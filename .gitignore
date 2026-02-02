@@ -38,197 +38,118 @@ logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 pip-log.txt
 
 # ============================================
-# WEB (Next.js Web Client)
+# CLIENT - NEXT.JS (kiosk_web & web_console)
 # ============================================
 
-web/.next/
-web/out/
-web/build/
-web/dist/
-web/.cache/
-web/node_modules/
-web/.turbo/
-web/.swc/
+client/kiosk_web/.next/
+client/kiosk_web/out/
+client/kiosk_web/build/
+client/kiosk_web/dist/
+client/kiosk_web/.cache/
+client/kiosk_web/node_modules/
+client/kiosk_web/.turbo/
+client/kiosk_web/.swc/
+client/kiosk_web/**/*.tsbuildinfo
 
-# Next.js specific
-web/**/.next/
-web/**/out/
-web/**/*.tsbuildinfo
-web/next-env.d.ts
+client/web_console/.next/
+client/web_console/out/
+client/web_console/build/
+client/web_console/dist/
+client/web_console/.cache/
+client/web_console/node_modules/
+client/web_console/.turbo/
+client/web_console/.swc/
+client/web_console/**/*.tsbuildinfo
 
 # ============================================
-# FLUTTERAPP (Flutter/Dart Mobile Client)
+# CLIENT - ELECTRON (kiosk_electron)
 # ============================================
 
-# Flutter/Dart specific
-flutterApp/.dart_tool/
-flutterApp/.flutter-plugins
-flutterApp/.flutter-plugins-dependencies
-flutterApp/.packages
-flutterApp/.pub-cache/
-flutterApp/.pub/
-flutterApp/build/
-flutterApp/flutter_*.log
+client/kiosk_electron/node_modules/
+client/kiosk_electron/dist/
+client/kiosk_electron/build/
+client/kiosk_electron/out/
+client/kiosk_electron/.cache/
+client/kiosk_electron/*.log
+
+# ============================================
+# CLIENT - FLUTTER (flutter_app)
+# ============================================
+
+client/flutter_app/.dart_tool/
+client/flutter_app/.flutter-plugins
+client/flutter_app/.flutter-plugins-dependencies
+client/flutter_app/.packages
+client/flutter_app/.pub-cache/
+client/flutter_app/.pub/
+client/flutter_app/build/
+client/flutter_app/flutter_*.log
 
 # Flutter iOS
-flutterApp/ios/Pods/
-flutterApp/ios/.symlinks/
-flutterApp/ios/Flutter/Flutter.framework
-flutterApp/ios/Flutter/Flutter.podspec
-flutterApp/ios/Flutter/Generated.xcconfig
-flutterApp/ios/Flutter/app.flx
-flutterApp/ios/Flutter/app.zip
-flutterApp/ios/Flutter/flutter_assets/
-flutterApp/ios/ServiceDefinitions.json
-flutterApp/ios/Runner/GeneratedPluginRegistrant.*
-flutterApp/ios/**/*.mode1v3
-flutterApp/ios/**/*.mode2v3
-flutterApp/ios/**/*.moved-aside
-flutterApp/ios/**/*.pbxuser
-flutterApp/ios/**/*.perspectivev3
-flutterApp/ios/**/*sync/
-flutterApp/ios/**/.sconsign.dblite
-flutterApp/ios/**/.tags*
-flutterApp/ios/**/.vagrant/
-flutterApp/ios/**/DerivedData/
-flutterApp/ios/**/Icon?
-flutterApp/ios/**/Pods/
-flutterApp/ios/**/.symlinks/
-flutterApp/ios/**/profile
-flutterApp/ios/**/xcuserdata
-flutterApp/ios/.generated/
-flutterApp/ios/Flutter/App.framework
-flutterApp/ios/Flutter/Flutter.framework
-flutterApp/ios/Flutter/Flutter.podspec
-flutterApp/ios/Flutter/Generated.xcconfig
-flutterApp/ios/Flutter/ephemeral/
-flutterApp/ios/Flutter/app.flx
-flutterApp/ios/Flutter/app.zip
-flutterApp/ios/Flutter/flutter_assets/
+client/flutter_app/ios/Pods/
+client/flutter_app/ios/.symlinks/
+client/flutter_app/ios/Flutter/Generated.xcconfig
+client/flutter_app/ios/DerivedData/
+client/flutter_app/ios/xcuserdata/
+client/flutter_app/ios/**/*.mode1v3
+client/flutter_app/ios/**/*.mode2v3
+client/flutter_app/ios/**/*.pbxuser
 
 # Flutter Android
-flutterApp/android/.gradle/
-flutterApp/android/gradle/
-flutterApp/android/captures/
-flutterApp/android/gradlew
-flutterApp/android/gradlew.bat
-flutterApp/android/local.properties
-flutterApp/android/**/GeneratedPluginRegistrant.java
-flutterApp/android/.idea/
-flutterApp/android/.settings/
-flutterApp/android/app/debug
-flutterApp/android/app/profile
-flutterApp/android/app/release
-flutterApp/android/**/*.iml
-flutterApp/android/**/.gradle/
-flutterApp/android/**/build/
+client/flutter_app/android/.gradle/
+client/flutter_app/android/gradle/
+client/flutter_app/android/captures/
+client/flutter_app/android/local.properties
+client/flutter_app/android/app/debug
+client/flutter_app/android/app/profile
+client/flutter_app/android/app/release
+client/flutter_app/android/**/*.iml
+client/flutter_app/android/**/build/
 
 # Flutter Web
-flutterApp/web/flutter_bootstrap.js
+client/flutter_app/web/flutter_bootstrap.js
 
-# Coverage
-flutterApp/coverage/
-
-# ============================================
-# FLUTTERAPP - KOTLIN (Android)
-# ============================================
-
-flutterApp/*.iml
-flutterApp/.gradle
-flutterApp/local.properties
-flutterApp/.idea/caches
-flutterApp/.idea/libraries
-flutterApp/.idea/modules.xml
-flutterApp/.idea/workspace.xml
-flutterApp/.idea/navEditor.xml
-flutterApp/.idea/assetWizardSettings.xml
-flutterApp/.externalNativeBuild
-flutterApp/.cxx
-flutterApp/*.apk
-flutterApp/*.ap_
-flutterApp/*.aab
-
-# Keystore files
-flutterApp/*.jks
-flutterApp/*.keystore
+# Keystore
+client/flutter_app/*.jks
+client/flutter_app/*.keystore
 
 # ============================================
-# SCRIPTS - PYTHON (AI Training & Data Processing)
+# SCRIPTS - PYTHON (AI / DATA / TRAINING)
 # ============================================
 
-# Python cache files only
-scripts/__pycache__/
 scripts/**/__pycache__/
-scripts/*.py[cod]
 scripts/**/*.py[cod]
-scripts/*$py.class
-scripts/**/*$py.class
-
-# Virtual environment ONLY - keep all code visible
-scripts/.venv/
-scripts/venv/
-scripts/env/
-scripts/ENV/
-
-# Specific virtual environment folders for each script
-scripts/download/venv/
-scripts/extract_frames/venv_frames/
-scripts/training/venv_training/
-
-# IDE files
-scripts/.idea/
-scripts/.vscode/
-
-# Jupyter Notebook checkpoints
-scripts/.ipynb_checkpoints
-scripts/**/.ipynb_checkpoints/
-
-# Keep dataset/, download/, extract_frames/ folders visible but ignore their contents
-# This way the folder structure is tracked but not the large files inside
-
-# Ignore large video files in any subfolder
-scripts/**/*.mp4
-scripts/**/*.avi
-scripts/**/*.mov
-scripts/**/*.mkv
-scripts/**/*.flv
-scripts/**/*.wmv
-scripts/**/*.webm
-
-# Ignore large datasets in download folder
-scripts/download/*.mp4
-scripts/download/*.avi
-scripts/download/*.mov
-scripts/download/*.mkv
-scripts/download/*.webm
-
-# Ignore extracted frames (images can be huge in quantity)
-scripts/extract_frames/**/*.jpg
-scripts/extract_frames/**/*.jpeg
-scripts/extract_frames/**/*.png
-
-# Ignore large data files
-scripts/**/*.h5
-scripts/**/*.hdf5
 scripts/**/*.npy
 scripts/**/*.npz
-
-# Ignore trained model weights (but keep training scripts)
+scripts/**/*.h5
 scripts/**/*.pt
 scripts/**/*.pth
 scripts/**/*.onnx
 scripts/**/*.weights
 
-# ML tracking/logs
+# Virtual environments
+scripts/.venv/
+scripts/venv/
+scripts/env/
+scripts/ENV/
+
+# Large data & media
+scripts/**/*.mp4
+scripts/**/*.avi
+scripts/**/*.mov
+scripts/**/*.mkv
+scripts/**/*.jpg
+scripts/**/*.jpeg
+scripts/**/*.png
+
+# ML tracking
 scripts/wandb/
 scripts/mlruns/
-scripts/.neptune/
 scripts/runs/
 scripts/tensorboard/
 
@@ -236,96 +157,44 @@ scripts/tensorboard/
 # SERVER_MAIN - NODE.JS
 # ============================================
 
-server_main/node_modules/
-server_main/npm-debug.log*
-server_main/yarn-debug.log*
-server_main/yarn-error.log*
-server_main/lerna-debug.log*
-server_main/.pnpm-debug.log*
-
-# Build outputs
-server_main/dist/
-server_main/build/
-server_main/out/
-server_main/.cache/
-
-# Testing
-server_main/coverage/
-server_main/.nyc_output/
-
-# TypeScript
-server_main/*.tsbuildinfo
-
-# Express/Node specific
-server_main/uploads/
-server_main/public/uploads/
+server/server_main/node_modules/
+server/server_main/dist/
+server/server_main/build/
+server/server_main/out/
+server/server_main/.cache/
+server/server_main/coverage/
+server/server_main/uploads/
+server/server_main/public/uploads/
+server/server_main/*.tsbuildinfo
 
 # ============================================
-# SERVER_AI - PYTHON (AI/ML Server)
+# SERVER_AI - PYTHON
 # ============================================
 
-server_AI/__pycache__/
-server_AI/*.py[cod]
-server_AI/*$py.class
-server_AI/*.so
-
-# Virtual environments
-server_AI/venv/
-server_AI/env/
-server_AI/ENV/
-server_AI/.venv/
-
-# Flask/Django specific
-server_AI/instance/
-server_AI/.webassets-cache
-server_AI/db.sqlite3
-server_AI/db.sqlite3-journal
-
-# FastAPI specific
-server_AI/.pytest_cache/
-
-# AI Model files
-server_AI/models/
-server_AI/weights/
-server_AI/checkpoints/
-server_AI/*.pt
-server_AI/*.pth
-server_AI/*.h5
-server_AI/*.onnx
-server_AI/*.pb
-
-# Celery
-server_AI/celerybeat-schedule
-server_AI/celerybeat.pid
-
-# Uploaded files/processing
-server_AI/uploads/
-server_AI/temp/
-server_AI/processed/
+server/server_AI/__pycache__/
+server/server_AI/*.py[cod]
+server/server_AI/venv/
+server/server_AI/env/
+server/server_AI/.venv/
+server/server_AI/db.sqlite3
+server/server_AI/models/
+server/server_AI/weights/
+server/server_AI/checkpoints/
+server/server_AI/uploads/
+server/server_AI/temp/
+server/server_AI/processed/
+server/server_AI/.pytest_cache/
 
 # ============================================
-# DATABASE & UPLOADS
+# DATABASES
 # ============================================
 
-# SQLite
 *.sqlite
 *.sqlite3
 *.db
 
-# PostgreSQL
-*.pgsql
-
-# MongoDB
-*.mdb
-
-# Uploads & Media
-uploads/
-media/
-static/uploaded/
-public/uploads/
-
 # ============================================
-# TEMPORARY & CACHE FILES
+# TEMP & CACHE
 # ============================================
 
 *.tmp
@@ -336,59 +205,64 @@ tmp/
 temp/
 
 # ============================================
-# SECURITY & SENSITIVE FILES
+# SCRIPTS — DATASETS & YOLO TRAINING (PYTHON)
 # ============================================
 
-# Certificates & Keys
-*.pem
-*.key
-*.cert
-*.crt
-*.p12
-*.pfx
+# Virtual environments (keep only code)
+scripts/**/venv/
+scripts/**/.venv/
+scripts/**/env/
+scripts/**/ENV/
 
-# Config files that might contain secrets
-config/production.json
-config/secrets.json
-secrets.yaml
-credentials.json
+# Python cache
+scripts/**/__pycache__/
+scripts/**/*.py[cod]
 
-# ============================================
-# BUILD ARTIFACTS
-# ============================================
+# === DATASETS (ignore heavy data, keep folder structure) ===
+scripts/dataset/**
+!scripts/dataset/.gitkeep
 
-*.tar.gz
-*.zip
-*.rar
-*.7z
+# Common dataset formats
+scripts/**/*.csv
+scripts/**/*.jsonl
+scripts/**/*.parquet
+scripts/**/*.tfrecord
+scripts/**/*.npy
+scripts/**/*.npz
+scripts/**/*.h5
+scripts/**/*.pkl
+scripts/**/*.pickle
 
-# ============================================
-# TESTING
-# ============================================
+# Images & videos (YOLO datasets are huge)
+scripts/**/*.jpg
+scripts/**/*.jpeg
+scripts/**/*.png
+scripts/**/*.bmp
+scripts/**/*.tiff
+scripts/**/*.mp4
+scripts/**/*.avi
+scripts/**/*.mov
+scripts/**/*.mkv
 
-.pytest_cache/
-.tox/
-.coverage
-htmlcov/
-*.cover
-.hypothesis/
+# === YOLO TRAINING OUTPUTS ===
+scripts/yoloTraining/**
+!scripts/yoloTraining/*.py
+!scripts/yoloTraining/README.md
+!scripts/yoloTraining/.gitkeep
 
-# ============================================
-# DOCUMENTATION
-# ============================================
+# Trained models
+scripts/**/*.pt
+scripts/**/*.pth
+scripts/**/*.onnx
+scripts/**/*.weights
+scripts/**/*.engine
 
-# Keep README files but ignore generated docs
-docs/_build/
-site/
+# Training logs
+scripts/wandb/
+scripts/mlruns/
+scripts/runs/
+scripts/tensorboard/
+scripts/**/*.log
 
-# ============================================
-# OPTIONAL: Uncomment if needed
-# ============================================
-
-# If you need to ignore CSV files (uncomment if datasets are in CSV)
-# scripts/**/*.csv
-# server_AI/**/*.csv
-
-# If you need to ignore pickle files
-# scripts/**/*.pkl
-# scripts/**/*.pickle
+# Extracted frames / preprocessing
+scripts/extract_frames/**
