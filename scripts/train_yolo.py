@@ -43,7 +43,7 @@ def parse_args():
         "--epochs", type=int, default=100, help="Number of training epochs (default: 100)"
     )
     parser.add_argument(
-        "--batch", type=int, default=-1, help="Batch size (-1 for auto, default: -1)"
+        "--batch", type=int, default=16, help="Batch size (default: 16, fits RTX 3050 8GB)"
     )
     parser.add_argument(
         "--imgsz", type=int, default=640, help="Input image size (default: 640)"
@@ -75,18 +75,41 @@ def parse_args():
     parser.add_argument(
         "--workers",
         type=int,
-        default=8,
-        help="Number of data loading workers (default: 8)",
+        default=4,
+        help="Number of data loading workers (default: 4, safe for Windows)",
     )
     return parser.parse_args()
 
 
-def validate_dataset():
-    """Verify dataset structure before training."""
+def prepare_data_yaml():
+    """
+    Generate a runtime data.yaml with the correct absolute path for the
+    current OS. This avoids hardcoding Linux/Windows paths in the checked-in
+    data.yaml and works cross-platform.
+    """
+    import yaml
+
     if not DATA_YAML.exists():
         print(f"ERROR: data.yaml not found at {DATA_YAML}")
         sys.exit(1)
 
+    with open(DATA_YAML) as f:
+        data = yaml.safe_load(f)
+
+    # Set the absolute path to the dataset root (works on Windows + Linux)
+    data["path"] = str(DATASET_DIR.resolve())
+
+    runtime_yaml = DATASET_DIR / "data_runtime.yaml"
+    with open(runtime_yaml, "w") as f:
+        yaml.dump(data, f, default_flow_style=False)
+
+    print(f"  Runtime data.yaml: {runtime_yaml}")
+    print(f"  Dataset root:      {DATASET_DIR.resolve()}")
+    return runtime_yaml
+
+
+def validate_dataset():
+    """Verify dataset structure before training."""
     for split in ["train", "valid", "test"]:
         img_dir = DATASET_DIR / split / "images"
         lbl_dir = DATASET_DIR / split / "labels"
@@ -112,8 +135,9 @@ def train(args):
     print("=" * 60)
     print()
 
-    # Validate dataset
-    print("Validating dataset...")
+    # Prepare cross-platform data.yaml and validate dataset
+    print("Preparing dataset...")
+    runtime_yaml = prepare_data_yaml()
     validate_dataset()
 
     # Load model
@@ -127,7 +151,7 @@ def train(args):
 
     # Training configuration
     train_kwargs = dict(
-        data=str(DATA_YAML),
+        data=str(runtime_yaml),
         epochs=args.epochs,
         batch=args.batch,
         imgsz=args.imgsz,
@@ -154,6 +178,9 @@ def train(args):
         warmup_epochs=3.0,
         warmup_momentum=0.8,
         cos_lr=True,       # Cosine learning rate scheduler
+        # GPU optimization (RTX 3050 / similar)
+        amp=True,          # Mixed precision (FP16) - halves VRAM usage
+        cache=True,        # Cache images in RAM for faster training
         # Saving
         save=True,
         save_period=10,    # Save checkpoint every 10 epochs
@@ -179,7 +206,7 @@ def train(args):
     print("\n" + "=" * 60)
     print("Evaluating on test set...")
     print("=" * 60)
-    metrics = model.val(data=str(DATA_YAML), split="test")
+    metrics = model.val(data=str(runtime_yaml), split="test")
 
     print("\nTest Results:")
     print(f"  mAP50:    {metrics.box.map50:.4f}")
