@@ -1,29 +1,29 @@
 """
-EcoCharge - YOLO Plastic Bottle Detection Training Script
-=========================================================
-Trains a YOLOv8 model to detect plastic bottles in images.
+EcoCharge - YOLO26 Plastic Bottle Detection Training Script
+============================================================
+Trains a YOLO26 model to detect plastic bottles in images.
+YOLO26 is Ultralytics' latest model (Jan 2026) with NMS-free end-to-end
+inference, optimized for edge devices.
 
 Usage:
-    python scripts/train_yolo.py                         # Train with defaults (yolov8n)
-    python scripts/train_yolo.py --model yolov8s         # Train with small model
-    python scripts/train_yolo.py --model yolov8m         # Train with medium model
+    python scripts/train_yolo.py                         # Train with defaults (yolo26n)
+    python scripts/train_yolo.py --model yolo26s         # Train with small model
+    python scripts/train_yolo.py --model yolo26m         # Train with medium model
     python scripts/train_yolo.py --epochs 200            # Custom epoch count
-    python scripts/train_yolo.py --resume runs/detect/train/weights/last.pt  # Resume training
+    python scripts/train_yolo.py --resume runs/detect/train/weights/last.pt
 
-Available YOLOv8 models (smallest to largest):
-    yolov8n  - Nano    (3.2M params)  - Fastest, good for edge/mobile
-    yolov8s  - Small   (11.2M params) - Good balance of speed and accuracy
-    yolov8m  - Medium  (25.9M params) - Higher accuracy
-    yolov8l  - Large   (43.7M params) - High accuracy
-    yolov8x  - XLarge  (68.2M params) - Highest accuracy, slowest
+Available YOLO26 models (smallest to largest):
+    yolo26n  - Nano    - Fastest, ideal for edge/mobile deployment
+    yolo26s  - Small   - Good balance of speed and accuracy
+    yolo26m  - Medium  - Higher accuracy
+    yolo26l  - Large   - High accuracy
+    yolo26x  - XLarge  - Highest accuracy, slowest
 """
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
-# Project root
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATASET_DIR = PROJECT_ROOT / "scripts" / "dataset" / "Eco-Charge.v1"
 DATA_YAML = DATASET_DIR / "data.yaml"
@@ -31,13 +31,13 @@ DATA_YAML = DATASET_DIR / "data.yaml"
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Train YOLOv8 for EcoCharge plastic bottle detection"
+        description="Train YOLO26 for EcoCharge plastic bottle detection"
     )
     parser.add_argument(
         "--model",
         type=str,
-        default="yolov8n.pt",
-        help="YOLO model variant: yolov8n.pt, yolov8s.pt, yolov8m.pt, yolov8l.pt, yolov8x.pt (default: yolov8n.pt)",
+        default="yolo26n.pt",
+        help="YOLO26 model: yolo26n.pt, yolo26s.pt, yolo26m.pt, yolo26l.pt, yolo26x.pt (default: yolo26n.pt)",
     )
     parser.add_argument(
         "--epochs", type=int, default=100, help="Number of training epochs (default: 100)"
@@ -104,11 +104,11 @@ def validate_dataset():
 
 
 def train(args):
-    """Run YOLO training."""
+    """Run YOLO26 training."""
     from ultralytics import YOLO
 
     print("=" * 60)
-    print("EcoCharge - YOLO Bottle Detection Training")
+    print("EcoCharge - YOLO26 Bottle Detection Training")
     print("=" * 60)
     print()
 
@@ -122,7 +122,7 @@ def train(args):
         model = YOLO(args.resume)
     else:
         model_name = args.model if args.model.endswith(".pt") else f"{args.model}.pt"
-        print(f"Loading pretrained model: {model_name}")
+        print(f"Loading pretrained YOLO26 model: {model_name}")
         model = YOLO(model_name)
 
     # Training configuration
@@ -196,8 +196,8 @@ def train(args):
     print(f"  Results:      {PROJECT_ROOT}/runs/detect/{args.name}/")
     print()
     print("Next steps:")
-    print("  1. Run inference:  python scripts/predict.py --source <image_or_dir>")
-    print("  2. Train attributes: python scripts/train_bottle_classifier.py")
+    print("  1. Run inference:     python scripts/predict.py --source <image_or_dir>")
+    print("  2. Train classifier:  python scripts/train_bottle_classifier.py")
 
     return results
 
