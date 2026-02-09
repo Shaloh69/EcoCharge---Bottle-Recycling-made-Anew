@@ -1,6 +1,7 @@
-train: ../train/images
-val: ../valid/images
-test: ../test/images
+path: /home/user/EcoCharge/scripts/dataset/Eco-Charge.v1
+train: train/images
+val: valid/images
+test: test/images
 
 nc: 1
 names: ['plastic-bottle']
