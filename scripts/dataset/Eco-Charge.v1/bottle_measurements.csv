@@ -1,156 +1,156 @@
-filename,volume_ml,height_cm,brand,condition
-IMG_20251028_141204_jpg.rf.c0c13a024bf490b06ec43df004ee0e38.jpg,1500,27,Coca-Cola,imperfect
-IMG_20251028_145229_jpg.rf.615e5805a763b74fa8848378fec5d29e.jpg,1500,27,Sprite,imperfect
-IMG_20251028_145545_jpg.rf.c54f728109a6d97802214b3b8db9d72a.jpg,237,16,Royal,imperfect
-IMG_20251028_145655_jpg.rf.b8370506f36b7958296149ae1bd1039b.jpg,237,16,Royal,imperfect
-IMG_20251028_145655_jpg.rf.b8370506f36b7958296149ae1bd1039b.jpg,237,16,Royal,imperfect
-IMG_20251028_145750_jpg.rf.8b95714db5aa3b95373aad3f96339093.jpg,290,17,Royal,perfect
-IMG_20251028_150229_jpg.rf.cbc7d55b40d28c93be77a2f881f0219b.jpg,296,17,7-UP,perfect
-IMG_20251028_150547_jpg.rf.aa6249ddd5160935f7b1861872e4cfe1.jpg,290,17,Mountain Dew,perfect
-IMG_20251028_150902_jpg.rf.a58890690039bbb9b2f0ad654094091d.jpg,290,17,Sting,perfect
-IMG_20251028_151051_jpg.rf.ea598a9c79cb1b2964fccdfb02cffd64.jpg,350,19,Cobra,perfect
-IMG_20251028_152115_jpg.rf.33852b86014121ffcfbf5cbcd3961d08.jpg,350,19,Cobra,imperfect
-IMG_20251028_152718_jpg.rf.3731924c361a8fcea33521a13e159e4f.jpg,900,25,Pocari-Sweat,perfect
-IMG_20251028_152902_jpg.rf.d502338957bf252769749cf72a34eb5c.jpg,900,25,Pocari-Sweat,imperfect
-IMG_20251028_153501_jpg.rf.2bbdd290125b112ca94b7cc903e88f45.jpg,350,18,Nature Spring,imperfect
-IMG_20251028_153621_jpg.rf.65a8e4adf98c0185a2e300adbe90917f.jpg,500,20,Summit,imperfect
+filename,volume_ml,height_cm,brand,appearace,colorcap,colorbottle,condition
+IMG_20251028_141204_jpg.rf.c0c13a024bf490b06ec43df004ee0e38.jpg,1500,27,Coca-Cola,perfect,red,transparent,damage
+IMG_20251028_145229_jpg.rf.615e5805a763b74fa8848378fec5d29e.jpg,1500,27,Sprite,imperfect,green,transparent,damage
+IMG_20251028_145545_jpg.rf.c54f728109a6d97802214b3b8db9d72a.jpg,237,16,Royal,perfect,royal-blue,transparent,nodamage
+IMG_20251028_145655_jpg.rf.b8370506f36b7958296149ae1bd1039b.jpg,237,16,Royal,imperfect,royal-blue,transparent,damage
+IMG_20251028_145655_jpg.rf.b8370506f36b7958296149ae1bd1039b.jpg,237,16,Royal,perfect,royal-blue,transparent,damage
+IMG_20251028_145750_jpg.rf.8b95714db5aa3b95373aad3f96339093.jpg,290,17,Royal,imperfect,royal-blue,transparent,nodamage
+IMG_20251028_150229_jpg.rf.cbc7d55b40d28c93be77a2f881f0219b.jpg,296,17,7-UP,imperfect,white,transparent,nodamage
+IMG_20251028_150547_jpg.rf.aa6249ddd5160935f7b1861872e4cfe1.jpg,290,17,Mountain-Dew,imperfect,black,green,nodamage
+IMG_20251028_150902_jpg.rf.a58890690039bbb9b2f0ad654094091d.jpg,290,17,Sting,perfect,black,transparent,nodamage
+IMG_20251028_151051_jpg.rf.ea598a9c79cb1b2964fccdfb02cffd64.jpg,350,19,Cobra,imperfect,black,transparent,nodamage
+IMG_20251028_152115_jpg.rf.33852b86014121ffcfbf5cbcd3961d08.jpg,350,19,Cobra,imperfect,black,transparent,damage
+IMG_20251028_152718_jpg.rf.3731924c361a8fcea33521a13e159e4f.jpg,900,25,Pocari-Sweat,imperfect,white,transparent,nodamage
+IMG_20251028_152902_jpg.rf.d502338957bf252769749cf72a34eb5c.jpg,900,25,Pocari-Sweat,perfect,white,transparent,damage
+IMG_20251028_153501_jpg.rf.2bbdd290125b112ca94b7cc903e88f45.jpg,350,18,Nature-Spring,imperfect,white,transparent,damage
+IMG_20251028_153621_jpg.rf.65a8e4adf98c0185a2e300adbe90917f.jpg,500,20,Summit,imperfect,blue,transparent,nodamage
 
 
 
 
-IMG_20251028_140447_jpg.rf.60294a45ddcdabb2ace86cfafa21c83b.jpg,1500,27,Coca-Cola,perfect
-IMG_20251028_140836_jpg.rf.57ce8ae34ca7c97da653ed4ee830f34b.jpg,1500,27,Coca-Cola,imperfect
-IMG_20251028_141030_jpg.rf.763a9b085b207030105efdf3da0f18e7.jpg,1500,27,Coca-Cola,perfect
-IMG_20251028_141055_jpg.rf.3a069bb2edc3d713c38607b26192b293.jpg,1500,27,Coca-Cola,imperfect
-IMG_20251028_141148_jpg.rf.5c3b05ef3449e11d8a45bd648e73ac4e.jpg,1500,27,Coca-Cola,imperfect
-IMG_20251028_141238_jpg.rf.08db637103d7ee9ecf4172b243c67da8.jpg,1500,27,Coca-Cola,imperfect
-IMG_20251028_141954_jpg.rf.64f02b413eb95af70aa6dd3fcfc0a894.jpg,190,15,Coca-Cola,perfect
-IMG_20251028_142030_jpg.rf.cc75dc13cbb6e237771d364d903ab435.jpg,190,15,Coca-Cola,imperfect
-IMG_20251028_142114_jpg.rf.33fa1d5df5edc889b02bbac884b5e584.jpg,190,15,Coca-Cola,imperfect
-IMG_20251028_142141_jpg.rf.d99936be1436f0b33b69cd6a51611a9e.jpg,190,15,Coca-Cola,imperfect
-IMG_20251028_142227_jpg.rf.1a814315d75f59c9e42bc634b6c4bc6e.jpg,190,15,Coca-Cola,imperfect
-IMG_20251028_142445_jpg.rf.21484facd2e10f7bf4ef74d8471d03cc.jpg,500,20,Coca-Cola,imperfect
-IMG_20251028_142611_jpg.rf.a9e787b69a0e00c832fdd184d4a4dca8.jpg,500,20,Coca-Cola,imperfect
-IMG_20251028_142637_jpg.rf.f4804c3582216ed507522d4f49664250.jpg,500,20,Coca-Cola,imperfect
-IMG_20251028_142739_jpg.rf.fc2edd47fd5f440bad06774fa7207a8b.jpg,500,20,Coca-Cola,imperfect
-IMG_20251028_142751_jpg.rf.ef71bbd32910961159293aa37e338e73.jpg,500,20,Coca-Cola,imperfect
-IMG_20251028_142936_jpg.rf.95f38c57ebca6594356e72a6a81c2710.jpg,390,18,Coca-Cola,perfect
-IMG_20251028_143053_jpg.rf.72a482917188e24710b1b368ea2c0a41.jpg,390,18,Coca-Cola,imperfect
-IMG_20251028_143110_jpg.rf.e59bc48bf9e6fe06fe5ce99ff62903c3.jpg,390,18,Coca-Cola,imperfect
-IMG_20251028_143223_jpg.rf.28d4173740dbc96a04c305fc1d4d6e39.jpg,390,18,Coca-Cola,imperfect
-IMG_20251028_143239_jpg.rf.cf44335d3a166c91697a511f41a56246.jpg,390,18,Coca-Cola,imperfect
-IMG_20251028_143302_jpg.rf.0c6c4aa04477e1ba55b51ba09656744e.jpg,390,18,Coca-Cola,imperfect
-IMG_20251028_144353_jpg.rf.a05cf104ce5cf4520f8f1c51afc3b344.jpg,190,15,Sprite,perfect
-IMG_20251028_144405_jpg.rf.9821e64371db444853994506ea72f3e2.jpg,190,15,Sprite,perfect
-IMG_20251028_144446_jpg.rf.7e74d2c3674055f73911a193cac142a9.jpg,190,15,Sprite,imperfect
-IMG_20251028_144521_jpg.rf.d6aaf72de4ee63faae55dcd527d61672.jpg,190,15,Sprite,imperfect
-IMG_20251028_144531_jpg.rf.1ecd198fbc6c948e93d32587bf164156.jpg,190,15,Sprite,imperfect
-IMG_20251028_144733_jpg.rf.86e872309aad0aa14d0544f7fc0ab791.jpg,190,15,Sprite,imperfect
-IMG_20251028_144743_jpg.rf.da87d0a3c613bb3dc2ad19e9d3ec0dad.jpg,190,15,Sprite,imperfect
-IMG_20251028_144901_jpg.rf.6da76c65fb04f7577dd139dd4cee0169.jpg,390,18,Sprite,perfect
-IMG_20251028_144915_jpg.rf.d01f4e367ff97454c9c3376b51a42be6.jpg,390,18,Sprite,perfect
-IMG_20251028_144951_jpg.rf.117bbe941dfdd33e69c01856fc5a3019.jpg,390,18,Sprite,imperfect
-IMG_20251028_145021_jpg.rf.ff156d48373e16892184285f3fab7f9f.jpg,390,18,Sprite,imperfect
-IMG_20251028_145038_jpg.rf.82f12d8d8d11f71b764360f99d94e71d.jpg,390,18,Sprite,imperfect
-IMG_20251028_145201_jpg.rf.dbbf3abc3e017916fbd2d2d5432f4d31.jpg,1500,27,Sprite,perfect
-IMG_20251028_145256_jpg.rf.e002974f658c815e46e82fd4cd5d8b76.jpg,1500,27,Sprite,imperfect
-IMG_20251028_145305_jpg.rf.083dae712564c139e8824e0913222612.jpg,1500,27,Sprite,imperfect
-IMG_20251028_145408_jpg.rf.70cbb9edd790008bba2e8457cd69db28.jpg,1500,27,Sprite,imperfect
-IMG_20251028_145518_jpg.rf.1f3c2295466109cf5567c2de47c01b85.jpg,190,15,Royal,perfect
-IMG_20251028_145537_jpg.rf.424834eeb77eb6f708376a11a18c4e2d.jpg,190,15,Royal,imperfect
-IMG_20251028_145622_jpg.rf.4249183c8dbe0875617824f67f307020.jpg,190,15,Royal,imperfect
-IMG_20251028_145637_jpg.rf.057866f6274a5832dcd89a837ae8c622.jpg,190,15,Royal,imperfect
-IMG_20251028_145741_jpg.rf.928d575f7eec0b1a95620f0110c9e47d.jpg,237,16,Royal,perfect
-IMG_20251028_145809_jpg.rf.00b6c39ff34b4b5b1881595f1411c8d1.jpg,237,16,Royal,imperfect
-IMG_20251028_145817_jpg.rf.5b54df946e84d0edcd9c70aea1c52969.jpg,237,16,Royal,imperfect
-IMG_20251028_145939_jpg.rf.138ba8dc269763287bac581f5ef89c0f.jpg,237,16,Royal,imperfect
-IMG_20251028_145950_jpg.rf.468844b17373cb1dcd36c238df377652.jpg,237,16,Royal,imperfect
-IMG_20251028_150219_jpg.rf.1f0ee38ccb1de7ebf190b9d3e940e146.jpg,296,17,7-UP,perfect
-IMG_20251028_150305_jpg.rf.4fc30ca82a7a026f7f969b5292645d10.jpg,296,17,7-Up,imperfect
-IMG_20251028_150357_jpg.rf.1da07c7f91d18158edb92cbc3ed107b8.jpg,296,17,7-UP,imperfect
-IMG_20251028_150415_jpg.rf.b8adf4cb3360efdaeb6d8d9dffe5e7c7.jpg,296,17,7-UP,imperfect
-IMG_20251028_150535_jpg.rf.7232588af61f4d75e6700bd0db939d8a.jpg,290,17,Mountain Dew,perfect
-IMG_20251028_150602_jpg.rf.6f1bf7d233d46396a4ac63db02694d98.jpg,290,17,Mountain Dew,imperfect
-IMG_20251028_150649_jpg.rf.d0d836de4175eb5552e50e3493e36a77.jpg,290,17,Mountain Dew,imperfect
-IMG_20251028_150706_jpg.rf.242b2d776501b1e5fd2a6483418a8239.jpg,290,17,Mountain Dew,imperfect
-IMG_20251028_150719_jpg.rf.e7204788e8276b11eaf78a5bff3da5b4.jpg,290,17,Mountain Dew,imperfect
-IMG_20251028_150722_jpg.rf.ce466eeaf1f379c187312c9d9259fdd0.jpg,290,17,Mountain Dew,imperfect
-IMG_20251028_150730_jpg.rf.dda7b195f7487d62638c218a2c49d506.jpg,290,17,Mountain Dew,imperfect
-IMG_20251028_150853_jpg.rf.1ff28db8702ea6f023d71702964e0015.jpg,290,17,Sting,perfect
-IMG_20251028_150912_jpg.rf.5ceaf7d0ce535e44532a25807bd204ac.jpg,290,17,Sting,imperfect
-IMG_20251028_150932_jpg.rf.0b364c03607be82e376316a588cd28ee.jpg,290,17,Sting,imperfect
-IMG_20251028_150950_jpg.rf.ab5121ae48f85094da232badc3319dea.jpg,290,17,Sting,imperfect
-IMG_20251028_151018_jpg.rf.3490a14ad8f5b19e246c2b2c93f103a7.jpg,290,17,Sting,imperfect
-IMG_20251028_151044_jpg.rf.e043e33ac5fa11fb57ae0265d34e59d1.jpg,330,18,Cobra,perfect
-IMG_20251028_151139_jpg.rf.16b93b57963cf0c961b93754e0a43bac.jpg,330,18,Cobra,imperfect
-IMG_20251028_151245_jpg.rf.ba0350ec9b3e8d0a19163f06b6b36d8e.jpg,330,18,Cobra,imperfect
-IMG_20251028_151305_jpg.rf.dd8a31fa3008f842ea088131d5b2eafd.jpg,330,18,Cobra,imperfect
-IMG_20251028_151946_jpg.rf.e48540c34a0ceb694a84f7ccae71b915.jpg,290,16,Cobra,perfect
-IMG_20251028_152134_jpg.rf.02ec77a767ad5db1967f8e2ab59acccd.jpg,290,16,Cobra,imperfect
-IMG_20251028_152148_jpg.rf.b50843e3f4e93a2fb509ad914e578ac0.jpg,290,16,Cobra,imperfect
-IMG_20251028_152455_jpg.rf.3a02001af7acac35c2a2e0736f0bfe36.jpg,500,20,Pocari,imperfect
-IMG_20251028_152503_jpg.rf.a1246c9f77331bf12f340ef7d046c06f.jpg,500,20,Pocari,imperfect
-IMG_20251028_152609_jpg.rf.bc0d14b97b27ff08177d071668bb3098.jpg,500,20,Pocari,imperfect
-IMG_20251028_152617_jpg.rf.06ef7c08cd8cc7c8872e301d18f1b182.jpg,500,20,Pocari,imperfect
-IMG_20251028_152645_jpg.rf.89c31fa024c11324d4cd5057234b25ab.jpg,500,20,Pocari,imperfect
-IMG_20251028_152702_jpg.rf.e3d7bb3c68bc9f5324caf0e3615d5349.jpg,900,25,Pocari,perfect
-IMG_20251028_152710_jpg.rf.7b0c9fd1fe354b1ecbf5cc9e2fd51ff6.jpg,900,25,Pocari,perfect
-IMG_20251028_152740_jpg.rf.810a2a0830ac95c1a02e98a80e8a7102.jpg,900,25,Pocari,imperfect
-IMG_20251028_152748_jpg.rf.aafa0cd00394f6512a8c53798f5994f7.jpg,900,25,Pocari,imperfect
-IMG_20251028_152838_jpg.rf.9ca0c0f442a8f08c99fda3bc3e65f757.jpg,900,25,Pocari,imperfect
-IMG_20251028_152841_jpg.rf.6d17966059010ecd158d4616635e418c.jpg,900,25,Pocari,imperfect
-IMG_20251028_152857_jpg.rf.2c238f100387f2f22844ffbc830fcddb.jpg,900,25,Pocari,imperfect
-IMG_20251028_153036_jpg.rf.a1bd4e581dfc0108fa33fab432bd4611.jpg,1000,25,Natures Spring,perfect
-IMG_20251028_153049_jpg.rf.dd901f1ea205707fece7c39f7fe8122a.jpg,1000,25,Natures Spring,imperfect
-IMG_20251028_153056_jpg.rf.8c64fdbe1273fa77f4a2b7ae4da45a45.jpg,1000,25,Natures Spring,imperfect
-IMG_20251028_153118_jpg.rf.16247813a692503ae50b3ff6020c6b6a.jpg,1000,25,Natures Spring,imperfect
-IMG_20251028_153136_jpg.rf.d86ad7433fee46cf9dab90b5d2c603fd.jpg,1000,25,Natures Spring,imperfect
-IMG_20251028_153150_jpg.rf.c5aabf04818f28d1ca8c03f0a977d9cb.jpg,1000,25,Natures Spring,imperfect
-IMG_20251028_153155_jpg.rf.86691bc257cc55fe07e6e342768f21a4.jpg,1000,25,Natures Spring,imperfect
-IMG_20251028_153304_jpg.rf.72cba08320b65db44d0bd0a5d3e177d4.jpg,500,20,Natures Spring,perfect
-IMG_20251028_153314_jpg.rf.66dcd99e5dae6d5b001759f9b8cb1bac.jpg,500,20,Natures Spring,perfect
-IMG_20251028_153333_jpg.rf.5d60c91dc831c0157b812512e9aaf61f.jpg,500,20,Natures Spring,imperfect
-IMG_20251028_153447_jpg.rf.2942e36fd07e73410a776a975608e0fa.jpg,500,20,Natures Spring,imperfect
-IMG_20251028_153550_jpg.rf.f65fb49e4618cc15157090b58e8942bc.jpg,1000,25,Summit,perfect
-IMG_20251028_153604_jpg.rf.eae701088291d6935edd4bc26d2e95c8.jpg,1000,25,Summit,perfect
-IMG_20251028_153707_jpg.rf.42083beec0c90198fb042f71dff987fb.jpg,1000,25,Summit,imperfect
-IMG_20251028_153940_jpg.rf.72d81c74fddffb31a07f4ec77cfc4cd8.jpg,1000,25,Summit,imperfect
-IMG_20251028_153951_jpg.rf.07702c9e329517681b4b89e3283256ac.jpg,1000,25,Summit,imperfect
-IMG_20251028_154009_jpg.rf.d62511376f3164e49505b559691b9e5f.jpg,1000,25,Summit,imperfect
-IMG_20251028_154027_jpg.rf.a1cdceacd84a019bff377e8f910507cb.jpg,500,20,Summit,perfect
-IMG_20251028_154048_jpg.rf.1ec1e1a9ed6cf3151c6216b611d2d35b.jpg,500,20,Summit,imperfect
-IMG_20251028_154119_jpg.rf.5041dd6e78082558863df0777672f602.jpg,500,20,Summit,imperfect
-IMG_20251028_154132_jpg.rf.8ff66649e0ecb7a21d5fc8c035a6730c.jpg,500,20,Summit,imperfect
+IMG_20251028_140447_jpg.rf.60294a45ddcdabb2ace86cfafa21c83b.jpg,1500,27,Coca-Cola,perfect,red,transparent,nodamage
+IMG_20251028_140836_jpg.rf.57ce8ae34ca7c97da653ed4ee830f34b.jpg,1500,27,Coca-Cola,perfect,red,transparent,nodamage
+IMG_20251028_141030_jpg.rf.763a9b085b207030105efdf3da0f18e7.jpg,1500,27,Coca-Cola,imperfect,red,transparent,nodamage
+IMG_20251028_141055_jpg.rf.3a069bb2edc3d713c38607b26192b293.jpg,1500,27,Coca-Cola,imperfect,red,transparent,nodamage
+IMG_20251028_141148_jpg.rf.5c3b05ef3449e11d8a45bd648e73ac4e.jpg,1500,27,Coca-Cola,imperfect,red,transparent,damage
+IMG_20251028_141238_jpg.rf.08db637103d7ee9ecf4172b243c67da8.jpg,1500,27,Coca-Cola,perfect,red,transparent ,damage
+IMG_20251028_141954_jpg.rf.64f02b413eb95af70aa6dd3fcfc0a894.jpg,190,15,Coca-Cola,imperfect,red,transparent,nodamage
+IMG_20251028_142030_jpg.rf.cc75dc13cbb6e237771d364d903ab435.jpg,190,15,Coca-Cola,perfect,red,transparent,nodamage
+IMG_20251028_142114_jpg.rf.33fa1d5df5edc889b02bbac884b5e584.jpg,190,15,Coca-Cola,perfect,red,transparent,damage
+IMG_20251028_142141_jpg.rf.d99936be1436f0b33b69cd6a51611a9e.jpg,190,15,Coca-Cola,imperfect,red,transparent,damage
+IMG_20251028_142227_jpg.rf.1a814315d75f59c9e42bc634b6c4bc6e.jpg,190,15,Coca-Cola,imperfect,red,transparent,damage
+IMG_20251028_142445_jpg.rf.21484facd2e10f7bf4ef74d8471d03cc.jpg,500,20,Coca-Cola,perfect,red,transparent,nodamage
+IMG_20251028_142611_jpg.rf.a9e787b69a0e00c832fdd184d4a4dca8.jpg,500,20,Coca-Cola,imperfect,red,transparent,nodamage
+IMG_20251028_142637_jpg.rf.f4804c3582216ed507522d4f49664250.jpg,500,20,Coca-Cola,perfect,red,transparent,damage
+IMG_20251028_142739_jpg.rf.fc2edd47fd5f440bad06774fa7207a8b.jpg,500,20,Coca-Cola,perfect,red,transparent,damage
+IMG_20251028_142751_jpg.rf.ef71bbd32910961159293aa37e338e73.jpg,500,20,Coca-Cola,imperfect,red,transparent,damage
+IMG_20251028_142936_jpg.rf.95f38c57ebca6594356e72a6a81c2710.jpg,390,18,Coca-Cola,imperfect,red,transparent,nodamage
+IMG_20251028_143053_jpg.rf.72a482917188e24710b1b368ea2c0a41.jpg,390,18,Coca-Cola,perfect,red,transparent,nodamage
+IMG_20251028_143110_jpg.rf.e59bc48bf9e6fe06fe5ce99ff62903c3.jpg,390,18,Coca-Cola,imperfect,red,transparent,nodamage
+IMG_20251028_143223_jpg.rf.28d4173740dbc96a04c305fc1d4d6e39.jpg,390,18,Coca-Cola,perfect,red,transparent,damage
+IMG_20251028_143239_jpg.rf.cf44335d3a166c91697a511f41a56246.jpg,390,18,Coca-Cola,imperfect,red,transparent,damage
+IMG_20251028_143302_jpg.rf.0c6c4aa04477e1ba55b51ba09656744e.jpg,390,18,Coca-Cola,imperfect,red,transparent,damage
+IMG_20251028_144353_jpg.rf.a05cf104ce5cf4520f8f1c51afc3b344.jpg,190,15,Sprite,perfect,green,transparent,nodamage
+IMG_20251028_144405_jpg.rf.9821e64371db444853994506ea72f3e2.jpg,190,15,Sprite,imperfect,green,transparent,nodamage
+IMG_20251028_144446_jpg.rf.7e74d2c3674055f73911a193cac142a9.jpg,190,15,Sprite,imperfect,green,transparent,nodamage
+IMG_20251028_144521_jpg.rf.d6aaf72de4ee63faae55dcd527d61672.jpg,190,15,Sprite,perfect,green,transparent,damage  
+IMG_20251028_144531_jpg.rf.1ecd198fbc6c948e93d32587bf164156.jpg,190,15,Sprite,imperfect,green,transparent,damage
+IMG_20251028_144733_jpg.rf.86e872309aad0aa14d0544f7fc0ab791.jpg,190,15,Sprite,perfect,green,transparent,damage
+IMG_20251028_144743_jpg.rf.da87d0a3c613bb3dc2ad19e9d3ec0dad.jpg,190,15,Sprite,imperfect,green,transparent,damage
+IMG_20251028_144901_jpg.rf.6da76c65fb04f7577dd139dd4cee0169.jpg,390,18,Sprite,perfect,green,transparent,nodamage
+IMG_20251028_144915_jpg.rf.d01f4e367ff97454c9c3376b51a42be6.jpg,390,18,Sprite,imperfect,green,transparent,nodamage
+IMG_20251028_144951_jpg.rf.117bbe941dfdd33e69c01856fc5a3019.jpg,390,18,Sprite,perfect,green,transparent,nodamage
+IMG_20251028_145021_jpg.rf.ff156d48373e16892184285f3fab7f9f.jpg,390,18,Sprite,imperfect,green,transparent,damage
+IMG_20251028_145038_jpg.rf.82f12d8d8d11f71b764360f99d94e71d.jpg,390,18,Sprite,imperfect,green,transparent,damage
+IMG_20251028_145201_jpg.rf.dbbf3abc3e017916fbd2d2d5432f4d31.jpg,1500,27,Sprite,perfect,green,transparent,nodamage
+IMG_20251028_145256_jpg.rf.e002974f658c815e46e82fd4cd5d8b76.jpg,1500,27,Sprite,imperfect,green,transparent,damage
+IMG_20251028_145305_jpg.rf.083dae712564c139e8824e0913222612.jpg,1500,27,Sprite,perfect,green,transparent,damage
+IMG_20251028_145408_jpg.rf.70cbb9edd790008bba2e8457cd69db28.jpg,1500,27,Sprite,imperfect,green,transparent,nodamage
+IMG_20251028_145518_jpg.rf.1f3c2295466109cf5567c2de47c01b85.jpg,190,15,Royal,imperfect,royal-blue,transparent,nodamage
+IMG_20251028_145537_jpg.rf.424834eeb77eb6f708376a11a18c4e2d.jpg,190,15,Royal,imperfect,royal-blue,transparent,nodamage
+IMG_20251028_145622_jpg.rf.4249183c8dbe0875617824f67f307020.jpg,190,15,Royal,perfect,royal-blue,transparent,damage
+IMG_20251028_145637_jpg.rf.057866f6274a5832dcd89a837ae8c622.jpg,190,15,Royal,imperfect,royal-blue,transparent,damage
+IMG_20251028_145741_jpg.rf.928d575f7eec0b1a95620f0110c9e47d.jpg,237,16,Royal,perfect,royal-blue,transparent,nodamage
+IMG_20251028_145809_jpg.rf.00b6c39ff34b4b5b1881595f1411c8d1.jpg,237,16,Royal,perfect,royal-blue,transparent,nodamage
+IMG_20251028_145817_jpg.rf.5b54df946e84d0edcd9c70aea1c52969.jpg,237,16,Royal,imperfect,royal-blue,transparent,nodamage
+IMG_20251028_145939_jpg.rf.138ba8dc269763287bac581f5ef89c0f.jpg,237,16,Royal,imperfect,royal-blue,transparent,damage
+IMG_20251028_145950_jpg.rf.468844b17373cb1dcd36c238df377652.jpg,237,16,Royal,imperfect,royal-blue,transparent,damage
+IMG_20251028_150219_jpg.rf.1f0ee38ccb1de7ebf190b9d3e940e146.jpg,296,17,7-UP,perfect,white,transparent,nodamage
+IMG_20251028_150305_jpg.rf.4fc30ca82a7a026f7f969b5292645d10.jpg,296,17,7-Up,imperfect,white,transparent,nodamage
+IMG_20251028_150357_jpg.rf.1da07c7f91d18158edb92cbc3ed107b8.jpg,296,17,7-UP,imperfect,white,transparent,damage
+IMG_20251028_150415_jpg.rf.b8adf4cb3360efdaeb6d8d9dffe5e7c7.jpg,296,17,7-UP,perfect,white,transparent,damage
+IMG_20251028_150535_jpg.rf.7232588af61f4d75e6700bd0db939d8a.jpg,290,17,Mountain Dew,perfect,black,green,nodamage
+IMG_20251028_150602_jpg.rf.6f1bf7d233d46396a4ac63db02694d98.jpg,290,17,Mountain Dew,perfect,black,green,nodamage
+IMG_20251028_150649_jpg.rf.d0d836de4175eb5552e50e3493e36a77.jpg,290,17,Mountain Dew,imperfect,black,green,damage
+IMG_20251028_150706_jpg.rf.242b2d776501b1e5fd2a6483418a8239.jpg,290,17,Mountain Dew,imperfect,black,green,damage
+IMG_20251028_150719_jpg.rf.e7204788e8276b11eaf78a5bff3da5b4.jpg,290,17,Mountain Dew,imperfect,black,green,damage
+IMG_20251028_150722_jpg.rf.ce466eeaf1f379c187312c9d9259fdd0.jpg,290,17,Mountain Dew,imperfect,black,transparent,damage
+IMG_20251028_150730_jpg.rf.dda7b195f7487d62638c218a2c49d506.jpg,290,17,Mountain Dew,imperfect,black,transparent,damage
+IMG_20251028_150853_jpg.rf.1ff28db8702ea6f023d71702964e0015.jpg,290,17,Sting,imperfect,black,transparent,nodamage
+IMG_20251028_150912_jpg.rf.5ceaf7d0ce535e44532a25807bd204ac.jpg,290,17,Sting,imperfect,black,transparent,nodamage
+IMG_20251028_150932_jpg.rf.0b364c03607be82e376316a588cd28ee.jpg,290,17,Sting,imperfect,black,transparent,damage
+IMG_20251028_150950_jpg.rf.ab5121ae48f85094da232badc3319dea.jpg,290,17,Sting,perfect,black,transparent,damage
+IMG_20251028_151018_jpg.rf.3490a14ad8f5b19e246c2b2c93f103a7.jpg,290,17,Sting,imperfect,black,transparent,damage
+IMG_20251028_151044_jpg.rf.e043e33ac5fa11fb57ae0265d34e59d1.jpg,330,18,Cobra,perfect,black,transparent,nodamage
+IMG_20251028_151139_jpg.rf.16b93b57963cf0c961b93754e0a43bac.jpg,330,18,Cobra,imperfect,black,transparent,nodamage
+IMG_20251028_151245_jpg.rf.ba0350ec9b3e8d0a19163f06b6b36d8e.jpg,330,18,Cobra,perfect,black,transparent,damage
+IMG_20251028_151305_jpg.rf.dd8a31fa3008f842ea088131d5b2eafd.jpg,330,18,Cobra,imperfect,black,transparent,damage
+IMG_20251028_151946_jpg.rf.e48540c34a0ceb694a84f7ccae71b915.jpg,290,16,Cobra,perfect,black,transparent,nodamage
+IMG_20251028_152134_jpg.rf.02ec77a767ad5db1967f8e2ab59acccd.jpg,290,16,Cobra,imperfect,black,transparent,damage
+IMG_20251028_152148_jpg.rf.b50843e3f4e93a2fb509ad914e578ac0.jpg,290,16,Cobra,perfect,black,transparent,damage
+IMG_20251028_152455_jpg.rf.3a02001af7acac35c2a2e0736f0bfe36.jpg,500,20,Pocari,imperfect,white,transparent,nodamage
+IMG_20251028_152503_jpg.rf.a1246c9f77331bf12f340ef7d046c06f.jpg,500,20,Pocari,perfect,white,transparent,nodamage
+IMG_20251028_152609_jpg.rf.bc0d14b97b27ff08177d071668bb3098.jpg,500,20,Pocari,perfect,white,transparent,damage
+IMG_20251028_152617_jpg.rf.06ef7c08cd8cc7c8872e301d18f1b182.jpg,500,20,Pocari,imperfect,white,transparent,damage
+IMG_20251028_152645_jpg.rf.89c31fa024c11324d4cd5057234b25ab.jpg,500,20,Pocari,perfect,white,transparent,damage
+IMG_20251028_152702_jpg.rf.e3d7bb3c68bc9f5324caf0e3615d5349.jpg,900,25,Pocari,perfect,white,transparent,nodamage
+IMG_20251028_152710_jpg.rf.7b0c9fd1fe354b1ecbf5cc9e2fd51ff6.jpg,900,25,Pocari,perfect,white,transparent,nodamage
+IMG_20251028_152740_jpg.rf.810a2a0830ac95c1a02e98a80e8a7102.jpg,900,25,Pocari,imperfect,white,transparent,nodamage
+IMG_20251028_152748_jpg.rf.aafa0cd00394f6512a8c53798f5994f7.jpg,900,25,Pocari,perfect,white,transparent,nodamage
+IMG_20251028_152838_jpg.rf.9ca0c0f442a8f08c99fda3bc3e65f757.jpg,900,25,Pocari,perfect,white,transparent,damage
+IMG_20251028_152841_jpg.rf.6d17966059010ecd158d4616635e418c.jpg,900,25,Pocari,perfect,white,transparent,damage
+IMG_20251028_152857_jpg.rf.2c238f100387f2f22844ffbc830fcddb.jpg,900,25,Pocari,imperfect,white,transparent,damage
+IMG_20251028_153036_jpg.rf.a1bd4e581dfc0108fa33fab432bd4611.jpg,1000,25,Natures Spring,imperfect,white,transparent,nodamage
+IMG_20251028_153049_jpg.rf.dd901f1ea205707fece7c39f7fe8122a.jpg,1000,25,Natures Spring,perfect,white,transparent,nodamage
+IMG_20251028_153056_jpg.rf.8c64fdbe1273fa77f4a2b7ae4da45a45.jpg,1000,25,Natures Spring,imperfect,white,transparent,nodamage
+IMG_20251028_153118_jpg.rf.16247813a692503ae50b3ff6020c6b6a.jpg,1000,25,Natures Spring,perfect,white,transparent,damage
+IMG_20251028_153136_jpg.rf.d86ad7433fee46cf9dab90b5d2c603fd.jpg,1000,25,Natures Spring,imperfect,white,transparent,damage
+IMG_20251028_153150_jpg.rf.c5aabf04818f28d1ca8c03f0a977d9cb.jpg,1000,25,Natures Spring,imperfect,white,transparent,damage
+IMG_20251028_153155_jpg.rf.86691bc257cc55fe07e6e342768f21a4.jpg,1000,25,Natures Spring,perfect,white,transparent,damage
+IMG_20251028_153304_jpg.rf.72cba08320b65db44d0bd0a5d3e177d4.jpg,500,20,Natures Spring,perfect,white,transparent,nodamage
+IMG_20251028_153314_jpg.rf.66dcd99e5dae6d5b001759f9b8cb1bac.jpg,500,20,Natures Spring,imperfect,white,transparent,nodamage
+IMG_20251028_153333_jpg.rf.5d60c91dc831c0157b812512e9aaf61f.jpg,500,20,Natures Spring,imperfect,white,transparent,nodamage
+IMG_20251028_153447_jpg.rf.2942e36fd07e73410a776a975608e0fa.jpg,500,20,Natures Spring,perfect,white,transparent,damage
+IMG_20251028_153550_jpg.rf.f65fb49e4618cc15157090b58e8942bc.jpg,1000,25,Summit,perfect,blue,transparent,nodamage
+IMG_20251028_153604_jpg.rf.eae701088291d6935edd4bc26d2e95c8.jpg,1000,25,Summit,imperfect,blue,transparent,nodamage
+IMG_20251028_153707_jpg.rf.42083beec0c90198fb042f71dff987fb.jpg,1000,25,Summit,perfect,blue,transparent,nodamage
+IMG_20251028_153940_jpg.rf.72d81c74fddffb31a07f4ec77cfc4cd8.jpg,1000,25,Summit,perfect,blue,transparent,damage
+IMG_20251028_153951_jpg.rf.07702c9e329517681b4b89e3283256ac.jpg,1000,25,Summit,imperfect,blue,transparent,damage
+IMG_20251028_154009_jpg.rf.d62511376f3164e49505b559691b9e5f.jpg,1000,25,Summit,perfect,blue,transparent,damage
+IMG_20251028_154027_jpg.rf.a1cdceacd84a019bff377e8f910507cb.jpg,500,20,Summit,perfect,blue,transparent,nodamage
+IMG_20251028_154048_jpg.rf.1ec1e1a9ed6cf3151c6216b611d2d35b.jpg,500,20,Summit,imperfect,blue,transparent,nodamage
+IMG_20251028_154119_jpg.rf.5041dd6e78082558863df0777672f602.jpg,500,20,Summit,perfect,blue,transparent,damage
+IMG_20251028_154132_jpg.rf.8ff66649e0ecb7a21d5fc8c035a6730c.jpg,500,20,Summit,perfect,blue,transparent,damage
 
 
 
-IMG_20251028_141943_jpg.rf.b2f66624d896f5b04f224b37c53611d6.jpg,190,15,Coca-Cola,perfect
-IMG_20251028_142652_jpg.rf.38133c872be7fd821f19b32cbe201875.jpg,500,20,Coca-Cola,imperfect
-IMG_20251028_143324_jpg.rf.2c7f62a387f98e0969ba182ab8b38613.jpg,390,18,Coca-Cola,imperfect
-IMG_20251028_144436_jpg.rf.cb7d59dbba5655eb465efcbb66614ab6.jpg,190,15,Sprite,perfect
-IMG_20251028_144940_jpg.rf.eb9d951b557c0e2b64692bac39b3f032.jpg,390,18,Sprite,imperfect
-IMG_20251028_145014_jpg.rf.09f0ab2aff5f21bff948f2ce39be6bf6.jpg,390,18,Sprite,imperfect
-IMG_20251028_145106_jpg.rf.9cc3ffb16cd9b5d1912d7e2e524504fa.jpg,390,18,Sprite,imperfect
-IMG_20251028_145213_jpg.rf.8d0943e61f7290c7d9fc8568f7ce1b3d.jpg,1500,27,Sprite,imperfect
-IMG_20251028_145242_jpg.rf.5c0dc94dcc2168d58b9e5ecdd32b9573.jpg,1500,27,Sprite,imperfect
-IMG_20251028_145358_jpg.rf.26d2e1480707c718bedf8b4e41260772.jpg,1500,27,Sprite,perfect
-IMG_20251028_145921_jpg.rf.6fefd1d24087295548e1165bbdda1f4d.jpg,390,18,Royal,imperfect
-IMG_20251028_150316_jpg.rf.f19532a7826f6711f295db0b76386932.jpg,296,17,7-UP,perfect
-IMG_20251028_150435_jpg.rf.ec3222095b37367b19133fece014fb23.jpg,296,17,7-UP,imperfect
-IMG_20251028_150611_jpg.rf.5693b59815e6d362295aa65c6d9b9c61.jpg,290,17,Mountain Dew,imperfect
-IMG_20251028_150921_jpg.rf.d6f9a8e8f2e61eb03c249b4ce0e5df80.jpg,290,17,Sting,perfect
-IMG_20251028_151006_jpg.rf.5beb3e2eae6a48b352c606df820934ce.jpg,290,17,Sting,imperfect
-IMG_20251028_151152_jpg.rf.bfcbdb957468ecde7f8eae7111d680a2.jpg,330,18,Cobra,perfect
-IMG_20251028_151928_jpg.rf.aa7e7c3ad360551dcc383960982e1f58.jpg,290,16,Cobra,imperfect
-IMG_20251028_152014_jpg.rf.6ffbb826b2b646fe29f374a47b5c61fd.jpg,290,16,Cobra,perfect
-IMG_20251028_152022_jpg.rf.77d15582466146eb57b7cee29a6212f0.jpg,290,16,Cobra,imperfect
-IMG_20251028_152031_jpg.rf.e673c00ed6c20c6a99659852d13c31ed.jpg,290,16,Cobra,perfect
-IMG_20251028_152423_jpg.rf.6c8de4dad8c1ce68fc681fd0e9405f8b.jpg,500,20,Pocari,perfect
-IMG_20251028_152434_jpg.rf.9aaf5da234fc2097ea7fb869ef4bcef3.jpg,500,20,Pocari,imperfect
-IMG_20251028_152631_jpg.rf.6e2145a4cec246971e4883dc9ea59cb7.jpg,500,20,Pocari,imperfect
-IMG_20251028_153027_jpg.rf.6350208e2319eac4d99c7f06f0c132bb.jpg,1000,25,Nature Spring,perfect
-IMG_20251028_153326_jpg.rf.da0db39ce9cca26cd747e97e6bc5de54.jpg,500,20,Nature Spring,perfect
-IMG_20251028_153508_jpg.rf.4e5d218f8a22000caefa55630694c2d7.jpg,500,20,Nature Spring,imperfect
-IMG_20251028_154001_jpg.rf.1f8e79aaa66ef7a56d528948e566ccec.jpg,1000,25,Summit,imperfect
-IMG_20251028_154112_jpg.rf.03bc7309bb9cadac0b81845249795a7c.jpg,500,20,Summit,imperfect
-IMG_20251028_154139_jpg.rf.3c84ae11165fbcf2960a3b8ace277bb3.jpg,500,20,Summit,imperfect
+IMG_20251028_141943_jpg.rf.b2f66624d896f5b04f224b37c53611d6.jpg,190,15,Coca-Cola,perfect,red,transparent,nodamage
+IMG_20251028_142652_jpg.rf.38133c872be7fd821f19b32cbe201875.jpg,500,20,Coca-Cola,imperfect,red,transparent,damage
+IMG_20251028_143324_jpg.rf.2c7f62a387f98e0969ba182ab8b38613.jpg,390,18,Coca-Cola,perfect,red,transparent,damage
+IMG_20251028_144436_jpg.rf.cb7d59dbba5655eb465efcbb66614ab6.jpg,190,15,Sprite,perfect,green,transparent,nodamage
+IMG_20251028_144940_jpg.rf.eb9d951b557c0e2b64692bac39b3f032.jpg,390,18,Sprite,imperfect,green,transparent,nodamage
+IMG_20251028_145014_jpg.rf.09f0ab2aff5f21bff948f2ce39be6bf6.jpg,390,18,Sprite,perfect,green,transparent,damage
+IMG_20251028_145106_jpg.rf.9cc3ffb16cd9b5d1912d7e2e524504fa.jpg,390,18,Sprite,perfect,green,transparent,damage
+IMG_20251028_145213_jpg.rf.8d0943e61f7290c7d9fc8568f7ce1b3d.jpg,1500,27,Sprite,imperfect,green,transparent,nodamage
+IMG_20251028_145242_jpg.rf.5c0dc94dcc2168d58b9e5ecdd32b9573.jpg,1500,27,Sprite,perfect,green,transparent,damage
+IMG_20251028_145358_jpg.rf.26d2e1480707c718bedf8b4e41260772.jpg,1500,27,Sprite,perfect,green,transparent,nodamage
+IMG_20251028_145921_jpg.rf.6fefd1d24087295548e1165bbdda1f4d.jpg,390,18,Royal,perfect,royal-blue,transparent,damage
+IMG_20251028_150316_jpg.rf.f19532a7826f6711f295db0b76386932.jpg,296,17,7-UP,perfect,white,transparent,nodamage
+IMG_20251028_150435_jpg.rf.ec3222095b37367b19133fece014fb23.jpg,296,17,7-UP,imperfect,white,transparent,damage
+IMG_20251028_150611_jpg.rf.5693b59815e6d362295aa65c6d9b9c61.jpg,290,17,Mountain Dew,imperfect,black,green,nodamage
+IMG_20251028_150921_jpg.rf.d6f9a8e8f2e61eb03c249b4ce0e5df80.jpg,290,17,Sting,perfect,black,transparent,nodamage
+IMG_20251028_151006_jpg.rf.5beb3e2eae6a48b352c606df820934ce.jpg,290,17,Sting,perfect,black,transparent,damage
+IMG_20251028_151152_jpg.rf.bfcbdb957468ecde7f8eae7111d680a2.jpg,330,18,Cobra,perfect,black,transparent,nodamage
+IMG_20251028_151928_jpg.rf.aa7e7c3ad360551dcc383960982e1f58.jpg,290,16,Cobra,imperfect,black,transparent,nodamage
+IMG_20251028_152014_jpg.rf.6ffbb826b2b646fe29f374a47b5c61fd.jpg,290,16,Cobra,perfect,black,transparent,nodamage
+IMG_20251028_152022_jpg.rf.77d15582466146eb57b7cee29a6212f0.jpg,290,16,Cobra,imperfect,black,transparent,nodamage
+IMG_20251028_152031_jpg.rf.e673c00ed6c20c6a99659852d13c31ed.jpg,290,16,Cobra,perfect,black,transparent,nodamage
+IMG_20251028_152423_jpg.rf.6c8de4dad8c1ce68fc681fd0e9405f8b.jpg,500,20,Pocari,perfect,white,transparent,nodamage
+IMG_20251028_152434_jpg.rf.9aaf5da234fc2097ea7fb869ef4bcef3.jpg,500,20,Pocari,imperfect,white,transparent,nodamage
+IMG_20251028_152631_jpg.rf.6e2145a4cec246971e4883dc9ea59cb7.jpg,500,20,Pocari,imperfect,white,transparent,damage
+IMG_20251028_153027_jpg.rf.6350208e2319eac4d99c7f06f0c132bb.jpg,1000,25,Nature Spring,perfect,white,transparent,nodamage
+IMG_20251028_153326_jpg.rf.da0db39ce9cca26cd747e97e6bc5de54.jpg,500,20,Nature Spring,perfect,white,transparent,nodamage
+IMG_20251028_153508_jpg.rf.4e5d218f8a22000caefa55630694c2d7.jpg,500,20,Nature Spring,imperfect,white,transparent,damage
+IMG_20251028_154001_jpg.rf.1f8e79aaa66ef7a56d528948e566ccec.jpg,1000,25,Summit,imperfect,white,transparent,damage
+IMG_20251028_154112_jpg.rf.03bc7309bb9cadac0b81845249795a7c.jpg,500,20,Summit,imperfect,blue,transparent,damage
+IMG_20251028_154139_jpg.rf.3c84ae11165fbcf2960a3b8ace277bb3.jpg,500,20,Summit,imperfect,blue,transparent,damage
