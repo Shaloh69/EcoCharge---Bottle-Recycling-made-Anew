@@ -1,0 +1,31 @@
+{
+  "brand": {
+    "7-UP": 0,
+    "Cobra": 1,
+    "Coca-Cola": 2,
+    "Mountain Dew": 3,
+    "Natures Spring": 4,
+    "Pocari": 5,
+    "Royal": 6,
+    "Sprite": 7,
+    "Sting": 8,
+    "Summit": 9
+  },
+  "volume": {
+    "190": 0,
+    "237": 1,
+    "290": 2,
+    "296": 3,
+    "330": 4,
+    "350": 5,
+    "390": 6,
+    "500": 7,
+    "900": 8,
+    "1000": 9,
+    "1500": 10
+  },
+  "condition": {
+    "imperfect": 0,
+    "perfect": 1
+  }
+}
