@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /c/Projects/Thesis/2026/EcoCharge log --oneline --all -- esp/)"
+    ]
+  }
+}
