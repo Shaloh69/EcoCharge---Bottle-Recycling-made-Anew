@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git -C /c/Projects/Thesis/2026/EcoCharge log --oneline --all -- esp/)"
+      "Bash(git -C /c/Projects/Thesis/2026/EcoCharge log --oneline --all -- esp/)",
+      "Bash(grep -v '^[[:space:]]*$')",
+      "Bash(scripts/.venv/Scripts/python.exe -c \":*)",
+      "Bash(rm -rf esp/motor)",
+      "Bash(rm -f esp/ecocharge/src/motor_control.c esp/ecocharge/include/motor_control.h)",
+      "WebSearch",
+      "Bash(find /d/Projects-Shem/Thesis/2026/EcoCharge -type d -not -path */node_modules* -not -path */.next* -not -path */.dart_tool* -not -path */.git*)"
     ]
   }
 }

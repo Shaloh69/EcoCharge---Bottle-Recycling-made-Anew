@@ -55,6 +55,8 @@ BRAND_NORMALIZE = {
     "7-Up": "7-UP",
     "Pocari-Sweat": "Pocari",
     "Nature Spring": "Natures Spring",
+    "Nature-Spring": "Natures Spring",
+    "Mountain-Dew": "Mountain Dew",
 }
 
 
@@ -410,11 +412,13 @@ def main():
     test_filenames = set(p.name for p in (DATASET_DIR / "test" / "images").glob("*.jpg"))
 
     train_df = df[df["filename"].isin(train_filenames)].reset_index(drop=True)
-    val_df = df[df["filename"].isin(val_filenames | test_filenames)].reset_index(drop=True)
+    val_df = df[df["filename"].isin(val_filenames)].reset_index(drop=True)
+    test_df = df[df["filename"].isin(test_filenames)].reset_index(drop=True)
 
     print(f"\nSplits:")
     print(f"  Train: {len(train_df)} images with CSV labels")
     print(f"  Val:   {len(val_df)} images with CSV labels")
+    print(f"  Test:  {len(test_df)} images with CSV labels (holdout)")
 
     # Datasets
     train_tf, val_tf = get_transforms(args.imgsz)
@@ -423,6 +427,8 @@ def main():
     train_ds = BottleCropDataset(train_df, label_maps, transform=train_tf)
     print("Building val dataset...")
     val_ds = BottleCropDataset(val_df, label_maps, transform=val_tf)
+    print("Building test dataset...")
+    test_ds = BottleCropDataset(test_df, label_maps, transform=val_tf)
 
     if len(train_ds) == 0:
         print("ERROR: No training samples found. Check that CSV filenames match image files.")
@@ -437,6 +443,7 @@ def main():
 
     train_loader = DataLoader(train_ds, batch_size=args.batch, sampler=sampler, num_workers=4)
     val_loader = DataLoader(val_ds, batch_size=args.batch, shuffle=False, num_workers=4)
+    test_loader = DataLoader(test_ds, batch_size=args.batch, shuffle=False, num_workers=4)
 
     # Model
     model = BottleAttributeNet(
@@ -504,6 +511,17 @@ def main():
             f"cond: {train_accs['condition']:.3f}/{val_accs['condition']:.3f} | "
             f"lr: {lr:.6f}"
         )
+
+    # Evaluate on held-out test set using best weights
+    if len(test_ds) > 0:
+        checkpoint = torch.load(best_weights_path, map_location=device, weights_only=False)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        test_loss, test_accs = evaluate(model, test_loader, criterion, device)
+        print(f"\nTest set results (holdout):")
+        print(f"  loss:      {test_loss:.4f}")
+        print(f"  brand:     {test_accs['brand']:.3f}")
+        print(f"  volume:    {test_accs['volume']:.3f}")
+        print(f"  condition: {test_accs['condition']:.3f}")
 
     # Save final model
     final_path = OUTPUT_DIR / "last_classifier.pt"

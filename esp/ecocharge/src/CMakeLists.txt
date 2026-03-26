@@ -1,0 +1,28 @@
+idf_component_register(
+    SRCS
+        "main.c"
+        "conveyor_motor.c"
+        "relay_control.c"
+        "sensor_monitor.c"
+        "api_client.c"
+        "wifi_sta.c"
+        "web_server.c"
+        "wifi_ap.c"
+        "nvs_config.c"
+        "wifi_provision.c"
+    INCLUDE_DIRS
+        "."
+        "../include"
+    REQUIRES
+        driver
+        esp_adc
+        esp_http_client
+        esp_wifi
+        esp_event
+        esp_netif
+        nvs_flash
+        freertos
+        log
+        esp_driver_ledc
+        esp_timer
+)
