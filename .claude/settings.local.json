@@ -7,7 +7,21 @@
       "Bash(rm -rf esp/motor)",
       "Bash(rm -f esp/ecocharge/src/motor_control.c esp/ecocharge/include/motor_control.h)",
       "WebSearch",
-      "Bash(find /d/Projects-Shem/Thesis/2026/EcoCharge -type d -not -path */node_modules* -not -path */.next* -not -path */.dart_tool* -not -path */.git*)"
+      "Bash(find /d/Projects-Shem/Thesis/2026/EcoCharge -type d -not -path */node_modules* -not -path */.next* -not -path */.dart_tool* -not -path */.git*)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npm list:*)",
+      "Bash(flutter pub:*)",
+      "Bash(ls /c/flutter/bin/flutter*)",
+      "Read(//d/flutter/**)",
+      "Bash(echo $PATH)",
+      "Bash(export PATH=\"$PATH:/c/Users/Shaloh/OneDrive/Desktop/Projects/Flutter/flutter/bin\")",
+      "Bash(cmd.exe /c \"where flutter\")",
+      "Bash(cmd.exe /c \"flutter --version\")",
+      "Bash(cmd.exe /c \"echo %PATH%\")",
+      "Bash(tr ';' '\\\\n')",
+      "Bash(\"d:/Projects-Shem/Thesis/2026/EcoCharge/server/server_main/Procfile\")"
     ]
   }
 }

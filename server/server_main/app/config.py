@@ -5,17 +5,33 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class Config:
-    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-change-in-prod")
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
+def _build_db_url() -> str:
+    """Build DATABASE_URL, converting mysql:// scheme to mysql+pymysql:// if needed."""
+    url = os.environ.get(
         "DATABASE_URL",
         "mysql+pymysql://root:password@localhost:3306/ecocharge",
     )
+    # Aiven returns mysql:// — SQLAlchemy needs mysql+pymysql://
+    if url.startswith("mysql://"):
+        url = url.replace("mysql://", "mysql+pymysql://", 1)
+    return url
+
+
+def _build_engine_options() -> dict:
+    opts: dict = {"pool_recycle": 280, "pool_pre_ping": True}
+    ssl_ca = os.environ.get("DB_SSL_CA_PATH")
+    if ssl_ca:
+        opts["connect_args"] = {"ssl": {"ca": ssl_ca}}
+    elif os.environ.get("DB_SSL_REQUIRED", "").lower() in ("1", "true", "yes"):
+        opts["connect_args"] = {"ssl": {}}
+    return opts
+
+
+class Config:
+    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-change-in-prod")
+    SQLALCHEMY_DATABASE_URI = _build_db_url()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_recycle": 280,
-        "pool_pre_ping": True,
-    }
+    SQLALCHEMY_ENGINE_OPTIONS = _build_engine_options()
 
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "dev-jwt-secret-change-in-prod")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(
@@ -32,6 +48,11 @@ class Config:
 
     CREDITS_PER_BOTTLE = int(os.environ.get("CREDITS_PER_BOTTLE", 1))
     MINUTES_PER_CREDIT = int(os.environ.get("MINUTES_PER_CREDIT", 10))
+
+    # Supabase Storage
+    SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+    SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    SUPABASE_BUCKET = os.environ.get("SUPABASE_BUCKET", "ecocharge_bucket")
 
 
 class DevelopmentConfig(Config):

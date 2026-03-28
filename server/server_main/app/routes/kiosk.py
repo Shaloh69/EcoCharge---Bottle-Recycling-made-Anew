@@ -101,3 +101,81 @@ def record_deposit():
             "transaction": txn.to_dict(),
         }
     ), 201
+
+
+import time as _time
+
+# Temporary in-memory store for QR link sessions: token -> {user_id, session_id, expires}
+_qr_pending: dict = {}
+
+
+@kiosk_bp.post("/qr-link")
+@jwt_required()
+def qr_link():
+    """Flutter app calls this after scanning kiosk QR code."""
+    data = request.get_json(silent=True) or {}
+    session_token = data.get("session_token")
+    kiosk_id = data.get("kiosk_id")
+
+    if not session_token or not kiosk_id:
+        return jsonify({"error": "session_token and kiosk_id are required"}), 400
+
+    user = _get_current_user()
+    if not user:
+        return jsonify({"error": "user not found"}), 404
+
+    kiosk = Kiosk.query.get(int(kiosk_id))
+    if not kiosk:
+        return jsonify({"error": "kiosk not found"}), 404
+
+    # Create a kiosk session for this user
+    kiosk_session = KioskSession(user_id=user.id, kiosk_id=kiosk.id)
+    db.session.add(kiosk_session)
+    db.session.commit()
+
+    # Store in pending dict so qr-status can return it
+    _qr_pending[session_token] = {
+        "user_id": user.id,
+        "session_id": kiosk_session.id,
+        "user": user.to_dict(),
+        "expires": _time.time() + 300,
+    }
+
+    return jsonify({"session_id": kiosk_session.id, "kiosk": kiosk.to_dict()}), 201
+
+
+@kiosk_bp.get("/qr-status")
+def qr_status():
+    """Kiosk web polls this to know when phone has linked."""
+    token = request.args.get("token")
+    if not token:
+        return jsonify({"linked": False}), 200
+
+    # Clean up expired entries
+    now = _time.time()
+    expired = [k for k, v in _qr_pending.items() if v["expires"] < now]
+    for k in expired:
+        del _qr_pending[k]
+
+    entry = _qr_pending.get(token)
+    if not entry:
+        return jsonify({"linked": False}), 200
+
+    from flask_jwt_extended import create_access_token
+    access_token = create_access_token(identity=str(entry["user_id"]))
+    # Remove after first successful read
+    del _qr_pending[token]
+
+    return jsonify({
+        "linked": True,
+        "access_token": access_token,
+        "session_id": entry["session_id"],
+        "user": entry["user"],
+    })
+
+
+@kiosk_bp.get("/list")
+def list_kiosks_public():
+    """Public kiosk listing for the Flutter mobile app."""
+    kiosks = Kiosk.query.order_by(Kiosk.name).all()
+    return jsonify([k.to_dict() for k in kiosks])

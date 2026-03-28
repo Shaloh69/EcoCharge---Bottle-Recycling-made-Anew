@@ -1,4 +1,5 @@
 """Admin-only routes for the web console dashboard."""
+from datetime import datetime, timezone, timedelta
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..models.user import User
@@ -115,6 +116,53 @@ def list_users():
         return jsonify({"error": "admin only"}), 403
     users = User.query.order_by(User.created_at.desc()).limit(100).all()
     return jsonify([u.to_dict() for u in users])
+
+
+@admin_bp.get("/alerts")
+@jwt_required()
+def list_alerts():
+    if not _require_admin():
+        return jsonify({"error": "admin only"}), 403
+    alerts = []
+    # Offline kiosks (not seen in last 2 minutes)
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=2)
+    for k in Kiosk.query.all():
+        if k.last_seen_at and k.last_seen_at.replace(tzinfo=timezone.utc) < cutoff:
+            alerts.append({"type": "offline", "kiosk_id": k.id, "kiosk_name": k.name,
+                           "message": f"{k.name} has gone offline", "severity": "error",
+                           "timestamp": k.last_seen_at.isoformat()})
+    # High bin levels from latest telemetry
+    for k in Kiosk.query.all():
+        latest = (DeviceTelemetry.query.filter_by(kiosk_id=k.id)
+                  .order_by(DeviceTelemetry.timestamp.desc()).first())
+        if latest and latest.bin_level is not None and latest.bin_level >= 80:
+            alerts.append({"type": "bin_full", "kiosk_id": k.id, "kiosk_name": k.name,
+                           "message": f"{k.name} bin at {latest.bin_level}%",
+                           "severity": "warning" if latest.bin_level < 95 else "error",
+                           "timestamp": latest.timestamp.isoformat()})
+    alerts.sort(key=lambda a: a["timestamp"], reverse=True)
+    return jsonify(alerts)
+
+
+@admin_bp.get("/ml-review")
+@jwt_required()
+def ml_review():
+    """Deposits with low confidence that may need human review."""
+    if not _require_admin():
+        return jsonify({"error": "admin only"}), 403
+    threshold = request.args.get("threshold", 0.70, type=float)
+    page = request.args.get("page", 1, type=int)
+    deposits = (BottleDeposit.query
+                .filter(BottleDeposit.confidence < threshold)
+                .order_by(BottleDeposit.timestamp.desc())
+                .paginate(page=page, per_page=50, error_out=False))
+    return jsonify({
+        "deposits": [d.to_dict() for d in deposits.items],
+        "total": deposits.total,
+        "pages": deposits.pages,
+        "page": deposits.page,
+        "threshold": threshold,
+    })
 
 
 @admin_bp.get("/overview")

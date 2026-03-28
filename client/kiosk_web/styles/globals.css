@@ -1,12 +1,15 @@
 @import "tailwindcss";
-
 @plugin '../hero.ts';
-
 @source '../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
-
 @custom-variant dark (&:is(.dark *));
-
 @theme {
-    --font-sans: "font", sans-serif;
-    --font-mono: "monospace", monospace;
+  --font-sans: "Inter", sans-serif;
+  --font-mono: "Fira Code", monospace;
+  --color-eco-green: #1B5E20;
+  --color-eco-green-mid: #2E7D32;
+  --color-eco-green-light: #4CAF50;
+  --color-eco-amber: #F59E0B;
+  --color-eco-red: #DC2626;
 }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; padding: 0; }

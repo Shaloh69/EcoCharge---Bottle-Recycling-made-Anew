@@ -1,15 +1,18 @@
 from flask import Flask
+from flask_cors import CORS
 from .config import get_config
-from .extensions import db, migrate, jwt
+from .extensions import db, migrate, jwt, init_supabase
 
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(get_config())
+    CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
+    init_supabase(app.config["SUPABASE_URL"], app.config["SUPABASE_SERVICE_KEY"])
 
     with app.app_context():
         from .models import user, kiosk, session, bottle_deposit  # noqa: F401

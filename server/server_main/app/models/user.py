@@ -12,6 +12,7 @@ class User(db.Model):
     phone = db.Column(db.String(20), nullable=True)
     password_hash = db.Column(db.String(255), nullable=False)
     qr_code = db.Column(db.String(64), unique=True, nullable=True)
+    profile_picture_url = db.Column(db.String(512), nullable=True)
     credit_balance = db.Column(db.Integer, default=0, nullable=False)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(
@@ -39,6 +40,7 @@ class User(db.Model):
             "email": self.email,
             "phone": self.phone,
             "qr_code": self.qr_code,
+            "profile_picture_url": self.profile_picture_url,
             "credit_balance": self.credit_balance,
             "is_admin": self.is_admin,
             "created_at": self.created_at.isoformat(),

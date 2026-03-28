@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: ecocharge-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn run:app
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ecocharge-db
+          property: connectionString
+      - key: DEVICE_API_KEY
+        sync: false
+      - key: AI_SERVER_URL
+        sync: false
+      - key: AI_API_KEY
+        sync: false
+      - key: CREDITS_PER_BOTTLE
+        value: "1"
+      - key: MINUTES_PER_CREDIT
+        value: "10"
+
+databases:
+  - name: ecocharge-db
+    databaseName: ecocharge
+    user: ecocharge

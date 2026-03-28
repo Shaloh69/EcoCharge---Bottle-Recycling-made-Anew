@@ -23,7 +23,7 @@ COPY app/ ./app/
 RUN mkdir -p /app/models
 
 ENV AI_API_KEY=change-me
-ENV YOLO_WEIGHTS=/app/models/best_detector.pt
+ENV YOLO_WEIGHTS=/app/models/best.pt
 ENV CLASSIFIER_WEIGHTS=/app/models/best_classifier.pt
 ENV CONF_THRESHOLD=0.40
 

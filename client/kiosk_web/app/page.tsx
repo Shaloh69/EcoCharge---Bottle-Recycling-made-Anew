@@ -1,56 +1,29 @@
-import { Link } from "@heroui/link";
-import { Snippet } from "@heroui/snippet";
-import { Code } from "@heroui/code";
-import { button as buttonStyles } from "@heroui/theme";
+"use client";
+import { useRouter } from "next/navigation";
+import { MascotFull } from "@/components/kiosk/MascotDisplay";
 
-import { siteConfig } from "@/config/site";
-import { title, subtitle } from "@/components/primitives";
-import { GithubIcon } from "@/components/icons";
-
-export default function Home() {
+export default function SplashPage() {
+  const router = useRouter();
   return (
-    <section className="flex flex-col items-center justify-center gap-4 py-8 md:py-10">
-      <div className="inline-block max-w-xl text-center justify-center">
-        <span className={title()}>Make&nbsp;</span>
-        <span className={title({ color: "violet" })}>beautiful&nbsp;</span>
-        <br />
-        <span className={title()}>
-          websites regardless of your design experience.
-        </span>
-        <div className={subtitle({ class: "mt-4" })}>
-          Beautiful, fast and modern React UI library.
+    <div className="min-h-screen flex flex-col items-center justify-between py-12 px-6"
+      style={{ backgroundColor: "#1B5E20" }}>
+      <div className="flex items-center gap-2">
+        <span className="text-3xl">🌿</span>
+        <span className="text-white text-2xl font-bold">EcoCharge</span>
+      </div>
+      <div className="flex flex-col items-center gap-8">
+        <MascotFull mood="idle" />
+        <div className="text-center">
+          <h1 className="text-white text-4xl font-bold mb-2">Welcome</h1>
+          <p className="text-white/70 text-lg">Recycle bottles. Earn charging credits.</p>
         </div>
       </div>
-
-      <div className="flex gap-3">
-        <Link
-          isExternal
-          className={buttonStyles({
-            color: "primary",
-            radius: "full",
-            variant: "shadow",
-          })}
-          href={siteConfig.links.docs}
-        >
-          Documentation
-        </Link>
-        <Link
-          isExternal
-          className={buttonStyles({ variant: "bordered", radius: "full" })}
-          href={siteConfig.links.github}
-        >
-          <GithubIcon size={20} />
-          GitHub
-        </Link>
-      </div>
-
-      <div className="mt-8">
-        <Snippet hideCopyButton hideSymbol variant="bordered">
-          <span>
-            Get started by editing <Code color="primary">app/page.tsx</Code>
-          </span>
-        </Snippet>
-      </div>
-    </section>
+      <button
+        onClick={() => router.push("/auth")}
+        className="w-full max-w-sm py-5 rounded-2xl bg-white text-green-800 text-xl font-bold shadow-xl hover:bg-green-50 transition-colors active:scale-95"
+      >
+        Touch to Proceed
+      </button>
+    </div>
   );
 }
