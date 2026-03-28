@@ -1,4 +1,4 @@
-import express from 'express'
+import express, { Request, Response } from 'express'
 import cors from 'cors'
 import { config } from './config'
 import { errorHandler } from './middleware/errorHandler'
@@ -14,7 +14,7 @@ app.use(cors({ origin: '*', credentials: true }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
-app.get('/health', (_req, res) => res.json({ status: 'ok' }))
+app.get('/health', (_req: Request, res: Response) => res.json({ status: 'ok' }))
 
 app.use('/api/auth', authRouter)
 app.use('/api/users', usersRouter)
