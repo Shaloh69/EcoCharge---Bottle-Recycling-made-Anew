@@ -217,6 +217,12 @@ class ApiService {
     });
   }
 
+  // ── Charging ──────────────────────────────────────────────────────────────
+
+  static Future<void> stopCharging(int sessionId) async {
+    await _post('/api/charging/stop/$sessionId', {});
+  }
+
   // ── Avatar ────────────────────────────────────────────────────────────────
 
   static Future<String> uploadAvatar(File imageFile) async {

@@ -49,6 +49,12 @@ export const admin = {
   alerts:         () => req<Alert[]>("/api/admin/alerts"),
   mlReview:       (page = 1, threshold = 0.70) =>
     req<Paginated<Deposit>>(`/api/admin/ml-review?page=${page}&threshold=${threshold}`),
+  settings:       () => req<Record<string, string>>("/api/admin/settings"),
+  saveSettings:   (body: Record<string, string>) =>
+    req<Record<string, string>>("/api/admin/settings", {
+      method: "PUT", body: JSON.stringify(body),
+    }),
+  analytics:      () => req<Analytics>("/api/admin/analytics"),
 };
 
 // ── types ────────────────────────────────────────────────────────────────────
@@ -91,4 +97,45 @@ export interface Overview {
 export interface Paginated<T> {
   items?: T[]; deposits?: T[]; sessions?: T[]; transactions?: T[];
   total: number; pages: number; page: number;
+}
+export interface Analytics {
+  days: Array<{
+    date: string;
+    kwh_consumed: number;
+    credits_issued: number;
+    gain_loss_php: number;
+  }>;
+}
+export interface TelemetryPort {
+  port: number;
+  current_a: number;
+  voltage_v: number;
+  relay_on: boolean;
+}
+export interface SseEvent {
+  type: "telemetry" | "overview";
+  kioskId?: number;
+  portData?: TelemetryPort[];
+  binLevel?: number;
+  // overview fields:
+  total_users?: number;
+  total_deposits?: number;
+  active_charging?: number;
+  total_credits_earned?: number;
+  kiosks_online?: number;
+}
+
+// ── SSE helper ───────────────────────────────────────────────────────────────
+export function openAdminSSE(
+  onEvent: (event: SseEvent) => void,
+  onError?: () => void
+): () => void {
+  const token = auth.getToken();
+  const API = process.env.NEXT_PUBLIC_API_URL ?? "";
+  const es = new EventSource(`${API}/api/admin/sse?token=${token ?? ""}`);
+  es.onmessage = (e) => {
+    try { onEvent(JSON.parse(e.data) as SseEvent); } catch { /* ignore */ }
+  };
+  if (onError) es.onerror = onError;
+  return () => es.close();
 }

@@ -1,0 +1,178 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                Int      @id @default(autoincrement())
+  name              String   @db.VarChar(120)
+  email             String   @unique @db.VarChar(255)
+  phone             String?  @db.VarChar(20)
+  passwordHash      String   @map("password_hash") @db.VarChar(255)
+  qrCode            String?  @unique @map("qr_code") @db.VarChar(64)
+  profilePictureUrl String?  @map("profile_picture_url") @db.VarChar(512)
+  creditBalance     Int      @default(0) @map("credit_balance")
+  isAdmin           Boolean  @default(false) @map("is_admin")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  sessions           KioskSession[]
+  creditTransactions CreditTransaction[]
+  chargingSessions   ChargingSession[]
+
+  @@map("users")
+}
+
+model Kiosk {
+  id          Int         @id @default(autoincrement())
+  name        String      @db.VarChar(120)
+  location    String?     @db.VarChar(255)
+  apiKey      String      @unique @map("api_key") @db.VarChar(64)
+  status      KioskStatus @default(offline)
+  lastSeenAt  DateTime?   @map("last_seen_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  sessions         KioskSession[]
+  deviceCommands   DeviceCommand[]
+  deviceTelemetry  DeviceTelemetry[]
+  chargingSessions ChargingSession[]
+
+  @@map("kiosks")
+}
+
+enum KioskStatus {
+  online
+  offline
+  error
+}
+
+model KioskSession {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  kioskId   Int       @map("kiosk_id")
+  startedAt DateTime  @default(now()) @map("started_at")
+  endedAt   DateTime? @map("ended_at")
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kiosk    Kiosk           @relation(fields: [kioskId], references: [id], onDelete: Cascade)
+  deposits BottleDeposit[]
+
+  @@index([userId])
+  @@index([kioskId])
+  @@map("sessions")
+}
+
+model BottleDeposit {
+  id             Int              @id @default(autoincrement())
+  sessionId      Int              @map("session_id")
+  brand          String?          @db.VarChar(60)
+  volumeMl       Int?             @map("volume_ml")
+  condition      BottleCondition?
+  confidence     Float?
+  creditsAwarded Int              @default(0) @map("credits_awarded")
+  timestamp      DateTime         @default(now())
+
+  session KioskSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("bottle_deposits")
+}
+
+enum BottleCondition {
+  perfect
+  imperfect
+}
+
+model CreditTransaction {
+  id           Int             @id @default(autoincrement())
+  userId       Int             @map("user_id")
+  type         TransactionType
+  amount       Int
+  balanceAfter Int             @map("balance_after")
+  refType      String?         @map("ref_type") @db.VarChar(60)
+  refId        Int?            @map("ref_id")
+  timestamp    DateTime        @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("credit_transactions")
+}
+
+enum TransactionType {
+  EARN
+  SPEND
+}
+
+model ChargingSession {
+  id              Int                   @id @default(autoincrement())
+  userId          Int                   @map("user_id")
+  kioskId         Int                   @map("kiosk_id")
+  portNumber      Int                   @map("port_number")
+  creditsUsed     Int                   @map("credits_used")
+  durationSeconds Int                   @map("duration_seconds")
+  wattSnapshot    Float?                @map("watt_snapshot")
+  startedAt       DateTime              @default(now()) @map("started_at")
+  endedAt         DateTime?             @map("ended_at")
+  status          ChargingSessionStatus @default(active)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kiosk Kiosk @relation(fields: [kioskId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([kioskId])
+  @@map("charging_sessions")
+}
+
+enum ChargingSessionStatus {
+  active
+  completed
+  interrupted
+  error
+}
+
+model DeviceCommand {
+  id          Int           @id @default(autoincrement())
+  kioskId     Int           @map("kiosk_id")
+  commandType String        @map("command_type") @db.VarChar(60)
+  payload     String?       @db.Text
+  status      CommandStatus @default(PENDING)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  ackedAt     DateTime?     @map("acked_at")
+
+  kiosk Kiosk @relation(fields: [kioskId], references: [id], onDelete: Cascade)
+
+  @@index([kioskId])
+  @@index([status])
+  @@map("device_commands")
+}
+
+enum CommandStatus {
+  PENDING
+  ACKED
+  FAILED
+}
+
+model DeviceTelemetry {
+  id        Int      @id @default(autoincrement())
+  kioskId   Int      @map("kiosk_id")
+  portData  String?  @map("port_data") @db.Text
+  binLevel  Int?     @map("bin_level")
+  timestamp DateTime @default(now())
+
+  kiosk Kiosk @relation(fields: [kioskId], references: [id], onDelete: Cascade)
+
+  @@index([kioskId])
+  @@map("device_telemetry")
+}
+
+model SystemSetting {
+  key       String   @id @db.VarChar(60)
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}

@@ -11,7 +11,7 @@ class BottleDeposit(db.Model):
     )
     brand = db.Column(db.String(60), nullable=True)
     volume_ml = db.Column(db.Integer, nullable=True)
-    condition = db.Column(db.Enum("perfect", "imperfect"), nullable=True)
+    condition = db.Column("condition", db.Enum("perfect", "imperfect"), nullable=True)
     confidence = db.Column(db.Float, nullable=True)
     credits_awarded = db.Column(db.Integer, default=0, nullable=False)
     timestamp = db.Column(

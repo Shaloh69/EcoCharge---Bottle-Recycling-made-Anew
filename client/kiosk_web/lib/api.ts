@@ -95,6 +95,22 @@ export async function detectBottle(imageBlob: Blob): Promise<DetectionResult> {
   return res.json();
 }
 
+// ── SSE ──────────────────────────────────────────────────────────────────────
+export function openKioskSSE(
+  kioskId: number,
+  onEvent: (event: { portData?: Array<{ port: number; current_a: number; voltage_v: number; relay_on: boolean }>; activePorts?: number[]; binLevel?: number }) => void,
+  onError?: () => void
+): () => void {
+  const tok = typeof window !== "undefined" ? sessionStorage.getItem("token") : null;
+  const url = `${API}/api/kiosk/${kioskId}/sse${tok ? `?token=${tok}` : ""}`;
+  const es = new EventSource(url);
+  es.onmessage = (e) => {
+    try { onEvent(JSON.parse(e.data)); } catch { /* ignore */ }
+  };
+  if (onError) es.onerror = onError;
+  return () => es.close();
+}
+
 // ── types ────────────────────────────────────────────────────────────────────
 export interface User {
   id: number; name: string; email: string; phone?: string;

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/services/api_service.dart';
 import 'package:flutter_app/theme/app_theme.dart';
@@ -13,6 +14,8 @@ class _CreditBalanceScreenState extends State<CreditBalanceScreen> {
   ApiUser? _user;
   List<ApiTransaction> _transactions = [];
   bool _loading = true;
+  Timer? _refreshTimer;
+  DateTime? _lastUpdated;
 
   @override
   void initState() {
@@ -23,11 +26,39 @@ class _CreditBalanceScreenState extends State<CreditBalanceScreen> {
           _user = results[0] as ApiUser;
           _transactions = results[1] as List<ApiTransaction>;
           _loading = false;
+          _lastUpdated = DateTime.now();
         });
       }
     }).catchError((_) {
       if (mounted) setState(() => _loading = false);
     });
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshTransactions());
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshTransactions() async {
+    try {
+      final transactions = await ApiService.getMyTransactions();
+      if (mounted) {
+        setState(() {
+          _transactions = transactions;
+          _lastUpdated = DateTime.now();
+        });
+      }
+    } catch (_) {}
+  }
+
+  String get _lastUpdatedLabel {
+    if (_lastUpdated == null) return '';
+    final h = _lastUpdated!.hour.toString().padLeft(2, '0');
+    final m = _lastUpdated!.minute.toString().padLeft(2, '0');
+    final s = _lastUpdated!.second.toString().padLeft(2, '0');
+    return 'Last updated $h:$m:$s';
   }
 
   @override
@@ -55,7 +86,17 @@ class _CreditBalanceScreenState extends State<CreditBalanceScreen> {
                   ]),
                 ),
                 const SizedBox(height: 16),
-                const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Align(alignment: Alignment.centerLeft, child: Text('Transaction History', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)))),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Transaction History', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      if (_lastUpdated != null)
+                        Text(_lastUpdatedLabel, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Expanded(child: _transactions.isEmpty
                     ? const Center(child: Text('No transactions yet', style: TextStyle(color: Colors.grey)))

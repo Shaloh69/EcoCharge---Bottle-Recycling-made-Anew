@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_app/theme/app_theme.dart';
@@ -15,11 +16,26 @@ class _HomeScreenState extends State<HomeScreen> {
   List<ApiDeposit> _deposits = [];
   List<ApiKiosk> _kiosks = [];
   bool _loading = true;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshBalance());
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshBalance() async {
+    try {
+      final user = await ApiService.getMe();
+      if (mounted) setState(() => _user = user);
+    } catch (_) {}
   }
 
   Future<void> _load() async {

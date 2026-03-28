@@ -11,6 +11,7 @@ import 'package:flutter_app/screens/history/deposit_history_screen.dart';
 import 'package:flutter_app/screens/credits/credit_balance_screen.dart';
 import 'package:flutter_app/screens/kiosks/kiosk_list_screen.dart';
 import 'package:flutter_app/screens/profile/profile_screen.dart';
+import 'package:flutter_app/screens/charging/charging_screen.dart';
 
 void main() => runApp(const EcoChargeApp());
 
@@ -22,6 +23,17 @@ final _router = GoRouter(
     GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
     GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
     GoRoute(path: '/scan', builder: (_, __) => const ScanKioskScreen()),
+    GoRoute(
+      path: '/charging',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>? ?? {};
+        return ChargingScreen(
+          sessionId: extra['sessionId'] as int? ?? 0,
+          durationSeconds: extra['durationSeconds'] as int? ?? 600,
+          portNumber: extra['portNumber'] as int? ?? 1,
+        );
+      },
+    ),
     ShellRoute(
       builder: (context, state, child) => MainShell(child: child),
       routes: [

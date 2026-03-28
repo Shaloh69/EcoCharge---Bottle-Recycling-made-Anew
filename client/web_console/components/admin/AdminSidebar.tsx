@@ -12,6 +12,7 @@ const navItems = [
   { href: "/dashboard/users", label: "Users", icon: "👥" },
   { href: "/dashboard/alerts", label: "Alerts", icon: "🔔" },
   { href: "/dashboard/ml-review", label: "ML Review", icon: "🤖" },
+  { href: "/dashboard/analytics", label: "Analytics", icon: "📈" },
   { href: "/dashboard/settings", label: "Settings", icon: "⚙️" },
 ];
 

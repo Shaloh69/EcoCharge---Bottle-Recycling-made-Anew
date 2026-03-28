@@ -1,31 +1,54 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { KioskHeader } from "@/components/kiosk/KioskHeader";
 import { BackButton } from "@/components/kiosk/BackButton";
-import { charging, session, type ChargingSession } from "@/lib/api";
+import { charging, openKioskSSE, type ChargingSession } from "@/lib/api";
 
 const KIOSK_ID = parseInt(process.env.NEXT_PUBLIC_KIOSK_ID ?? "1");
 
 export default function ChargingPage() {
   const router = useRouter();
   const [selected, setSelected] = useState<number | null>(null);
-  const [activeSessions, setActiveSessions] = useState<ChargingSession[]>([]);
+  const [activePorts, setActivePorts] = useState<number[]>([]);
+  const [live, setLive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const closeRef = useRef<(() => void) | null>(null);
 
   const deposit = typeof window !== "undefined"
     ? JSON.parse(sessionStorage.getItem("lastDeposit") ?? "{}")
     : {};
 
   useEffect(() => {
-    charging.active().then(setActiveSessions).catch(() => {});
+    // Initial fetch for port state
+    charging.active().then((sessions: ChargingSession[]) => {
+      setActivePorts(sessions.map((s: ChargingSession) => s.port_number));
+    }).catch(() => {});
+
+    // SSE live updates
+    closeRef.current = openKioskSSE(
+      KIOSK_ID,
+      (event) => {
+        setLive(true);
+        if (event.activePorts != null) {
+          setActivePorts(event.activePorts);
+          // Deselect if selected port just became occupied
+          setSelected(prev =>
+            prev != null && event.activePorts!.includes(prev) ? null : prev
+          );
+        }
+      },
+      () => setLive(false),
+    );
+
+    return () => closeRef.current?.();
   }, []);
 
   const ports = [1, 2, 3, 4].map(id => ({
     id,
     type: id % 2 === 0 ? "USB-C" : "USB-A",
-    status: activeSessions.some(s => s.port_number === id) ? "in-use" : "available",
+    inUse: activePorts.includes(id),
   }));
 
   const handleConfirm = async () => {
@@ -51,19 +74,30 @@ export default function ChargingPage() {
           <p className="text-gray-800 text-2xl font-bold">
             {deposit.brand ?? "Bottle"} · {deposit.volume_ml ?? "?"}ml
           </p>
-          <p className="text-gray-500 text-sm mt-2">Time Credit Earned</p>
-          <p className="text-green-700 text-3xl font-bold">10 min</p>
+          <p className="text-gray-500 text-sm mt-2">Credits Earned</p>
+          <p className="text-green-700 text-3xl font-bold">
+            {deposit.credits_awarded ?? 1} credit{(deposit.credits_awarded ?? 1) !== 1 ? "s" : ""}
+          </p>
         </div>
 
-        <h3 className="text-white text-xl font-semibold">Select Charging Outlet</h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-white text-xl font-semibold">Select Charging Outlet</h3>
+          {live && (
+            <span className="flex items-center gap-1 text-xs text-green-200 font-semibold bg-green-900 bg-opacity-50 px-2 py-1 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              LIVE
+            </span>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
           {ports.map(port => (
             <button
               key={port.id}
-              disabled={port.status === "in-use"}
+              disabled={port.inUse}
               onClick={() => setSelected(port.id)}
               className={`rounded-2xl p-5 flex flex-col items-center gap-2 shadow transition-all active:scale-95 ${
-                port.status === "in-use"
+                port.inUse
                   ? "bg-gray-200 opacity-50 cursor-not-allowed"
                   : selected === port.id
                     ? "bg-green-600 text-white"
@@ -75,12 +109,12 @@ export default function ChargingPage() {
               <span className="text-xs">{port.type}</span>
               <span
                 className={`text-xs px-2 py-0.5 rounded-full ${
-                  port.status === "in-use"
+                  port.inUse
                     ? "bg-red-100 text-red-600"
                     : "bg-green-100 text-green-700"
                 }`}
               >
-                {port.status === "in-use" ? "In Use" : "Available"}
+                {port.inUse ? "In Use" : "Available"}
               </span>
             </button>
           ))}
