@@ -1,8 +1,22 @@
-# EcoCharge — Self-Hosting AI Inference Server (Philippines)
+# EcoCharge — Complete Setup & Self-Hosting Guide (Philippines)
 
-**Last updated:** 2026-03-25
+**Last updated:** 2026-03-31
 **Target:** Windows 11 PC, Philippine residential internet connection
-**Goal:** Expose the FastAPI AI inference server (`server/server_AI/`) to the internet so the kiosk and ESP32 can reach it — free, stable, and HTTPS.
+**Goal:** Train the AI models from scratch, then expose the FastAPI inference server to the internet so the kiosk and ESP32 can reach it — free, stable, and HTTPS.
+
+---
+
+## Table of Contents
+
+1. [Prerequisites](#prerequisites)
+2. [Part 0 — Dataset](#part-0--dataset)
+3. [Part 1 — Train the Models](#part-1--train-the-models)
+4. [Part 2 — Run the AI Server](#part-2--run-the-ai-server)
+5. [Part 3 — Expose via Cloudflare Tunnel](#part-3--expose-via-cloudflare-tunnel)
+6. [Part 4 — Keep Everything Running](#part-4--keep-everything-running-auto-restart)
+7. [Part 5 — Update ESP32 Firmware](#part-5--update-esp32-firmware)
+8. [Part 6 — Demo Day Prep](#part-6--demo-day-prep)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -20,46 +34,239 @@ For a thesis demo: self-hosting is free, fast, and gives you full control.
 
 ---
 
-## Philippine ISP Reality Check
+## Prerequisites
 
-### Check if you are behind CGNAT first
+### Required software
 
-1. Go to `https://whatismyip.com` — note the public IP shown
-2. Log into your router (usually `192.168.1.1`) — check the WAN IP
-3. **If they match** → you have a real public IP (port forwarding works)
-4. **If they differ** → you are behind CGNAT (port forwarding is useless)
+- **Python 3.10 or 3.11** — download from `https://python.org`. During install, check **"Add Python to PATH"**.
+- **Git** — `https://git-scm.com`
+- **CUDA Toolkit 11.8 or 12.1** (optional, for GPU training) — only if you have an NVIDIA GPU. Download from NVIDIA's developer site. Verify with `nvidia-smi` in a terminal.
 
-| ISP | Typical Situation |
-|-----|------------------|
-| PLDT Fibr | Real dynamic public IP — port forwarding works |
-| Globe At Home Fibr/Air | CGNAT common — port forwarding likely fails |
-| Converge FiberX | Real dynamic public IP — port forwarding works |
-| Globe/Smart LTE | CGNAT always — use tunnel |
+### Verify Python is installed
 
-**Regardless of ISP: use Cloudflare Tunnel.** It works with CGNAT, no port forwarding needed, free, and gives automatic HTTPS. It is strictly simpler than any port-forwarding approach.
+```bash
+python --version   # Should print Python 3.10.x or 3.11.x
+pip --version
+```
+
+### Project root
+
+All commands in this guide assume you are at the project root unless stated otherwise:
+
+```bash
+cd d:/Projects-Shem/Thesis/2026/EcoCharge
+```
 
 ---
 
-## Part 1 — Run the AI Server Locally
+## Part 0 — Dataset
 
-### Step 1: Install dependencies
+The training scripts expect the dataset at `scripts/dataset/Eco-Charge.v1/` with this structure:
+
+```
+scripts/dataset/Eco-Charge.v1/
+├── data.yaml
+├── bottle_measurements.csv        ← required for classifier
+├── train/
+│   ├── images/   (*.jpg)
+│   └── labels/   (*.txt, YOLO format)
+├── valid/
+│   ├── images/
+│   └── labels/
+└── test/
+    ├── images/
+    └── labels/
+```
+
+### Download from Roboflow
+
+The dataset was annotated and exported from Roboflow. To re-download it:
+
+1. Log in to Roboflow and open the **Eco-Charge** project.
+2. Click **Export Dataset** → Format: **YOLOv8** → **Download zip to computer**.
+3. Extract the zip into `scripts/dataset/Eco-Charge.v1/`.
+
+> If you don't have Roboflow access, use the copy already in `scripts/dataset/Eco-Charge.v1/` (committed to the repo, minus the images which are in `.gitignore`).
+
+### `bottle_measurements.csv`
+
+This CSV maps each image filename to its bottle attributes (brand, volume_ml, height_cm, condition). It must live at `scripts/dataset/Eco-Charge.v1/bottle_measurements.csv`. It is already committed to the repo.
+
+---
+
+## Part 1 — Train the Models
+
+Training uses a **separate virtual environment** from the server. This keeps heavy GPU packages (PyTorch, OpenCV) out of the server's slim environment.
+
+### Step 1: Create the training venv
 
 ```bash
-cd d:/Projects-Shem/Thesis/2026/EcoCharge/server/server_AI
+cd d:/Projects-Shem/Thesis/2026/EcoCharge/scripts
+python -m venv .venv
+```
+
+### Step 2: Activate the venv
+
+```bash
+# In PowerShell:
+.venv\Scripts\Activate.ps1
+
+# In cmd / Git Bash:
+.venv\Scripts\activate
+```
+
+Your prompt will show `(.venv)` when active.
+
+### Step 3: Install training dependencies
+
+```bash
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### Step 2: Copy model weights
+For GPU training, install PyTorch with CUDA **before** running the above (replace `cu121` with your CUDA version):
 
 ```bash
-# From project root
-copy runs\classifier\best_classifier.pt server\server_AI\models\best_classifier.pt
-copy runs\detect\ecocharge_bottle_det\weights\best.pt server\server_AI\models\best.pt
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+pip install -r requirements.txt
 ```
 
-### Step 3: Set environment variables
+Verify GPU is available:
 
-Create `server/server_AI/.env`:
+```bash
+python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU only')"
+```
+
+### Step 4: Train the YOLO bottle detector
+
+From the `scripts/` directory (with `.venv` active):
+
+```bash
+cd d:/Projects-Shem/Thesis/2026/EcoCharge
+python scripts/train_yolo.py
+```
+
+Default settings: `yolo26n`, 100 epochs, batch 16, 640px. The script:
+1. Validates the dataset structure
+2. Downloads the pretrained `yolo26n.pt` weights (first run only, ~6 MB)
+3. Trains and saves checkpoints every 10 epochs
+4. Evaluates on the test split when done
+
+**Common overrides:**
+
+```bash
+# Larger model (more accurate, slower)
+python scripts/train_yolo.py --model yolo26s
+
+# More epochs
+python scripts/train_yolo.py --epochs 200
+
+# Smaller batch if VRAM is limited
+python scripts/train_yolo.py --batch 8
+
+# Resume from a checkpoint
+python scripts/train_yolo.py --resume runs/detect/ecocharge_bottle_det/weights/last.pt
+
+# Force CPU
+python scripts/train_yolo.py --device cpu
+```
+
+**Output location:**
+
+```
+runs/detect/ecocharge_bottle_det/
+├── weights/
+│   ├── best.pt    ← use this one
+│   └── last.pt
+└── results.csv, confusion_matrix.png, ...
+```
+
+Training takes ~15–30 minutes on an RTX 3050 (100 epochs, yolo26n). CPU-only training takes several hours.
+
+### Step 5: Train the bottle attribute classifier
+
+The classifier (EfficientNet-B0) predicts **brand, volume, and condition** from cropped bottle images. It requires the YOLO dataset labels to be present (for bounding box crops) **and** `bottle_measurements.csv`.
+
+```bash
+python scripts/train_bottle_classifier.py
+```
+
+**Common overrides:**
+
+```bash
+# More epochs (default: 30)
+python scripts/train_bottle_classifier.py --epochs 50
+
+# Smaller batch for low VRAM
+python scripts/train_bottle_classifier.py --batch 8
+
+# Use ResNet-18 instead of EfficientNet-B0 (faster, less accurate)
+python scripts/train_bottle_classifier.py --backbone resnet18
+```
+
+**Output location:**
+
+```
+runs/classifier/
+├── best_classifier.pt    ← use this one
+├── last_classifier.pt
+├── label_maps.json
+└── training_history.png
+```
+
+Training takes ~5–10 minutes on GPU (30 epochs, EfficientNet-B0).
+
+---
+
+## Part 2 — Run the AI Server
+
+The server has its own lightweight virtual environment — it doesn't need OpenCV or the full training stack.
+
+### Step 1: Create the server venv
+
+```bash
+cd d:/Projects-Shem/Thesis/2026/EcoCharge/server/server_AI
+python -m venv .venv
+```
+
+### Step 2: Activate and install dependencies
+
+```bash
+# PowerShell:
+.venv\Scripts\Activate.ps1
+
+# cmd / Git Bash:
+.venv\Scripts\activate
+
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+> For GPU inference, install PyTorch with CUDA first (same as training step above), then `pip install -r requirements.txt`.
+
+### Step 3: Copy model weights
+
+From the project root (after training is complete):
+
+```bash
+# Windows cmd:
+copy runs\classifier\best_classifier.pt server\server_AI\models\best_classifier.pt
+copy runs\detect\ecocharge_bottle_det\weights\best.pt server\server_AI\models\best.pt
+
+# Git Bash / PowerShell:
+cp runs/classifier/best_classifier.pt server/server_AI/models/best_classifier.pt
+cp runs/detect/ecocharge_bottle_det/weights/best.pt server/server_AI/models/best.pt
+```
+
+### Step 4: Set environment variables
+
+Create `server/server_AI/.env` (copy from the example):
+
+```bash
+copy server\server_AI\.env.example server\server_AI\.env
+```
+
+Then edit `server/server_AI/.env`:
 
 ```env
 AI_API_KEY=change-this-to-a-strong-random-key
@@ -69,11 +276,16 @@ CONF_THRESHOLD=0.40
 ```
 
 Generate a strong API key:
+
 ```bash
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-### Step 4: Test locally
+Paste the output as the value for `AI_API_KEY`.
+
+### Step 5: Test locally
+
+Make sure the server venv is active, then:
 
 ```bash
 cd server/server_AI
@@ -83,15 +295,38 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 Open `http://localhost:8000/health` — should return `{"status": "ok"}`.
 
 Test inference:
+
 ```bash
 curl -X POST http://localhost:8000/api/detect \
   -H "Authorization: Bearer your-api-key" \
   -F "file=@path/to/test_bottle.jpg"
 ```
 
+Press `Ctrl+C` to stop the server when done testing.
+
 ---
 
-## Part 2 — Expose via Cloudflare Tunnel
+## Part 3 — Expose via Cloudflare Tunnel
+
+### Philippine ISP Reality Check
+
+Check if you are behind CGNAT first:
+
+1. Go to `https://whatismyip.com` — note the public IP shown
+2. Log into your router (usually `192.168.1.1`) — check the WAN IP
+3. **If they match** → real public IP (port forwarding works)
+4. **If they differ** → CGNAT (port forwarding is useless)
+
+| ISP | Typical Situation |
+|-----|------------------|
+| PLDT Fibr | Real dynamic public IP — port forwarding works |
+| Globe At Home Fibr/Air | CGNAT common — port forwarding likely fails |
+| Converge FiberX | Real dynamic public IP — port forwarding works |
+| Globe/Smart LTE | CGNAT always — use tunnel |
+
+**Regardless of ISP: use Cloudflare Tunnel.** It works with CGNAT, no port forwarding needed, free, and gives automatic HTTPS.
+
+---
 
 Cloudflare Tunnel creates an outbound-only encrypted connection from your PC to Cloudflare's edge. You get a stable HTTPS URL with a valid TLS certificate — no port forwarding, no static IP needed.
 
@@ -105,7 +340,6 @@ Go to `https://cloudflare.com` and register. No domain required for a quick tunn
 
 ### Step 2: Install cloudflared on Windows
 
-Download the installer from the Cloudflare docs or run:
 ```powershell
 winget install Cloudflare.cloudflared
 ```
@@ -129,11 +363,10 @@ cloudflared tunnel create ecocharge-ai
 
 # Add DNS route (replace yourdomain.com with your actual domain)
 cloudflared tunnel route dns ecocharge-ai ai.yourdomain.com
-
-# Create config file at C:\Users\Shaloh\.cloudflared\config.yml
 ```
 
 Create `C:\Users\Shaloh\.cloudflared\config.yml`:
+
 ```yaml
 tunnel: ecocharge-ai
 credentials-file: C:\Users\Shaloh\.cloudflared\<tunnel-id>.json
@@ -145,6 +378,7 @@ ingress:
 ```
 
 Test it:
+
 ```bash
 cloudflared tunnel run ecocharge-ai
 ```
@@ -161,7 +395,7 @@ The tunnel now starts automatically when Windows boots and restarts on crash.
 
 ---
 
-## Part 3 — Keep the AI Server Running (Auto-Restart)
+## Part 4 — Keep Everything Running (Auto-Restart)
 
 Use **NSSM** (Non-Sucking Service Manager) to run Uvicorn as a Windows service that auto-restarts on crash and starts on boot.
 
@@ -171,16 +405,20 @@ Download from `https://nssm.cc/download` — no installer needed, just a `.exe`.
 
 ### Step 2: Create a startup script
 
-Create `server/server_AI/start.bat`:
+`server/server_AI/start.bat` already exists in the repo. Verify it matches your paths:
+
 ```bat
 @echo off
 cd /d d:\Projects-Shem\Thesis\2026\EcoCharge\server\server_AI
+call .venv\Scripts\activate
 set AI_API_KEY=your-strong-api-key
 set YOLO_WEIGHTS=models/best.pt
 set CLASSIFIER_WEIGHTS=models/best_classifier.pt
 set CONF_THRESHOLD=0.40
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
 ```
+
+Replace `your-strong-api-key` with the key you generated.
 
 ### Step 3: Register as Windows service
 
@@ -195,7 +433,7 @@ Now `uvicorn` runs as a Windows service, restarts on crash, and starts on every 
 
 ---
 
-## Part 4 — Update ESP32 Firmware
+## Part 5 — Update ESP32 Firmware
 
 Once the tunnel is running, update `esp/ecocharge/include/config.h`:
 
@@ -214,7 +452,7 @@ Reflash the ESP32 via PlatformIO (`pio run --target upload`).
 
 ---
 
-## Part 5 — Prepare for Demo Day
+## Part 6 — Demo Day Prep
 
 ### Windows settings
 
@@ -240,14 +478,13 @@ curl -X POST https://ai.yourdomain.com/api/detect \
 ### Mobile hotspot backup
 
 If your main internet fails mid-demo:
+
 1. Enable hotspot on your phone (Globe/Smart/DITO LTE)
 2. Connect your PC WiFi to the hotspot
-3. The Cloudflare Tunnel reconnects automatically (Cloudflare Tunnel uses outbound connections only)
+3. The Cloudflare Tunnel reconnects automatically (outbound connections only)
 4. Reprovision the ESP32 to connect to the same hotspot SSID via the captive portal
 
----
-
-## Hardware Recommendation: UPS
+### Hardware Recommendation: UPS
 
 Philippine brownouts are real. A basic UPS protects your demo from power interruptions.
 
@@ -256,7 +493,7 @@ Philippine brownouts are real. A basic UPS protects your demo from power interru
 | APC BX650LI | 650VA | ~10 min | PHP 2,500 |
 | CyberPower CP1000AVRLCD | 1000VA | ~15 min | PHP 3,500 |
 
-Plug the server PC and router into the UPS. 10 minutes is enough to outlast a brief interruption or gracefully shut down.
+Plug the server PC and router into the UPS.
 
 ---
 
@@ -314,7 +551,12 @@ sc stop cloudflared && sc start cloudflared
 |---------|-------------|-----|
 | `/health` returns 502 | Uvicorn not running | `nssm start EcoChargeAI`; check logs |
 | Tunnel URL unreachable | cloudflared service stopped | `sc start cloudflared` |
-| `torch.cuda.is_available()` = False | No NVIDIA GPU or wrong CUDA | Set `device=cpu` in inference.py; still works |
+| `torch.cuda.is_available()` = False | No NVIDIA GPU or wrong CUDA | Install PyTorch with correct CUDA version; or use CPU |
+| Training OOM (out of memory) | Batch size too large for VRAM | Add `--batch 8` or `--batch 4` |
+| `data.yaml not found` | Dataset not downloaded | Follow Part 0 — Dataset section |
+| `bottle_measurements.csv not found` | CSV missing from dataset dir | Check `scripts/dataset/Eco-Charge.v1/bottle_measurements.csv` |
+| `No training samples found` | CSV filenames don't match image files | Check filenames in CSV match the `.jpg` files in `train/images/` |
 | ESP32 TLS handshake error | Certificate validation | Set `esp_http_client_config_t.skip_cert_common_name_check = true` |
 | CORS error from kiosk browser | FastAPI CORS not configured | Add `CORSMiddleware` to `app/main.py` |
 | Inference takes >5s | Running on CPU, large image | Resize image to 640px before sending; expected on CPU |
+| `Activate.ps1 cannot be loaded` | PowerShell execution policy | Run: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |

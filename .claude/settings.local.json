@@ -50,7 +50,13 @@
       "Bash(cmd /c \"dart analyze d:\\\\Projects-Shem\\\\Thesis\\\\2026\\\\EcoCharge\\\\client\\\\flutter_app\\\\lib 2>&1\")",
       "Bash(cmd /c \"powershell -Command \"\"Get-Command flutter -ErrorAction SilentlyContinue | Select-Object Source\"\"\")",
       "Bash(cmd /c \"powershell -Command \"\"Get-Command dart -ErrorAction SilentlyContinue | Select-Object Source\"\"\")",
-      "Bash(cmd /c \"powershell -Command \"\"Get-ChildItem -Path C:\\\\,D:\\\\ -Recurse -Filter ''flutter.bat'' -ErrorAction SilentlyContinue -Depth 5 | Select-Object -First 3 FullName\"\" 2>&1\")"
+      "Bash(cmd /c \"powershell -Command \"\"Get-ChildItem -Path C:\\\\,D:\\\\ -Recurse -Filter ''flutter.bat'' -ErrorAction SilentlyContinue -Depth 5 | Select-Object -First 3 FullName\"\" 2>&1\")",
+      "Read(//c/Projects/Thesis/2026/EcoCharge/**)",
+      "Read(//d/Projects-Shem/Thesis/2026/EcoCharge/**)"
+    ],
+    "additionalDirectories": [
+      "C:\\Projects\\Thesis\\2026\\EcoCharge",
+      "D:\\Projects-Shem\\Thesis\\2026\\EcoCharge"
     ]
   }
 }
