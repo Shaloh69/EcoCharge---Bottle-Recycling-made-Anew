@@ -1,8 +1,11 @@
 import "@/styles/globals.css";
+
 import { Metadata, Viewport } from "next";
 import clsx from "clsx";
+
 import { Providers } from "./providers";
-import { fontSans } from "@/config/fonts";
+
+import { KioskRoot } from "@/components/kiosk/KioskRoot";
 
 export const metadata: Metadata = {
   title: "EcoCharge Kiosk",
@@ -11,21 +14,34 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1B5E20",
+  themeColor: "#0A2E0F",
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html suppressHydrationWarning lang="en">
       <head />
-      <body className={clsx("min-h-screen font-sans antialiased", fontSans.variable)}
-        style={{ backgroundColor: "#1B5E20", color: "white" }}>
-        <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
-          <div className="min-h-screen flex flex-col">
-            {children}
-          </div>
+      <body className={clsx("font-sans antialiased")}>
+        {/* Animated nature mesh gradient — always behind all content */}
+        <div className="bg-animated" />
+        <div className="bg-noise" />
+
+        <Providers
+          themeProps={{
+            attribute: "class",
+            defaultTheme: "dark",
+            forcedTheme: "dark",
+          }}
+        >
+          <KioskRoot>{children}</KioskRoot>
         </Providers>
       </body>
     </html>

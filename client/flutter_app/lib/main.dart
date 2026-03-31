@@ -52,7 +52,9 @@ class EcoChargeApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp.router(
     title: 'EcoCharge',
-    theme: AppTheme.theme,
+    theme: AppTheme.light,
+    darkTheme: AppTheme.dark,
+    themeMode: ThemeMode.system,
     routerConfig: _router,
     debugShowCheckedModeBanner: false,
   );

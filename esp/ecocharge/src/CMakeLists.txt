@@ -20,6 +20,7 @@ idf_component_register(
         esp_wifi
         esp_event
         esp_netif
+        lwip
         nvs_flash
         freertos
         log

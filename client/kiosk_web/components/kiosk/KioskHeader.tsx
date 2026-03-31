@@ -1,13 +1,48 @@
 "use client";
-export function KioskHeader({ showAccount = false }: { showAccount?: boolean }) {
+
+export function KioskHeader({
+  showAccount = false,
+}: {
+  showAccount?: boolean;
+}) {
   return (
-    <div className="flex items-center justify-between px-6 py-4" style={{ backgroundColor: "#1B5E20" }}>
-      <div className="flex items-center gap-2">
-        <span className="text-2xl">🌿</span>
-        <span className="text-white text-xl font-bold">EcoCharge</span>
+    <div
+      className="flex items-center justify-between px-5 py-4"
+      style={{
+        background: "rgba(0,0,0,0.28)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        borderBottom: "1px solid rgba(255,255,255,0.10)",
+      }}
+    >
+      <div className="flex items-center gap-2.5">
+        <span
+          className="text-2xl float-slow-anim"
+          style={{ filter: "drop-shadow(0 0 8px rgba(76,175,80,0.7))" }}
+        >
+          🌿
+        </span>
+        <div>
+          <p className="text-white text-xl font-extrabold tracking-tight leading-none">
+            EcoCharge
+          </p>
+          <p className="text-white/40 text-[10px] tracking-widest uppercase leading-none mt-0.5">
+            Kiosk Station
+          </p>
+        </div>
       </div>
+
       {showAccount && (
-        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold cursor-pointer">A</div>
+        <div
+          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm cursor-pointer transition-all active:scale-90"
+          style={{
+            background: "rgba(76,175,80,0.25)",
+            border: "1.5px solid rgba(76,175,80,0.5)",
+            boxShadow: "0 0 12px rgba(76,175,80,0.2)",
+          }}
+        >
+          A
+        </div>
       )}
     </div>
   );

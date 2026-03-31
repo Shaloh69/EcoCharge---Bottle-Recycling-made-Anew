@@ -1,14 +1,20 @@
 "use client";
-import { useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState, Suspense } from "react";
-import { KioskHeader } from "@/components/kiosk/KioskHeader";
+import { useRouter, useSearchParams } from "next/navigation";
+
 import { BackButton } from "@/components/kiosk/BackButton";
-import { detectBottle, kioskApi, session, type DetectionResult } from "@/lib/api";
+import { KioskHeader } from "@/components/kiosk/KioskHeader";
+import {
+  detectBottle,
+  kioskApi,
+  session,
+  type DetectionResult,
+} from "@/lib/api";
 
 function DepositContent() {
   const router = useRouter();
   const params = useSearchParams();
-  const mode = params.get("mode") || "charge";
+  const mode = params.get("mode") ?? "charge";
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -18,15 +24,16 @@ function DepositContent() {
     setScanning(true);
     setError("");
     try {
-      // Capture frame from webcam
       let imageBlob: Blob;
+
       if (videoRef.current && canvasRef.current) {
         const ctx = canvasRef.current.getContext("2d")!;
+
         canvasRef.current.width = videoRef.current.videoWidth || 640;
         canvasRef.current.height = videoRef.current.videoHeight || 480;
         ctx.drawImage(videoRef.current, 0, 0);
-        imageBlob = await new Promise<Blob>(res =>
-          canvasRef.current!.toBlob(b => res(b!), "image/jpeg", 0.9)
+        imageBlob = await new Promise<Blob>((res) =>
+          canvasRef.current!.toBlob((b) => res(b!), "image/jpeg", 0.9),
         );
       } else {
         throw new Error("Camera not available");
@@ -36,25 +43,30 @@ function DepositContent() {
 
       if (!result.detected || result.confidence < 0.5) {
         router.push(`/session/result?mode=${mode}&status=rejected`);
+
         return;
       }
 
-      // Record deposit with server
       const sid = session.get();
+
       if (sid) {
         await kioskApi.recordDeposit(
           parseInt(sid),
           result.brand,
           result.volume_ml,
           result.condition,
-          result.confidence
+          result.confidence,
         );
       }
 
-      // Pass result to result page via sessionStorage
       sessionStorage.setItem(
         "lastDeposit",
-        JSON.stringify({ brand: result.brand, volume_ml: result.volume_ml, condition: result.condition, confidence: result.confidence })
+        JSON.stringify({
+          brand: result.brand,
+          volume_ml: result.volume_ml,
+          condition: result.condition,
+          confidence: result.confidence,
+        }),
       );
       router.push(`/session/result?mode=${mode}&status=accepted`);
     } catch (e) {
@@ -64,39 +76,66 @@ function DepositContent() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#1B5E20" }}>
+    <div className="flex flex-col min-h-screen page-enter">
       <KioskHeader showAccount />
       <canvas ref={canvasRef} className="hidden" />
-      <div className="flex-1 flex flex-col items-center px-6 pt-6 gap-6">
-        {/* Hidden video element for webcam capture */}
-        <video ref={videoRef} autoPlay playsInline muted className="hidden" />
+      <video ref={videoRef} autoPlay muted playsInline className="hidden" />
 
-        <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-lg flex flex-col items-center gap-4">
-          <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center text-4xl">
-            {scanning ? "🔍" : "🍶"}
+      <div className="flex-1 flex flex-col items-center px-6 pt-8 gap-6">
+        {/* Scan card */}
+        <div
+          className="glass-white rounded-3xl p-7 w-full max-w-sm shadow-xl flex flex-col items-center gap-5 page-scale"
+          style={{ animationDelay: "0.1s" }}
+        >
+          <div
+            className="w-24 h-24 rounded-2xl flex items-center justify-center text-5xl"
+            style={{
+              background: scanning
+                ? "linear-gradient(135deg, rgba(20,184,166,0.2), rgba(20,184,166,0.05))"
+                : "linear-gradient(135deg, rgba(76,175,80,0.15), rgba(76,175,80,0.04))",
+              border: scanning
+                ? "2px solid rgba(20,184,166,0.4)"
+                : "2px solid rgba(76,175,80,0.3)",
+            }}
+          >
+            <span className={scanning ? "breathe-anim" : "float-anim"}>
+              {scanning ? "🔍" : "🍶"}
+            </span>
           </div>
-          <p className="text-gray-800 text-xl font-semibold text-center">
-            {scanning ? "Scanning bottle..." : "Insert your plastic bottle"}
-          </p>
-          {!scanning && (
-            <p className="text-gray-500 text-sm text-center">
-              Place bottle in the slot above the camera
+
+          <div className="text-center">
+            <p className="text-gray-800 text-xl font-bold">
+              {scanning ? "Scanning bottle…" : "Insert your plastic bottle"}
             </p>
-          )}
-          {error && (
-            <p className="text-red-500 text-sm text-center">{error}</p>
-          )}
+            {!scanning && (
+              <p className="text-gray-400 text-sm mt-1">
+                Place bottle in the slot above the camera
+              </p>
+            )}
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+          </div>
         </div>
 
-        <button
-          disabled={scanning}
-          onClick={handleScan}
-          className="w-full max-w-sm py-5 rounded-2xl bg-white text-green-800 text-xl font-bold shadow-xl hover:bg-green-50 active:scale-95 transition-all disabled:opacity-50"
+        {/* Mode badge */}
+        <div
+          className={`px-4 py-2 rounded-full text-sm font-semibold page-fade ${mode === "charge" ? "glass-amber" : "glass-green"}`}
+          style={{ animationDelay: "0.2s" }}
         >
-          {scanning ? "Scanning..." : "Scan Bottle"}
+          {mode === "charge" ? "⚡ Charge mode" : "💳 Credit mode"}
+        </div>
+
+        {/* Scan button */}
+        <button
+          className="glass-btn-primary w-full max-w-sm py-6 rounded-3xl text-xl font-extrabold transition-all active:scale-95 disabled:opacity-40 page-fade"
+          disabled={scanning}
+          style={{ animationDelay: "0.25s" }}
+          onClick={handleScan}
+        >
+          {scanning ? "Scanning…" : "Scan Bottle"}
         </button>
       </div>
-      <div className="px-6 pb-6">
+
+      <div className="px-6 pb-8">
         <BackButton href="/session" />
       </div>
     </div>

@@ -1,13 +1,29 @@
 "use client";
+
 import { useRouter } from "next/navigation";
-export function BackButton({ href }: { href?: string }) {
+
+export function BackButton({
+  href,
+  label = "← Back",
+}: {
+  href?: string;
+  label?: string;
+}) {
   const router = useRouter();
+
   return (
     <button
-      onClick={() => href ? router.push(href) : router.back()}
-      className="text-white/70 text-lg font-medium px-4 py-2 rounded-xl hover:text-white hover:bg-white/10 transition-colors"
+      className="w-full py-4 rounded-2xl font-medium text-sm tracking-wide transition-all active:scale-95"
+      style={{
+        color: "rgba(255,255,255,0.55)",
+        background: "rgba(255,255,255,0.07)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+      }}
+      onClick={() => (href ? router.push(href) : router.back())}
     >
-      ← Back
+      {label}
     </button>
   );
 }

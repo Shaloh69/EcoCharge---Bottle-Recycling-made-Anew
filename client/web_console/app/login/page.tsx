@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+
 import { adminAuth, auth } from "@/lib/api";
 
 export default function LoginPage() {
@@ -15,6 +16,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await adminAuth.login(form.email, form.password);
+
       auth.setToken(res.access_token);
       router.push("/dashboard");
     } catch (e) {
@@ -34,7 +36,10 @@ export default function LoginPage() {
         </div>
         <form className="space-y-4" onSubmit={handleLogin}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="email">
+            <label
+              className="block text-sm font-medium text-gray-700 mb-1"
+              htmlFor="email"
+            >
               Email
             </label>
             <input
@@ -44,11 +49,14 @@ export default function LoginPage() {
               placeholder="admin@ecocharge.ph"
               type="email"
               value={form.email}
-              onChange={e => setForm({ ...form, email: e.target.value })}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="password">
+            <label
+              className="block text-sm font-medium text-gray-700 mb-1"
+              htmlFor="password"
+            >
               Password
             </label>
             <input
@@ -58,15 +66,15 @@ export default function LoginPage() {
               placeholder="••••••••"
               type="password"
               value={form.password}
-              onChange={e => setForm({ ...form, password: e.target.value })}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
             />
           </div>
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
           <button
             className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-colors hover:opacity-90 disabled:opacity-50"
+            disabled={loading}
             style={{ backgroundColor: "#1B5E20" }}
             type="submit"
-            disabled={loading}
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>

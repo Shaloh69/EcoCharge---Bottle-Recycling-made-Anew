@@ -4,6 +4,7 @@ type StatusType =
   | "offline"
   | "warning"
   | "fault"
+  | "error"
   | "active"
   | "idle"
   | "full"
@@ -36,6 +37,12 @@ const statusConfig: Record<
     text: "text-red-700",
     dot: "bg-red-500",
     label: "Fault",
+  },
+  error: {
+    bg: "bg-red-100",
+    text: "text-red-700",
+    dot: "bg-red-500",
+    label: "Error",
   },
   active: {
     bg: "bg-blue-100",
