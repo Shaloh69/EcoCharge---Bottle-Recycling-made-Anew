@@ -1,5 +1,4 @@
 const API = process.env.NEXT_PUBLIC_API_URL ?? "";
-const AI = process.env.NEXT_PUBLIC_AI_URL ?? "";
 
 // ── token helpers ────────────────────────────────────────────────────────────
 export const token = {
@@ -121,11 +120,8 @@ export async function detectBottle(imageBlob: Blob): Promise<DetectionResult> {
   const form = new FormData();
 
   form.append("image", imageBlob, "capture.jpg");
-  const res = await fetch(`${AI}/api/detect`, {
+  const res = await fetch("/api/detect", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.NEXT_PUBLIC_AI_KEY ?? ""}`,
-    },
     body: form,
   });
 
