@@ -73,17 +73,25 @@ model BottleDeposit {
   condition      BottleCondition?
   confidence     Float?
   creditsAwarded Int              @default(0) @map("credits_awarded")
+  status         DepositStatus    @default(pending_bin)
   timestamp      DateTime         @default(now())
 
   session KioskSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
+  @@index([status])
   @@map("bottle_deposits")
 }
 
 enum BottleCondition {
   perfect
   imperfect
+}
+
+enum DepositStatus {
+  pending_bin   // AI approved, waiting for bin sensor confirmation
+  confirmed     // Bin sensor confirmed — credits awarded
+  rejected      // AI rejected or bin timeout — no credits
 }
 
 model CreditTransaction {

@@ -92,6 +92,35 @@ export const kioskApi = {
         }),
       },
     ),
+
+  // AI approved — create pending deposit, tell ESP32 to drop bottle
+  approveBottle: (
+    session_id: number,
+    brand: string | null,
+    volume_ml: number | null,
+    condition: string | null,
+    confidence: number,
+  ) =>
+    req<{ deposit_id: number; status: string; credits_pending: number }>(
+      `${API}/api/kiosk/bottle/approve`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          session_id,
+          brand,
+          volume_ml,
+          condition,
+          confidence,
+        }),
+      },
+    ),
+
+  // AI rejected — tell ESP32 to reverse belt and eject bottle
+  rejectBottle: (session_id: number) =>
+    req<{ rejected: boolean }>(`${API}/api/kiosk/bottle/reject`, {
+      method: "POST",
+      body: JSON.stringify({ session_id }),
+    }),
 };
 
 // ── charging ─────────────────────────────────────────────────────────────────
@@ -198,4 +227,11 @@ export interface DetectionResult {
   condition: string;
   condition_confidence: number;
   bounding_box?: number[];
+}
+
+export interface BinConfirmEvent {
+  type: "bottleInBin";
+  confirmed: boolean;
+  deposit_id?: number;
+  credits_awarded: number;
 }

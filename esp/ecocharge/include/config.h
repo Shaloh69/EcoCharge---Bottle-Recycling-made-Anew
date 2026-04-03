@@ -169,6 +169,57 @@
 #define UART_BAUD_RATE       115200
 
 // ----------------------------------------------------------------------------
+// Ultrasonic Sensors — HC-SR04
+//
+// Three sensors:
+//   Sensor 1 (Entrance)   — detects bottle at belt entry
+//   Sensor 2 (Bin Top)    — confirms bottle landed in upper bin region
+//   Sensor 3 (Bin Bottom) — confirms bottle landed in lower bin region
+//
+// TRIG: digital output — 10µs pulse triggers a measurement
+// ECHO: digital input  — pulse width proportional to distance
+//
+// ⚠ HC-SR04 ECHO outputs 5 V. ESP32 GPIO max is 3.3 V.
+//   Wire a voltage divider on every ECHO line:
+//     ECHO → 1 kΩ → ESP32 pin → 2 kΩ → GND
+//   Or use HC-SR04P (3.3 V variant) and skip the dividers.
+//
+// GPIO 36 (VP) and GPIO 39 (VN) are input-only — safe for ECHO.
+// GPIO 15 used as TRIG: initialised LOW, safe after boot.
+// GPIO 2  used as ECHO: strapping pin, stays LOW on boot naturally.
+// ----------------------------------------------------------------------------
+#define ULTRASONIC_ENTRANCE_TRIG_GPIO    13
+#define ULTRASONIC_ENTRANCE_ECHO_GPIO    36   // VP — input-only
+
+#define ULTRASONIC_BIN_TOP_TRIG_GPIO     14
+#define ULTRASONIC_BIN_TOP_ECHO_GPIO     39   // VN — input-only
+
+#define ULTRASONIC_BIN_BOT_TRIG_GPIO     15
+#define ULTRASONIC_BIN_BOT_ECHO_GPIO      2
+
+// Distance thresholds (centimetres)
+#define ULTRASONIC_ENTRANCE_THRESHOLD_CM  15.0f  // < 15 cm → bottle at entrance
+#define ULTRASONIC_BIN_THRESHOLD_CM       20.0f  // < 20 cm → bottle in bin
+#define ULTRASONIC_MAX_DISTANCE_CM       400.0f  // sensor reliable range
+
+// Timing
+#define ULTRASONIC_TRIG_PULSE_US          10     // 10 µs trigger pulse
+#define ULTRASONIC_TIMEOUT_US          23200     // ~400 cm round-trip max
+
+// ----------------------------------------------------------------------------
+// Bottle FSM — conveyor speed modes and timing
+// ----------------------------------------------------------------------------
+#define CONVEYOR_SPEED_SCAN       35    // % — slow, scanning mode
+#define CONVEYOR_SPEED_FAST       80    // % — approved, dropping into bin
+#define CONVEYOR_SPEED_REVERSE    50    // % — rejected, ejecting bottle
+
+#define BOTTLE_NUDGE_FORWARD_MS  400    // belt-on duration per nudge
+#define BOTTLE_NUDGE_PAUSE_MS    300    // pause after nudge before photo
+#define BOTTLE_SCAN_INTERVAL_MS 2000    // ms between scan attempts
+#define BOTTLE_MAX_RETRIES         6    // max AI scan attempts before reject
+#define BOTTLE_BIN_TIMEOUT_MS  10000   // ms to wait for bin confirmation
+
+// ----------------------------------------------------------------------------
 // FreeRTOS task configuration
 // ----------------------------------------------------------------------------
 #define SAFETY_TASK_STACK      4096
@@ -179,5 +230,7 @@
 #define TELEMETRY_TASK_PRIORITY 4
 #define SENSOR_TASK_STACK      4096
 #define SENSOR_TASK_PRIORITY   6
+#define BOTTLE_FSM_TASK_STACK  4096
+#define BOTTLE_FSM_TASK_PRIORITY 7
 
 #endif // CONFIG_H

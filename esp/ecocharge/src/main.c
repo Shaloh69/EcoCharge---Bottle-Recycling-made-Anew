@@ -11,6 +11,8 @@
 #include "conveyor_motor.h"
 #include "relay_control.h"
 #include "sensor_monitor.h"
+#include "ultrasonic.h"
+#include "bottle_fsm.h"
 #include "api_client.h"
 #include "wifi_sta.h"
 #include "wifi_ap.h"
@@ -79,13 +81,14 @@ static void safety_task(void *arg)
 }
 
 // ---------------------------------------------------------------------------
-// Sensor sampling task
+// Sensor sampling task — ADC charging sensors + ultrasonic sensors
 // ---------------------------------------------------------------------------
 static void sensor_task(void *arg)
 {
     ESP_LOGI(LOG_TAG, "Sensor task started");
     while (1) {
         sensor_sample_all();
+        ultrasonic_read_all();   // reads all 3 HC-SR04 sensors (~90 ms total)
         vTaskDelay(pdMS_TO_TICKS(SENSOR_SAMPLE_MS));
     }
 }
@@ -149,6 +152,8 @@ void app_main(void)
     ESP_ERROR_CHECK(conveyor_init());
     ESP_ERROR_CHECK(relay_init());
     ESP_ERROR_CHECK(sensor_init());
+    ESP_ERROR_CHECK(ultrasonic_init());
+    bottle_fsm_start();   // starts FSM task + watches entrance sensor
 
     // Safety + sensor tasks run in both modes (needed for hardware test page)
     xTaskCreate(safety_task, "safety", SAFETY_TASK_STACK, NULL,

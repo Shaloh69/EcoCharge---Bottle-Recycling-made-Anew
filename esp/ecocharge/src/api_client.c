@@ -3,6 +3,8 @@
 #include "relay_control.h"
 #include "conveyor_motor.h"
 #include "sensor_monitor.h"
+#include "ultrasonic.h"
+#include "bottle_fsm.h"
 #include "esp_http_client.h"
 #include "esp_log.h"
 #include "esp_tls.h"
@@ -69,6 +71,14 @@ static void _execute_command(int id, const char *cmd_type, const char *payload_j
 
     } else if (strcmp(cmd_type, "close_conveyor") == 0) {
         conveyor_stop();      // stop belt
+
+    } else if (strcmp(cmd_type, "approve_bottle") == 0) {
+        // AI approved — FSM will ramp speed and drop into bin
+        bottle_fsm_approve();
+
+    } else if (strcmp(cmd_type, "reject_bottle") == 0) {
+        // AI rejected — FSM will reverse belt and eject bottle
+        bottle_fsm_reject();
 
     } else if (strcmp(cmd_type, "ping") == 0) {
         ESP_LOGI(LOG_TAG, "Ping received — kiosk alive");
@@ -250,8 +260,27 @@ esp_err_t api_client_post_telemetry(void)
         }
     }
 
-    // bin_level: reserved for ultrasonic sensor (set to -1 until hardware fitted)
-    n += snprintf(body + n, sizeof(body) - n, "],\"bin_level\":-1}");
+    // Ultrasonic sensor readings
+    ultrasonic_data_t us = ultrasonic_get();
+    n += snprintf(body + n, sizeof(body) - n,
+                  "],\"ultrasonic\":{"
+                  "\"entrance_cm\":%.1f,"
+                  "\"bin_top_cm\":%.1f,"
+                  "\"bin_bot_cm\":%.1f"
+                  "},",
+                  us.entrance_cm,
+                  us.bin_top_cm,
+                  us.bin_bot_cm);
+
+    // Bottle FSM state
+    n += snprintf(body + n, sizeof(body) - n,
+                  "\"bottle_at_entrance\":%s,"
+                  "\"bottle_in_bin\":%s,"
+                  "\"fsm_state\":\"%s\","
+                  "\"bin_level\":-1}",
+                  ultrasonic_bottle_at_entrance() ? "true" : "false",
+                  bottle_fsm_bin_confirmed()      ? "true" : "false",
+                  bottle_fsm_state_str());
     body[n] = '\0';
 
     char url[128];

@@ -99,7 +99,7 @@ router.delete('/sessions/:id', requireAuth, async (req: AuthRequest, res: Respon
   }
 })
 
-// POST /deposits
+// POST /deposits  (legacy — kept for backward compatibility)
 const depositSchema = z.object({
   session_id: z.number().int().positive(),
   brand: z.string().optional(),
@@ -112,7 +112,6 @@ router.post('/deposits', requireAuth, async (req: AuthRequest, res: Response, ne
   try {
     const body = depositSchema.parse(req.body)
 
-    // Verify session belongs to user
     const session = await prisma.kioskSession.findFirst({
       where: { id: body.session_id, userId: req.userId! },
     })
@@ -128,6 +127,7 @@ router.post('/deposits', requireAuth, async (req: AuthRequest, res: Response, ne
         condition: body.condition ?? null,
         confidence: body.confidence ?? null,
         creditsAwarded,
+        status: 'confirmed',
       },
     })
 
@@ -136,8 +136,6 @@ router.post('/deposits', requireAuth, async (req: AuthRequest, res: Response, ne
       : null
 
     const updatedUser = await prisma.user.findUniqueOrThrow({ where: { id: req.userId! } })
-
-    // Queue conveyor command to the kiosk
     await queueCommand(session.kioskId, 'open_conveyor', { deposit_id: deposit.id })
 
     res.status(201).json({
@@ -149,12 +147,80 @@ router.post('/deposits', requireAuth, async (req: AuthRequest, res: Response, ne
         condition: deposit.condition,
         confidence: deposit.confidence,
         credits_awarded: deposit.creditsAwarded,
+        status: deposit.status,
         timestamp: deposit.timestamp,
       },
       credits_awarded: creditsAwarded,
       new_balance: updatedUser.creditBalance,
       transaction,
     })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ── Bottle FSM routes ─────────────────────────────────────────────────────────
+
+const bottleApproveSchema = z.object({
+  session_id: z.number().int().positive(),
+  brand: z.string().optional(),
+  volume_ml: z.number().int().positive().optional(),
+  condition: z.enum(['perfect', 'imperfect']).optional(),
+  confidence: z.number().optional(),
+})
+
+// POST /bottle/approve — AI approved. Create pending deposit, queue approve_bottle.
+// Credits are NOT awarded here — they are awarded when bin sensor confirms.
+router.post('/bottle/approve', requireAuth, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const body = bottleApproveSchema.parse(req.body)
+
+    const session = await prisma.kioskSession.findFirst({
+      where: { id: body.session_id, userId: req.userId! },
+    })
+    if (!session) { res.status(404).json({ error: 'session not found' }); return }
+
+    const creditsAwarded = body.volume_ml ? await creditsForVolume(body.volume_ml) : 0
+
+    // Save deposit as pending — credits awarded only after bin confirmation
+    const deposit = await prisma.bottleDeposit.create({
+      data: {
+        sessionId: body.session_id,
+        brand: body.brand ?? null,
+        volumeMl: body.volume_ml ?? null,
+        condition: body.condition ?? null,
+        confidence: body.confidence ?? null,
+        creditsAwarded,
+        status: 'pending_bin',
+      },
+    })
+
+    // Tell ESP32 FSM to run fast-forward and drop bottle
+    await queueCommand(session.kioskId, 'approve_bottle', { deposit_id: deposit.id })
+
+    res.status(201).json({
+      deposit_id: deposit.id,
+      status: 'pending_bin',
+      credits_pending: creditsAwarded,
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// POST /bottle/reject — AI rejected. Queue reject_bottle so ESP32 reverses belt.
+router.post('/bottle/reject', requireAuth, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const body = z.object({ session_id: z.number().int().positive() }).parse(req.body)
+
+    const session = await prisma.kioskSession.findFirst({
+      where: { id: body.session_id, userId: req.userId! },
+    })
+    if (!session) { res.status(404).json({ error: 'session not found' }); return }
+
+    await queueCommand(session.kioskId, 'reject_bottle', {})
+
+    res.json({ rejected: true })
   } catch (err) {
     next(err)
   }
