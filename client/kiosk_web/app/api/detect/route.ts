@@ -17,12 +17,24 @@ export async function POST(req: NextRequest) {
   }
   upstream.append("file", image, "capture.jpg");
 
-  const res = await fetch(`${AI_URL}/api/detect`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${AI_KEY}` },
-    body: upstream,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${AI_URL}/api/detect`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${AI_KEY}` },
+      body: upstream,
+    });
+  } catch (err) {
+    console.error("[detect] AI server unreachable:", err);
+    return NextResponse.json({ error: "AI server unreachable" }, { status: 503 });
+  }
 
-  const data = await res.json();
+  let data: unknown;
+  try {
+    data = await res.json();
+  } catch {
+    return NextResponse.json({ error: `AI error ${res.status}` }, { status: res.status });
+  }
+
   return NextResponse.json(data, { status: res.status });
 }
