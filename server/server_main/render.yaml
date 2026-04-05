@@ -15,8 +15,8 @@ services:
         value: "3001"
       # ── Database ────────────────────────────────────────────────────────────
       # Set this in the Render dashboard.
-      # Format: mysql://user:pass@host:port/db?sslaccept=accept_invalid_certs
-      # (sslaccept=accept_invalid_certs avoids needing the CA cert file)
+      # Format: mysql://user:pass@host:port/db?ssl-ca=certs/ca.pem
+      # The certs/ca.pem file is committed to the repo (downloaded from Aiven console).
       - key: DATABASE_URL
         sync: false
       # ── JWT ─────────────────────────────────────────────────────────────────
