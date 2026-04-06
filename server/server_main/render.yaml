@@ -15,7 +15,7 @@ services:
         value: "3001"
       # ── Database ────────────────────────────────────────────────────────────
       # Set this in the Render dashboard.
-      # Format: mysql://user:pass@host:port/db?ssl-ca=certs/ca.pem
+      # Format: mysql://user:pass@host:port/db?sslca=certs/ca.pem
       # The certs/ca.pem file is committed to the repo (downloaded from Aiven console).
       - key: DATABASE_URL
         sync: false
@@ -28,6 +28,11 @@ services:
         value: "30d"
       # ── Device ──────────────────────────────────────────────────────────────
       - key: DEVICE_API_KEY
+        sync: false
+      # ── CORS ────────────────────────────────────────────────────────────────────
+      # Comma-separated list of allowed origins (no trailing slashes)
+      # e.g. https://ecocharge-kiosk.onrender.com,https://ecocharge-admin.onrender.com
+      - key: ALLOWED_ORIGINS
         sync: false
       # ── AI Server ───────────────────────────────────────────────────────────
       - key: AI_SERVER_URL

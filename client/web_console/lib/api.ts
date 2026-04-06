@@ -2,10 +2,14 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 // ── token ────────────────────────────────────────────────────────────────────
 export const auth = {
+  // sessionStorage: cleared when the tab closes, never persists across sessions.
+  // localStorage would expose the admin JWT to any XSS script indefinitely.
   getToken: () =>
-    typeof window !== "undefined" ? localStorage.getItem("admin_token") : null,
-  setToken: (t: string) => localStorage.setItem("admin_token", t),
-  clear: () => localStorage.removeItem("admin_token"),
+    typeof window !== "undefined"
+      ? sessionStorage.getItem("admin_token")
+      : null,
+  setToken: (t: string) => sessionStorage.setItem("admin_token", t),
+  clear: () => sessionStorage.removeItem("admin_token"),
 };
 
 // ── base fetch ───────────────────────────────────────────────────────────────

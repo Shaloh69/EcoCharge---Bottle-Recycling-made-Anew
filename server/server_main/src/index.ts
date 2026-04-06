@@ -10,7 +10,31 @@ import devicesRouter from './routes/devices'
 import adminRouter from './routes/admin'
 
 const app = express()
-app.use(cors({ origin: '*', credentials: true }))
+
+// ── CORS ──────────────────────────────────────────────────────────────────────
+// Parse the comma-separated allowlist from env.
+// origin: '*' + credentials: true is rejected by all modern browsers, so we
+// use an explicit allowlist instead.
+const allowedOrigins = config.ALLOWED_ORIGINS
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean)
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow same-origin (no Origin header) and any listed origin
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error(`CORS: origin '${origin}' not allowed`))
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400,           // cache preflight for 24 h
+}))
+
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 

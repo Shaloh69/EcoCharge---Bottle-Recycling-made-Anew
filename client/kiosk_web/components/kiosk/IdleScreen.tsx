@@ -147,8 +147,6 @@ export function IdleScreen({ onDismiss }: { onDismiss: () => void }) {
   return (
     <div
       role="button"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === "Enter" && advance()}
       style={{
         position: "fixed",
         inset: 0,
@@ -162,7 +160,9 @@ export function IdleScreen({ onDismiss }: { onDismiss: () => void }) {
         justifyContent: "center",
         padding: "32px 28px",
       }}
+      tabIndex={0}
       onClick={onDismiss}
+      onKeyDown={(e) => e.key === "Enter" && advance()}
     >
       {/* dot grid overlay */}
       <div

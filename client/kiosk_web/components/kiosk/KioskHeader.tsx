@@ -1,10 +1,20 @@
 "use client";
 
+import { useAiHealth } from "@/hooks/useAiHealth";
+
+const AI_DOT_COLOR: Record<string, string> = {
+  checking: "#888888",
+  online: "#4caf50",
+  offline: "#f44336",
+};
+
 export function KioskHeader({
   showAccount = false,
 }: {
   showAccount?: boolean;
 }) {
+  const aiStatus = useAiHealth();
+
   return (
     <div
       className="flex items-center justify-between px-5 py-4"
@@ -30,6 +40,29 @@ export function KioskHeader({
             Kiosk Station
           </p>
         </div>
+      </div>
+
+      {/* AI server status indicator */}
+      <div className="flex items-center gap-1.5">
+        <span
+          style={{
+            display: "inline-block",
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            background: AI_DOT_COLOR[aiStatus],
+            boxShadow:
+              aiStatus === "online"
+                ? "0 0 6px rgba(76,175,80,0.8)"
+                : aiStatus === "offline"
+                  ? "0 0 6px rgba(244,67,54,0.8)"
+                  : "none",
+            transition: "background 0.4s, box-shadow 0.4s",
+          }}
+        />
+        <span className="text-white/40 text-[10px] uppercase tracking-widest">
+          AI
+        </span>
       </div>
 
       {showAccount && (

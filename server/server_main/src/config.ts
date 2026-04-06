@@ -10,6 +10,9 @@ const schema = z.object({
   JWT_EXPIRES_IN: z.string().default('60m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
   DEVICE_API_KEY: z.string().default('esp32-device-secret'),
+  // Comma-separated list of allowed CORS origins, e.g.:
+  // https://ecocharge-kiosk.onrender.com,https://ecocharge-admin.onrender.com
+  ALLOWED_ORIGINS: z.string().default('http://localhost:3000,http://localhost:3001'),
   AI_SERVER_URL: z.string().default(''),
   AI_API_KEY: z.string().default(''),
   SUPABASE_URL: z.string().default(''),

@@ -18,11 +18,11 @@ const MAX_RETRIES = 6;
 const SCAN_INTERVAL_MS = 2000; // matches BOTTLE_SCAN_INTERVAL_MS in firmware
 
 type Phase =
-  | "waiting"       // idle — watching for bottle at entrance
-  | "scanning"      // bottle detected — running scan loop
-  | "approved"      // AI passed — waiting for bin confirmation
+  | "waiting" // idle — watching for bottle at entrance
+  | "scanning" // bottle detected — running scan loop
+  | "approved" // AI passed — waiting for bin confirmation
   | "bin_confirmed" // bin sensor fired — credits awarded
-  | "rejected"      // AI failed all retries OR bin timeout
+  | "rejected" // AI failed all retries OR bin timeout
   | "error";
 
 function DepositContent() {
@@ -30,15 +30,15 @@ function DepositContent() {
   const params = useSearchParams();
   const mode = params.get("mode") ?? "charge";
 
-  const videoRef   = useRef<HTMLVideoElement>(null);
-  const canvasRef  = useRef<HTMLCanvasElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const scanActive = useRef(false); // prevents overlapping scan loops
 
-  const [phase,       setPhase]       = useState<Phase>("waiting");
-  const [attempt,     setAttempt]     = useState(0);
-  const [statusMsg,   setStatusMsg]   = useState("Waiting for bottle…");
-  const [credits,     setCredits]     = useState(0);
-  const [binPending,  setBinPending]  = useState(false);
+  const [phase, setPhase] = useState<Phase>("waiting");
+  const [attempt, setAttempt] = useState(0);
+  const [statusMsg, setStatusMsg] = useState("Waiting for bottle…");
+  const [credits, setCredits] = useState(0);
+  const [binPending, setBinPending] = useState(false);
 
   // ── Camera init ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -60,11 +60,13 @@ function DepositContent() {
 
   // ── Capture a JPEG frame from the camera ───────────────────────────────────
   const captureFrame = useCallback(async (): Promise<Blob> => {
-    const video  = videoRef.current!;
+    const video = videoRef.current!;
     const canvas = canvasRef.current!;
-    canvas.width  = video.videoWidth  || 640;
+
+    canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
     canvas.getContext("2d")!.drawImage(video, 0, 0);
+
     return new Promise<Blob>((resolve) =>
       canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.9),
     );
@@ -78,7 +80,14 @@ function DepositContent() {
     scanActive.current = true;
 
     const sid = session.get();
-    if (!sid) { setPhase("error"); setStatusMsg("No session"); scanActive.current = false; return; }
+
+    if (!sid) {
+      setPhase("error");
+      setStatusMsg("No session");
+      scanActive.current = false;
+
+      return;
+    }
 
     let result: DetectionResult | null = null;
 
@@ -91,6 +100,7 @@ function DepositContent() {
 
       try {
         const blob = await captureFrame();
+
         result = await detectBottle(blob);
       } catch {
         setStatusMsg(`Attempt ${i} failed — retrying`);
@@ -117,6 +127,7 @@ function DepositContent() {
         }
 
         scanActive.current = false;
+
         return; // SSE listener handles the rest
       }
     }
@@ -127,50 +138,56 @@ function DepositContent() {
 
     try {
       await kioskApi.rejectBottle(parseInt(sid));
-    } catch { /* best-effort */ }
+    } catch {
+      /* best-effort */
+    }
 
     scanActive.current = false;
   }, [captureFrame]);
 
   // ── SSE listener — responds to bottle events from ESP32 telemetry ──────────
   useEffect(() => {
-    const unsubscribe = openKioskSSE(
-      KIOSK_ID,
-      (event) => {
-        // bottleAtEntrance — auto-trigger scan when ESP32 detects bottle
-        if ((event as any).bottleAtEntrance === true && phase === "waiting") {
-          setPhase("scanning");
-          setStatusMsg("Bottle detected! Starting scan…");
-          runScanLoop();
-          return;
-        }
+    const unsubscribe = openKioskSSE(KIOSK_ID, (event) => {
+      // bottleAtEntrance — auto-trigger scan when ESP32 detects bottle
+      if ((event as any).bottleAtEntrance === true && phase === "waiting") {
+        setPhase("scanning");
+        setStatusMsg("Bottle detected! Starting scan…");
+        runScanLoop();
 
-        // bottleInBin — bin sensor confirmation from ESP32
-        if ((event as any).type === "bottleInBin") {
-          const binEvent = event as unknown as BinConfirmEvent;
-          setBinPending(false);
-          if (binEvent.confirmed) {
-            setCredits(binEvent.credits_awarded);
-            setPhase("bin_confirmed");
-            setStatusMsg(`Bottle received! +${binEvent.credits_awarded} credits earned.`);
+        return;
+      }
 
-            // Navigate to result after brief display
-            setTimeout(() => {
-              sessionStorage.setItem("lastDeposit", JSON.stringify({
+      // bottleInBin — bin sensor confirmation from ESP32
+      if ((event as any).type === "bottleInBin") {
+        const binEvent = event as unknown as BinConfirmEvent;
+
+        setBinPending(false);
+        if (binEvent.confirmed) {
+          setCredits(binEvent.credits_awarded);
+          setPhase("bin_confirmed");
+          setStatusMsg(
+            `Bottle received! +${binEvent.credits_awarded} credits earned.`,
+          );
+
+          // Navigate to result after brief display
+          setTimeout(() => {
+            sessionStorage.setItem(
+              "lastDeposit",
+              JSON.stringify({
                 credits_awarded: binEvent.credits_awarded,
-              }));
-              router.push(`/session/result?mode=${mode}&status=accepted`);
-            }, 2500);
-          } else {
-            setPhase("rejected");
-            setStatusMsg("Bottle not detected in bin. No credits awarded.");
-            setTimeout(() => {
-              router.push(`/session/result?mode=${mode}&status=rejected`);
-            }, 2500);
-          }
+              }),
+            );
+            router.push(`/session/result?mode=${mode}&status=accepted`);
+          }, 2500);
+        } else {
+          setPhase("rejected");
+          setStatusMsg("Bottle not detected in bin. No credits awarded.");
+          setTimeout(() => {
+            router.push(`/session/result?mode=${mode}&status=rejected`);
+          }, 2500);
         }
-      },
-    );
+      }
+    });
 
     return unsubscribe;
   }, [phase, mode, router, runScanLoop]);
@@ -183,29 +200,33 @@ function DepositContent() {
         setPhase("rejected");
         setBinPending(false);
         setStatusMsg("Bin confirmation timed out. No credits awarded.");
-        setTimeout(() => router.push(`/session/result?mode=${mode}&status=rejected`), 2000);
+        setTimeout(
+          () => router.push(`/session/result?mode=${mode}&status=rejected`),
+          2000,
+        );
       }
     }, 12000); // 10s firmware timeout + 2s SSE travel buffer
+
     return () => clearTimeout(timer);
   }, [binPending, mode, router]);
 
   // ── UI helpers ─────────────────────────────────────────────────────────────
   const phaseIcon: Record<Phase, string> = {
-    waiting:      "🍶",
-    scanning:     "🔍",
-    approved:     "⬇️",
-    bin_confirmed:"✅",
-    rejected:     "❌",
-    error:        "⚠️",
+    waiting: "🍶",
+    scanning: "🔍",
+    approved: "⬇️",
+    bin_confirmed: "✅",
+    rejected: "❌",
+    error: "⚠️",
   };
 
   const phaseColor: Record<Phase, string> = {
-    waiting:      "rgba(76,175,80,0.15)",
-    scanning:     "rgba(20,184,166,0.2)",
-    approved:     "rgba(59,130,246,0.2)",
-    bin_confirmed:"rgba(76,175,80,0.3)",
-    rejected:     "rgba(239,68,68,0.2)",
-    error:        "rgba(245,158,11,0.2)",
+    waiting: "rgba(76,175,80,0.15)",
+    scanning: "rgba(20,184,166,0.2)",
+    approved: "rgba(59,130,246,0.2)",
+    bin_confirmed: "rgba(76,175,80,0.3)",
+    rejected: "rgba(239,68,68,0.2)",
+    error: "rgba(245,158,11,0.2)",
   };
 
   const isActive = phase === "scanning" || phase === "approved";
@@ -217,7 +238,6 @@ function DepositContent() {
       <video ref={videoRef} autoPlay muted playsInline className="hidden" />
 
       <div className="flex-1 flex flex-col items-center px-6 pt-8 gap-6">
-
         {/* Status card */}
         <div
           className="glass-white rounded-3xl p-7 w-full max-w-sm shadow-xl flex flex-col items-center gap-5 page-scale"
@@ -237,12 +257,13 @@ function DepositContent() {
 
           <div className="text-center">
             <p className="text-gray-800 text-xl font-bold">
-              {phase === "waiting"      && "Insert your plastic bottle"}
-              {phase === "scanning"     && `Scanning — attempt ${attempt}/${MAX_RETRIES}`}
-              {phase === "approved"     && "Dropping into bin…"}
-              {phase === "bin_confirmed"&& `+${credits} credits earned!`}
-              {phase === "rejected"     && "Bottle rejected"}
-              {phase === "error"        && "Something went wrong"}
+              {phase === "waiting" && "Insert your plastic bottle"}
+              {phase === "scanning" &&
+                `Scanning — attempt ${attempt}/${MAX_RETRIES}`}
+              {phase === "approved" && "Dropping into bin…"}
+              {phase === "bin_confirmed" && `+${credits} credits earned!`}
+              {phase === "rejected" && "Bottle rejected"}
+              {phase === "error" && "Something went wrong"}
             </p>
             <p className="text-gray-400 text-sm mt-1">{statusMsg}</p>
 

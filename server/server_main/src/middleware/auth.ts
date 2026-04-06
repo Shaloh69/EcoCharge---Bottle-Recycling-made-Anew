@@ -4,8 +4,11 @@ import { config } from '../config'
 import { AuthRequest } from '../types'
 
 export function requireAuth(req: AuthRequest, res: Response, next: NextFunction): void {
-  const auth = req.headers.authorization ?? ''
-  const token = auth.replace('Bearer ', '').trim()
+  // Accept token from Authorization header OR ?token= query param (needed for SSE / EventSource)
+  const headerToken = (req.headers.authorization ?? '').replace('Bearer ', '').trim()
+  const queryToken  = typeof req.query.token === 'string' ? req.query.token.trim() : ''
+  const token = headerToken || queryToken
+
   if (!token) { res.status(401).json({ error: 'unauthorized' }); return }
   try {
     const payload = jwt.verify(token, config.JWT_SECRET) as { sub: string; isAdmin?: boolean }
