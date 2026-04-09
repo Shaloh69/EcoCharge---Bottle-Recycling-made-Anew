@@ -7,15 +7,54 @@ import prisma from './prisma'
 import { SETTING_DEFAULTS } from './services/settingsService'
 
 // ── Auto-migrate ───────────────────────────────────────────────────────────────
+// Runs `prisma migrate deploy`. If a P3018 drift error is detected (e.g. a
+// column that was added via `db push` before the migration file was created),
+// we auto-resolve the stuck migration and retry. This loop handles the case
+// where multiple migrations are stuck.
 export function runMigrations() {
   console.log('[Startup] Running prisma migrate deploy…')
-  try {
-    execSync('npx prisma migrate deploy', { stdio: 'inherit' })
-    console.log('[Startup] Migrations applied.')
-  } catch (err) {
-    console.error('[Startup] Migration failed — aborting startup.', err)
-    process.exit(1)
+
+  for (let attempt = 1; attempt <= 10; attempt++) {
+    try {
+      execSync('npx prisma migrate deploy', { stdio: 'pipe' })
+      console.log('[Startup] Migrations applied.')
+      return
+    } catch (err: unknown) {
+      const out =
+        (err as NodeJS.ErrnoException & { stdout?: Buffer; stderr?: Buffer })
+          .stdout?.toString() ?? ''
+      const errOut =
+        (err as NodeJS.ErrnoException & { stdout?: Buffer; stderr?: Buffer })
+          .stderr?.toString() ?? ''
+      const combined = out + errOut
+
+      // P3018 = migration failed to apply; usually database drift
+      // (column/table already exists from a prior db push).
+      // Extract the migration name and mark it as already applied, then retry.
+      if (combined.includes('P3018')) {
+        const match = combined.match(/Migration name:\s*(\S+)/)
+        if (match) {
+          const name = match[1]
+          console.warn(
+            `[Startup] Drift detected — migration "${name}" already applied in DB.`,
+          )
+          console.warn(`[Startup] Resolving: prisma migrate resolve --applied ${name}`)
+          execSync(`npx prisma migrate resolve --applied ${name}`, {
+            stdio: 'inherit',
+          })
+          console.log(`[Startup] Resolved "${name}". Retrying deploy… (attempt ${attempt + 1})`)
+          continue
+        }
+      }
+
+      // Any other error — print output and abort
+      console.error('[Startup] Migration failed:\n', combined || err)
+      process.exit(1)
+    }
   }
+
+  console.error('[Startup] Migration loop exceeded max attempts — aborting.')
+  process.exit(1)
 }
 
 // ── Auto-seed (idempotent upserts — safe on every boot) ───────────────────────
