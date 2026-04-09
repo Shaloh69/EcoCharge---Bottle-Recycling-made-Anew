@@ -6,7 +6,7 @@ import { requireAuth } from '../middleware/auth'
 import { config } from '../config'
 import { creditsForVolume, awardCredits } from '../services/creditService'
 import { queueCommand } from '../services/commandService'
-import { addKioskClient, sseHeaders, broadcastToKiosk } from '../services/sseService'
+import { addKioskClient, sseHeaders } from '../services/sseService'
 import { AuthRequest } from '../types'
 
 const router = Router()

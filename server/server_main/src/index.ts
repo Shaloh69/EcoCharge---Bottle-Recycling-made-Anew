@@ -17,20 +17,34 @@ const allowedOrigins = config.ALLOWED_ORIGINS
   .map(o => o.trim())
   .filter(Boolean)
 
-app.use(cors({
+// Log exact value at startup so we can diagnose mismatches from Render logs
+console.log(`[CORS] Raw ALLOWED_ORIGINS env: "${process.env.ALLOWED_ORIGINS ?? '(not set)'}"`)
+console.log(`[CORS] Parsed allowlist (${allowedOrigins.length}): ${allowedOrigins.join(' | ')}`)
+
+const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true)
-    } else {
-      console.warn(`[CORS] Blocked request from origin: ${origin}`)
-      callback(new Error(`CORS: origin '${origin}' not allowed`))
+    // No origin = same-origin request, curl, or mobile app — always allow
+    if (!origin) return callback(null, true)
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true)
     }
+    // IMPORTANT: use callback(null, false) NOT callback(new Error(...))
+    // Throwing an error routes through the Express error handler which responds
+    // with a 500 that has NO CORS headers — the browser then misreports this
+    // as a CORS error, hiding the real cause.
+    console.warn(`[CORS] Rejected: "${origin}" not in [${allowedOrigins.join(', ')}]`)
+    return callback(null, false)
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   maxAge: 86400,
-}))
+}
+
+// Handle OPTIONS preflight for ALL routes BEFORE other middleware
+// Without this explicit handler, preflight on some routes can fall through
+app.options('*', cors(corsOptions))
+app.use(cors(corsOptions))
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
