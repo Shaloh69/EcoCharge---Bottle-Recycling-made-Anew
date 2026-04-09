@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express'
 import cors from 'cors'
+
 import { config } from './config'
 import { errorHandler } from './middleware/errorHandler'
 import authRouter from './routes/auth'
@@ -8,6 +9,7 @@ import kioskRouter from './routes/kiosk'
 import chargingRouter from './routes/charging'
 import devicesRouter from './routes/devices'
 import adminRouter from './routes/admin'
+import { runMigrations, autoSeed } from './startup'
 
 const app = express()
 
@@ -73,12 +75,21 @@ app.use('/api/admin',   adminRouter)
 app.use(errorHandler)
 
 // ── Start ─────────────────────────────────────────────────────────────────────
-app.listen(config.PORT, () => {
-  console.log('─────────────────────────────────────────')
-  console.log(`  EcoCharge API  •  port ${config.PORT}`)
-  console.log(`  ENV            •  ${config.NODE_ENV}`)
-  console.log(`  Allowed origins: ${allowedOrigins.join(', ')}`)
-  console.log('─────────────────────────────────────────')
-})
+runMigrations()
+
+autoSeed()
+  .then(() => {
+    app.listen(config.PORT, () => {
+      console.log('─────────────────────────────────────────')
+      console.log(`  EcoCharge API  •  port ${config.PORT}`)
+      console.log(`  ENV            •  ${config.NODE_ENV}`)
+      console.log(`  Allowed origins: ${allowedOrigins.join(', ')}`)
+      console.log('─────────────────────────────────────────')
+    })
+  })
+  .catch((err) => {
+    console.error('[Startup] Seed failed — aborting.', err)
+    process.exit(1)
+  })
 
 export default app
