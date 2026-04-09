@@ -17,6 +17,11 @@ export default function LoginPage() {
     try {
       const res = await adminAuth.login(form.email, form.password);
 
+      if (!res.user.is_admin) {
+        setError("Access denied — admin account required");
+        return;
+      }
+
       auth.setToken(res.access_token);
       router.push("/dashboard");
     } catch (e) {

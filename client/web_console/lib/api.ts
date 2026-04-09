@@ -4,12 +4,22 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "";
 export const auth = {
   // sessionStorage: cleared when the tab closes, never persists across sessions.
   // localStorage would expose the admin JWT to any XSS script indefinitely.
+  // A companion cookie `admin_authed=1` (session-scoped, no token value) is set
+  // so that the edge middleware can gate /dashboard routes without touching JWT.
   getToken: () =>
     typeof window !== "undefined"
       ? sessionStorage.getItem("admin_token")
       : null,
-  setToken: (t: string) => sessionStorage.setItem("admin_token", t),
-  clear: () => sessionStorage.removeItem("admin_token"),
+  setToken: (t: string) => {
+    sessionStorage.setItem("admin_token", t);
+    // Session cookie — expires when browser closes, no JS access (httpOnly not
+    // possible from client, but value-less so nothing sensitive is exposed).
+    document.cookie = "admin_authed=1; path=/; SameSite=Strict";
+  },
+  clear: () => {
+    sessionStorage.removeItem("admin_token");
+    document.cookie = "admin_authed=; path=/; max-age=0; SameSite=Strict";
+  },
 };
 
 // ── base fetch ───────────────────────────────────────────────────────────────

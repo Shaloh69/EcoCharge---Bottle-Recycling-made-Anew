@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { auth } from "@/lib/api";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
@@ -18,6 +19,12 @@ const navItems = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  function handleLogout() {
+    auth.clear();
+    router.push("/login");
+  }
 
   return (
     <aside
@@ -55,7 +62,7 @@ export function AdminSidebar() {
           );
         })}
       </nav>
-      <div className="p-4 border-t border-white/10">
+      <div className="p-4 border-t border-white/10 space-y-3">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-bold">
             A
@@ -65,6 +72,12 @@ export function AdminSidebar() {
             <p className="text-white/60 text-xs">admin@ecocharge.ph</p>
           </div>
         </div>
+        <button
+          className="w-full text-left px-4 py-2 rounded-xl text-sm text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+          onClick={handleLogout}
+        >
+          🚪 Sign out
+        </button>
       </div>
     </aside>
   );
