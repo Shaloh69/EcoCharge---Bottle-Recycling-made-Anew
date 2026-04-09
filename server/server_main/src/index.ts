@@ -75,21 +75,21 @@ app.use('/api/admin',   adminRouter)
 app.use(errorHandler)
 
 // ── Start ─────────────────────────────────────────────────────────────────────
-runMigrations()
+// Bind the port FIRST so Render's port-detection passes immediately.
+// Migrations and seed run async in the background — the DB schema already
+// exists, so any requests that arrive during the ~2-3 second window are fine.
+app.listen(config.PORT, () => {
+  console.log('─────────────────────────────────────────')
+  console.log(`  EcoCharge API  •  port ${config.PORT}`)
+  console.log(`  ENV            •  ${config.NODE_ENV}`)
+  console.log(`  Allowed origins: ${allowedOrigins.join(', ')}`)
+  console.log('─────────────────────────────────────────')
+})
 
-autoSeed()
-  .then(() => {
-    app.listen(config.PORT, () => {
-      console.log('─────────────────────────────────────────')
-      console.log(`  EcoCharge API  •  port ${config.PORT}`)
-      console.log(`  ENV            •  ${config.NODE_ENV}`)
-      console.log(`  Allowed origins: ${allowedOrigins.join(', ')}`)
-      console.log('─────────────────────────────────────────')
-    })
-  })
+runMigrations()
+  .then(() => autoSeed())
+  .then(() => console.log('[Startup] Ready.'))
   .catch((err) => {
-    console.error('[Startup] Seed failed — aborting.', err)
+    console.error('[Startup] Fatal startup error:', err)
     process.exit(1)
   })
-
-export default app

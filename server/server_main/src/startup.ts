@@ -1,63 +1,54 @@
-import { execSync } from 'child_process'
+import { exec } from 'child_process'
 import crypto from 'crypto'
+import { promisify } from 'util'
 
 import bcrypt from 'bcryptjs'
 
 import prisma from './prisma'
 import { SETTING_DEFAULTS } from './services/settingsService'
 
+const execAsync = promisify(exec)
+
 // ── Auto-migrate ───────────────────────────────────────────────────────────────
-// Runs `prisma migrate deploy`. If a P3018 drift error is detected (e.g. a
-// column that was added via `db push` before the migration file was created),
-// we auto-resolve the stuck migration and retry. This loop handles the case
-// where multiple migrations are stuck.
-export function runMigrations() {
+// Uses async exec so the event loop stays unblocked (port is already bound by
+// the time this runs). Handles P3018 drift errors by auto-resolving the stuck
+// migration and retrying — up to 10 times for multiple stuck migrations.
+export async function runMigrations() {
   console.log('[Startup] Running prisma migrate deploy…')
 
   for (let attempt = 1; attempt <= 10; attempt++) {
     try {
-      execSync('npx prisma migrate deploy', { stdio: 'pipe' })
+      const { stdout, stderr } = await execAsync('npx prisma migrate deploy')
+      if (stdout) process.stdout.write(stdout)
+      if (stderr) process.stderr.write(stderr)
       console.log('[Startup] Migrations applied.')
       return
     } catch (err: unknown) {
-      const out =
-        (err as NodeJS.ErrnoException & { stdout?: Buffer; stderr?: Buffer })
-          .stdout?.toString() ?? ''
-      const errOut =
-        (err as NodeJS.ErrnoException & { stdout?: Buffer; stderr?: Buffer })
-          .stderr?.toString() ?? ''
-      const combined = out + errOut
+      const e = err as { stdout?: string; stderr?: string; message?: string }
+      const combined = (e.stdout ?? '') + (e.stderr ?? '') + (e.message ?? '')
 
-      // P3018 = migration failed to apply; usually database drift
-      // (column/table already exists from a prior db push).
-      // Extract the migration name and mark it as already applied, then retry.
+      // P3018 = migration failed due to schema drift (column/table already
+      // exists from a prior db push). Extract the name, mark it as applied,
+      // then retry the deploy loop.
       if (combined.includes('P3018')) {
         const match = combined.match(/Migration name:\s*(\S+)/)
         if (match) {
           const name = match[1]
-          console.warn(
-            `[Startup] Drift detected — migration "${name}" already applied in DB.`,
-          )
-          console.warn(`[Startup] Resolving: prisma migrate resolve --applied ${name}`)
-          execSync(`npx prisma migrate resolve --applied ${name}`, {
-            stdio: 'inherit',
-          })
-          console.log(`[Startup] Resolved "${name}". Retrying deploy… (attempt ${attempt + 1})`)
+          console.warn(`[Startup] Drift on "${name}" — marking as applied and retrying…`)
+          await execAsync(`npx prisma migrate resolve --applied ${name}`)
           continue
         }
       }
 
-      // Any other error — print output and abort
-      console.error('[Startup] Migration failed:\n', combined || err)
-      process.exit(1)
+      console.error('[Startup] Migration failed:\n', combined)
+      throw new Error('migrate deploy failed')
     }
   }
 
-  console.error('[Startup] Migration loop exceeded max attempts — aborting.')
-  process.exit(1)
+  throw new Error('Migration loop exceeded max attempts')
 }
 
-// ── Auto-seed (idempotent upserts — safe on every boot) ───────────────────────
+// ── Auto-seed (idempotent — safe on every boot) ───────────────────────────────
 export async function autoSeed() {
   // Admin user
   const email    = process.env.ADMIN_EMAIL    ?? 'admin@ecocharge.ph'
