@@ -1,3 +1,4 @@
+"use client";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 
 const sessions = [
@@ -38,57 +39,125 @@ const sessions = [
 
 export default function SessionsPage() {
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Sessions</h1>
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-100">
-            <tr>
-              {[
-                "ID",
-                "User",
-                "Kiosk",
-                "Start",
-                "End",
-                "Bottles",
-                "Credits",
-                "Port",
-                "Status",
-              ].map((h) => (
-                <th
-                  key={h}
-                  className="text-left py-3 px-4 text-gray-500 font-medium text-xs"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {sessions.map((s) => (
-              <tr
-                key={s.id}
-                className="border-b border-gray-50 hover:bg-gray-50"
-              >
-                <td className="py-3 px-4 text-gray-400 text-xs">{s.id}</td>
-                <td className="py-3 px-4 text-gray-700">{s.user}</td>
-                <td className="py-3 px-4 text-gray-700">{s.kiosk}</td>
-                <td className="py-3 px-4 text-gray-700">{s.start}</td>
-                <td className="py-3 px-4 text-gray-700">{s.end}</td>
-                <td className="py-3 px-4 text-gray-700 font-medium">
-                  {s.bottles}
-                </td>
-                <td className="py-3 px-4 text-green-600 font-medium">
-                  {s.credits}
-                </td>
-                <td className="py-3 px-4 text-gray-700">{s.port}</td>
-                <td className="py-3 px-4">
-                  <StatusBadge status={s.status} />
-                </td>
+    <div className="p-6 md:p-8 space-y-6">
+      <div>
+        <h1
+          className="text-2xl font-extrabold tracking-tight"
+          style={{ color: "rgba(255,255,255,0.92)" }}
+        >
+          Sessions
+        </h1>
+        <p
+          className="text-sm mt-0.5"
+          style={{ color: "rgba(255,255,255,0.38)" }}
+        >
+          Kiosk interaction sessions overview
+        </p>
+      </div>
+
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{
+          background: "rgba(255,255,255,0.05)",
+          border: "1px solid rgba(255,255,255,0.09)",
+          backdropFilter: "blur(18px)",
+          WebkitBackdropFilter: "blur(18px)",
+        }}
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                {[
+                  "ID",
+                  "User",
+                  "Kiosk",
+                  "Start",
+                  "End",
+                  "Bottles",
+                  "Credits",
+                  "Port",
+                  "Status",
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="text-left py-3.5 px-5 text-[10px] font-semibold tracking-widest uppercase"
+                    style={{ color: "rgba(255,255,255,0.32)" }}
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {sessions.map((s) => (
+                <tr
+                  key={s.id}
+                  className="transition-colors duration-150"
+                  style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = "rgba(132,204,22,0.06)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
+                >
+                  <td
+                    className="py-3.5 px-5 text-xs font-mono"
+                    style={{ color: "rgba(255,255,255,0.30)" }}
+                  >
+                    {s.id}
+                  </td>
+                  <td
+                    className="py-3.5 px-5 font-semibold"
+                    style={{ color: "rgba(255,255,255,0.85)" }}
+                  >
+                    {s.user}
+                  </td>
+                  <td
+                    className="py-3.5 px-5"
+                    style={{ color: "rgba(255,255,255,0.60)" }}
+                  >
+                    {s.kiosk}
+                  </td>
+                  <td
+                    className="py-3.5 px-5"
+                    style={{ color: "rgba(255,255,255,0.55)" }}
+                  >
+                    {s.start}
+                  </td>
+                  <td
+                    className="py-3.5 px-5"
+                    style={{ color: "rgba(255,255,255,0.45)" }}
+                  >
+                    {s.end}
+                  </td>
+                  <td
+                    className="py-3.5 px-5 font-bold"
+                    style={{ color: "rgba(255,255,255,0.80)" }}
+                  >
+                    {s.bottles}
+                  </td>
+                  <td
+                    className="py-3.5 px-5 font-bold"
+                    style={{ color: "#84CC16" }}
+                  >
+                    {s.credits}
+                  </td>
+                  <td
+                    className="py-3.5 px-5"
+                    style={{ color: "rgba(255,255,255,0.55)" }}
+                  >
+                    {s.port}
+                  </td>
+                  <td className="py-3.5 px-5">
+                    <StatusBadge status={s.status} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

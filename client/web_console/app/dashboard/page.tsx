@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { addToast } from "@heroui/toast";
 
 import { StatsCard } from "@/components/admin/StatsCard";
 import { StatusBadge } from "@/components/admin/StatusBadge";
@@ -31,12 +32,15 @@ export default function DashboardPage() {
     admin
       .overview()
       .then(setOverview)
-      .catch(() => {});
+      .catch(() =>
+        addToast({ title: "Failed to load overview", color: "danger" }),
+      );
     admin
       .kiosks()
       .then(setKiosks)
-      .catch(() => {});
-
+      .catch(() =>
+        addToast({ title: "Failed to load kiosks", color: "danger" }),
+      );
     closeRef.current = openAdminSSE(
       (event: SseEvent) => {
         setLive(true);
@@ -66,69 +70,125 @@ export default function DashboardPage() {
           );
         }
       },
-      () => setLive(false),
+      () => {
+        setLive(false);
+        addToast({
+          title: "Live feed disconnected",
+          description: "Attempting to reconnect…",
+          color: "warning",
+        });
+      },
     );
 
     return () => closeRef.current?.();
   }, []);
 
   return (
-    <div className="p-8">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="p-6 md:p-8 space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1
+            className="text-2xl font-extrabold tracking-tight"
+            style={{ color: "rgba(255,255,255,0.92)" }}
+          >
+            Dashboard
+          </h1>
+          <p
+            className="text-sm mt-0.5"
+            style={{ color: "rgba(255,255,255,0.38)" }}
+          >
             EcoCharge system overview
           </p>
         </div>
-        {live && (
-          <span className="flex items-center gap-1.5 text-xs text-green-700 font-semibold bg-green-50 px-3 py-1.5 rounded-full border border-green-200">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+        {live ? (
+          <span
+            className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full"
+            style={{
+              background: "rgba(74,222,128,0.12)",
+              color: "#4ADE80",
+              border: "1px solid rgba(74,222,128,0.25)",
+            }}
+          >
+            <span className="w-2 h-2 rounded-full bg-[#4ADE80] animate-pulse" />
             LIVE
+          </span>
+        ) : (
+          <span
+            className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full"
+            style={{
+              background: "rgba(148,163,184,0.10)",
+              color: "rgba(255,255,255,0.35)",
+              border: "1px solid rgba(255,255,255,0.08)",
+            }}
+          >
+            <span className="w-2 h-2 rounded-full bg-slate-500" />
+            Connecting…
           </span>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
+          accent="#14B8A6"
           icon="🏧"
           subtitle="active now"
           title="Kiosks Online"
-          value={String(overview?.kiosks_online ?? "—")}
+          value={overview?.kiosks_online ?? "—"}
         />
         <StatsCard
+          accent="#0EA5E9"
           icon="🍶"
           subtitle="all time"
           title="Total Deposits"
-          value={String(overview?.total_deposits ?? "—")}
+          value={overview?.total_deposits ?? "—"}
         />
         <StatsCard
+          accent="#84CC16"
           icon="💳"
           subtitle="minutes earned"
           title="Credits Issued"
-          value={String(overview?.total_credits_earned ?? "—")}
+          value={overview?.total_credits_earned ?? "—"}
         />
         <StatsCard
-          color="#D97706"
+          accent="#F59E0B"
           icon="⚡"
           subtitle="charging now"
           title="Active Charging"
-          value={String(overview?.active_charging ?? "—")}
+          value={overview?.active_charging ?? "—"}
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Live Kiosk Telemetry */}
         <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-gray-800 font-semibold">
+          <h2
+            className="text-sm font-semibold flex items-center gap-2"
+            style={{ color: "rgba(255,255,255,0.70)" }}
+          >
             Live Kiosk Telemetry
             {live && (
-              <span className="ml-2 text-xs text-green-600 font-normal">
+              <span
+                className="text-[10px] px-2 py-0.5 rounded-full"
+                style={{
+                  background: "rgba(74,222,128,0.12)",
+                  color: "#4ADE80",
+                }}
+              >
                 ● streaming
               </span>
             )}
           </h2>
           {kiosks.length === 0 && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-gray-400 text-sm">
+            <div
+              className="rounded-2xl p-8 text-center text-sm"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                color: "rgba(255,255,255,0.25)",
+              }}
+            >
               No kiosks found.
             </div>
           )}
@@ -138,12 +198,28 @@ export default function DashboardPage() {
             return (
               <div
                 key={k.id}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
+                className="rounded-2xl p-5"
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.09)",
+                  backdropFilter: "blur(18px)",
+                  WebkitBackdropFilter: "blur(18px)",
+                }}
               >
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-start justify-between mb-4">
                   <div>
-                    <p className="font-semibold text-gray-800">{k.name}</p>
-                    <p className="text-gray-400 text-xs">{k.location}</p>
+                    <p
+                      className="font-bold text-base"
+                      style={{ color: "rgba(255,255,255,0.88)" }}
+                    >
+                      {k.name}
+                    </p>
+                    <p
+                      className="text-xs mt-0.5"
+                      style={{ color: "rgba(255,255,255,0.38)" }}
+                    >
+                      📍 {k.location}
+                    </p>
                   </div>
                   <StatusBadge status={k.status} />
                 </div>
@@ -151,19 +227,46 @@ export default function DashboardPage() {
                   <>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                       {tel.portData.map((p) => (
-                        <div key={p.port} className="bg-gray-50 rounded-lg p-3">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-gray-500">
+                        <div
+                          key={p.port}
+                          className="rounded-xl p-3"
+                          style={{
+                            background: p.relay_on
+                              ? "rgba(74,222,128,0.08)"
+                              : "rgba(255,255,255,0.04)",
+                            border: `1px solid ${p.relay_on ? "rgba(74,222,128,0.20)" : "rgba(255,255,255,0.07)"}`,
+                          }}
+                        >
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span
+                              className="text-[10px] font-semibold uppercase"
+                              style={{ color: "rgba(255,255,255,0.40)" }}
+                            >
                               Port {p.port}
                             </span>
                             <span
-                              className={`w-2 h-2 rounded-full ${p.relay_on ? "bg-green-500" : "bg-gray-300"}`}
+                              className="w-2 h-2 rounded-full"
+                              style={{
+                                backgroundColor: p.relay_on
+                                  ? "#4ADE80"
+                                  : "rgba(255,255,255,0.20)",
+                              }}
                             />
                           </div>
-                          <p className="text-sm font-bold text-gray-800">
+                          <p
+                            className="text-base font-bold"
+                            style={{
+                              color: p.relay_on
+                                ? "#4ADE80"
+                                : "rgba(255,255,255,0.65)",
+                            }}
+                          >
                             {(p.voltage_v * p.current_a).toFixed(1)}W
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p
+                            className="text-[10px] mt-0.5"
+                            style={{ color: "rgba(255,255,255,0.30)" }}
+                          >
                             {p.current_a.toFixed(2)}A · {p.voltage_v.toFixed(1)}
                             V
                           </p>
@@ -171,7 +274,10 @@ export default function DashboardPage() {
                       ))}
                     </div>
                     <div>
-                      <div className="flex justify-between text-xs text-gray-500 mb-1">
+                      <div
+                        className="flex justify-between text-[10px] mb-1.5"
+                        style={{ color: "rgba(255,255,255,0.38)" }}
+                      >
                         <span>Bin Level</span>
                         <span>{tel.binLevel}%</span>
                       </div>
@@ -179,8 +285,11 @@ export default function DashboardPage() {
                     </div>
                   </>
                 ) : (
-                  <p className="text-gray-400 text-sm">
-                    Waiting for telemetry...
+                  <p
+                    className="text-sm"
+                    style={{ color: "rgba(255,255,255,0.28)" }}
+                  >
+                    Waiting for telemetry…
                   </p>
                 )}
               </div>
@@ -188,25 +297,96 @@ export default function DashboardPage() {
           })}
         </div>
 
+        {/* Summary Panel */}
         <div className="space-y-4">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h2 className="text-gray-800 font-semibold mb-3">Summary</h2>
-            <p className="text-gray-500 text-sm">
-              Total users:{" "}
-              <span className="font-semibold text-gray-800">
-                {overview?.total_users ?? "—"}
-              </span>
-            </p>
+          <div
+            className="rounded-2xl p-5"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.09)",
+              backdropFilter: "blur(18px)",
+              WebkitBackdropFilter: "blur(18px)",
+            }}
+          >
+            <h2
+              className="text-sm font-semibold mb-4"
+              style={{ color: "rgba(255,255,255,0.70)" }}
+            >
+              Summary
+            </h2>
+            <div className="space-y-3">
+              {[
+                {
+                  label: "Total Users",
+                  value: overview?.total_users ?? "—",
+                  color: "#A855F7",
+                },
+                {
+                  label: "Total Deposits",
+                  value: overview?.total_deposits ?? "—",
+                  color: "#0EA5E9",
+                },
+                {
+                  label: "Credits Earned",
+                  value: overview?.total_credits_earned ?? "—",
+                  color: "#84CC16",
+                },
+                {
+                  label: "Active Charging",
+                  value: overview?.active_charging ?? "—",
+                  color: "#F59E0B",
+                },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="flex items-center justify-between">
+                  <span
+                    className="text-xs"
+                    style={{ color: "rgba(255,255,255,0.45)" }}
+                  >
+                    {label}
+                  </span>
+                  <span className="text-sm font-bold" style={{ color }}>
+                    {value}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h2 className="text-gray-800 font-semibold mb-3">Kiosk Status</h2>
+
+          <div
+            className="rounded-2xl p-5"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.09)",
+              backdropFilter: "blur(18px)",
+              WebkitBackdropFilter: "blur(18px)",
+            }}
+          >
+            <h2
+              className="text-sm font-semibold mb-4"
+              style={{ color: "rgba(255,255,255,0.70)" }}
+            >
+              Kiosk Status
+            </h2>
             <div className="space-y-3">
               {kiosks.map((k) => (
                 <div key={k.id} className="flex items-center justify-between">
-                  <span className="text-gray-700 text-sm">{k.name}</span>
+                  <span
+                    className="text-xs"
+                    style={{ color: "rgba(255,255,255,0.65)" }}
+                  >
+                    {k.name}
+                  </span>
                   <StatusBadge status={k.status} />
                 </div>
               ))}
+              {kiosks.length === 0 && (
+                <p
+                  className="text-xs"
+                  style={{ color: "rgba(255,255,255,0.25)" }}
+                >
+                  No kiosks
+                </p>
+              )}
             </div>
           </div>
         </div>

@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
+import { addToast } from "@heroui/toast";
 
 import { admin, type Deposit } from "@/lib/api";
-import { StatusBadge } from "@/components/admin/StatusBadge";
+
+const ACCENT = "#0EA5E9";
 
 export default function DepositsPage() {
   const [deposits, setDeposits] = useState<Deposit[]>([]);
@@ -11,71 +13,151 @@ export default function DepositsPage() {
     admin
       .deposits()
       .then((r) => setDeposits(r.deposits ?? []))
-      .catch(() => {});
+      .catch(() =>
+        addToast({ title: "Failed to load deposits", color: "danger" }),
+      );
   }, []);
 
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Bottle Deposits</h1>
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-100">
-            <tr>
-              {[
-                "ID",
-                "Time",
-                "Brand",
-                "Volume",
-                "Condition",
-                "Confidence",
-                "Credit",
-              ].map((h) => (
-                <th
-                  key={h}
-                  className="text-left py-3 px-4 text-gray-500 font-medium text-xs"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {deposits.map((d) => (
-              <tr
-                key={d.id}
-                className="border-b border-gray-50 hover:bg-gray-50"
-              >
-                <td className="py-3 px-4 text-gray-400 text-xs">#{d.id}</td>
-                <td className="py-3 px-4 text-gray-700">
-                  {new Date(d.timestamp).toLocaleString()}
-                </td>
-                <td className="py-3 px-4 text-gray-800 font-medium">
-                  {d.brand}
-                </td>
-                <td className="py-3 px-4 text-gray-700">{d.volume_ml}ml</td>
-                <td className="py-3 px-4">
-                  <StatusBadge
-                    label={d.condition}
-                    status={d.condition === "perfect" ? "online" : "warning"}
-                  />
-                </td>
-                <td className="py-3 px-4">
-                  <span
-                    className={`font-medium ${d.confidence >= 0.8 ? "text-green-600" : "text-amber-600"}`}
+    <div className="p-6 md:p-8 space-y-6">
+      <div>
+        <h1
+          className="text-2xl font-extrabold tracking-tight"
+          style={{ color: "rgba(255,255,255,0.92)" }}
+        >
+          Bottle Deposits
+        </h1>
+        <p
+          className="text-sm mt-0.5"
+          style={{ color: "rgba(255,255,255,0.38)" }}
+        >
+          All bottle deposits processed through the kiosk
+        </p>
+      </div>
+
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{
+          background: "rgba(255,255,255,0.05)",
+          border: "1px solid rgba(255,255,255,0.09)",
+          backdropFilter: "blur(18px)",
+          WebkitBackdropFilter: "blur(18px)",
+        }}
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                {[
+                  "ID",
+                  "Time",
+                  "Brand",
+                  "Volume",
+                  "Condition",
+                  "Confidence",
+                  "Credits",
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="text-left py-3.5 px-5 text-[10px] font-semibold tracking-widest uppercase"
+                    style={{ color: "rgba(255,255,255,0.32)" }}
                   >
-                    {Math.round(d.confidence * 100)}%
-                  </span>
-                </td>
-                <td className="py-3 px-4 text-green-600 font-medium">
-                  +{d.credits_awarded} min
-                </td>
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-        {deposits.length === 0 && (
-          <p className="text-center text-gray-400 py-12">No deposits yet</p>
-        )}
+            </thead>
+            <tbody>
+              {deposits.length === 0 ? (
+                <tr>
+                  <td
+                    className="text-center py-14 text-sm"
+                    colSpan={7}
+                    style={{ color: "rgba(255,255,255,0.25)" }}
+                  >
+                    No deposits yet
+                  </td>
+                </tr>
+              ) : (
+                deposits.map((d) => (
+                  <tr
+                    key={d.id}
+                    className="transition-colors duration-150"
+                    style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background =
+                        "rgba(14,165,233,0.06)")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = "transparent")
+                    }
+                  >
+                    <td
+                      className="py-3.5 px-5 text-xs font-mono"
+                      style={{ color: "rgba(255,255,255,0.30)" }}
+                    >
+                      #{d.id}
+                    </td>
+                    <td
+                      className="py-3.5 px-5"
+                      style={{ color: "rgba(255,255,255,0.55)" }}
+                    >
+                      {new Date(d.timestamp).toLocaleString()}
+                    </td>
+                    <td
+                      className="py-3.5 px-5 font-semibold"
+                      style={{ color: "rgba(255,255,255,0.85)" }}
+                    >
+                      {d.brand}
+                    </td>
+                    <td
+                      className="py-3.5 px-5"
+                      style={{ color: "rgba(255,255,255,0.60)" }}
+                    >
+                      {d.volume_ml}ml
+                    </td>
+                    <td className="py-3.5 px-5">
+                      <span
+                        className="px-2.5 py-1 rounded-full text-xs font-semibold"
+                        style={
+                          d.condition === "perfect"
+                            ? {
+                                background: "rgba(74,222,128,0.12)",
+                                color: "#4ADE80",
+                                border: "1px solid rgba(74,222,128,0.25)",
+                              }
+                            : {
+                                background: "rgba(251,191,36,0.12)",
+                                color: "#FBBF24",
+                                border: "1px solid rgba(251,191,36,0.25)",
+                              }
+                        }
+                      >
+                        {d.condition}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-5">
+                      <span
+                        className="font-bold text-xs"
+                        style={{
+                          color: d.confidence >= 0.8 ? "#4ADE80" : "#FBBF24",
+                        }}
+                      >
+                        {Math.round(d.confidence * 100)}%
+                      </span>
+                    </td>
+                    <td
+                      className="py-3.5 px-5 font-bold"
+                      style={{ color: ACCENT }}
+                    >
+                      +{d.credits_awarded} min
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

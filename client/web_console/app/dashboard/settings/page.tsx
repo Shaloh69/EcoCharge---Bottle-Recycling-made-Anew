@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { addToast } from "@heroui/toast";
 
 import { admin } from "@/lib/api";
 
@@ -27,12 +28,24 @@ const DEFAULTS: Settings = {
   electricity_rate_php_per_kwh: "11.0",
 };
 
+const GLASS = {
+  background: "rgba(255,255,255,0.05)",
+  border: "1px solid rgba(255,255,255,0.09)",
+  backdropFilter: "blur(18px)",
+  WebkitBackdropFilter: "blur(18px)",
+} as const;
+
+const inputStyle: React.CSSProperties = {
+  background: "rgba(255,255,255,0.06)",
+  border: "1px solid rgba(255,255,255,0.12)",
+  color: "rgba(255,255,255,0.88)",
+  outline: "none",
+};
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     admin
@@ -41,7 +54,14 @@ export default function SettingsPage() {
         setSettings({ ...DEFAULTS, ...(s as Settings) });
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setLoading(false);
+        addToast({
+          title: "Failed to load settings",
+          description: "Could not fetch settings from server.",
+          color: "danger",
+        });
+      });
   }, []);
 
   const set = (key: keyof Settings, val: string) =>
@@ -49,18 +69,23 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setSaving(true);
-    setError("");
-    setSaved(false);
     try {
       const updated = await admin.saveSettings(
         settings as Record<string, string>,
       );
 
       setSettings({ ...DEFAULTS, ...(updated as Settings) });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      addToast({
+        title: "Settings saved",
+        description: "All changes have been applied.",
+        color: "success",
+      });
     } catch (e) {
-      setError((e as Error).message ?? "Failed to save");
+      addToast({
+        title: "Save failed",
+        description: (e as Error).message ?? "Could not save settings.",
+        color: "danger",
+      });
     } finally {
       setSaving(false);
     }
@@ -68,11 +93,22 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Settings</h1>
+      <div className="p-6 md:p-8 space-y-6">
+        <div>
+          <h1
+            className="text-2xl font-extrabold tracking-tight"
+            style={{ color: "rgba(255,255,255,0.92)" }}
+          >
+            Settings
+          </h1>
+        </div>
         <div className="animate-pulse space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-32 bg-gray-100 rounded-xl" />
+            <div
+              key={i}
+              className="h-40 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.04)" }}
+            />
           ))}
         </div>
       </div>
@@ -80,249 +116,333 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Settings</h1>
-      <div className="space-y-6 max-w-2xl">
+    <div className="p-6 md:p-8 space-y-6">
+      <div>
+        <h1
+          className="text-2xl font-extrabold tracking-tight"
+          style={{ color: "rgba(255,255,255,0.92)" }}
+        >
+          Settings
+        </h1>
+        <p
+          className="text-sm mt-0.5"
+          style={{ color: "rgba(255,255,255,0.38)" }}
+        >
+          System configuration and credit tiers
+        </p>
+      </div>
+
+      <div className="space-y-5 max-w-2xl">
         {/* Credit Tiers */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-gray-800 font-semibold mb-1">
+        <div className="rounded-2xl p-6" style={GLASS}>
+          <h2
+            className="text-sm font-bold mb-0.5"
+            style={{ color: "rgba(255,255,255,0.80)" }}
+          >
             Credit Tiers (by volume)
           </h2>
-          <p className="text-gray-400 text-xs mb-4">
+          <p
+            className="text-xs mb-5"
+            style={{ color: "rgba(255,255,255,0.35)" }}
+          >
             Credits awarded when a bottle is deposited, based on volume.
           </p>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between py-3 border-b border-gray-50">
-              <div>
-                <p className="text-gray-700 text-sm font-medium">
-                  Small bottle (≤{settings.credit_tier_s_max_ml}ml)
-                </p>
-                <p className="text-gray-400 text-xs">Credits per deposit</p>
+          <div className="space-y-1">
+            {[
+              {
+                label: `Small bottle (≤${settings.credit_tier_s_max_ml}ml)`,
+                key: "credit_tier_s_credits" as keyof Settings,
+              },
+              {
+                label: `Medium bottle (${settings.credit_tier_s_max_ml}–${settings.credit_tier_m_max_ml}ml)`,
+                key: "credit_tier_m_credits" as keyof Settings,
+              },
+              {
+                label: `Large bottle (>${settings.credit_tier_m_max_ml}ml)`,
+                key: "credit_tier_l_credits" as keyof Settings,
+              },
+            ].map(({ label, key }) => (
+              <div
+                key={key}
+                className="flex items-center justify-between py-3"
+                style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+              >
+                <div>
+                  <p
+                    className="text-sm font-medium"
+                    style={{ color: "rgba(255,255,255,0.78)" }}
+                  >
+                    {label}
+                  </p>
+                  <p
+                    className="text-xs"
+                    style={{ color: "rgba(255,255,255,0.35)" }}
+                  >
+                    Credits per deposit
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    className="w-16 rounded-xl px-3 py-1.5 text-sm text-center"
+                    min="1"
+                    step="1"
+                    style={inputStyle}
+                    type="number"
+                    value={settings[key]}
+                    onBlur={(e) => {
+                      e.target.style.border =
+                        "1px solid rgba(255,255,255,0.12)";
+                      e.target.style.boxShadow = "none";
+                    }}
+                    onChange={(e) => set(key, e.target.value)}
+                    onFocus={(e) => {
+                      e.target.style.border =
+                        "1px solid rgba(148,163,184,0.50)";
+                      e.target.style.boxShadow =
+                        "0 0 0 3px rgba(148,163,184,0.10)";
+                    }}
+                  />
+                  <span
+                    className="text-xs"
+                    style={{ color: "rgba(255,255,255,0.40)" }}
+                  >
+                    credits
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  className="w-16 border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-green-500"
-                  min="1"
-                  step="1"
-                  type="number"
-                  value={settings.credit_tier_s_credits}
-                  onChange={(e) => set("credit_tier_s_credits", e.target.value)}
-                />
-                <span className="text-gray-500 text-sm">credits</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between py-3 border-b border-gray-50">
-              <div>
-                <p className="text-gray-700 text-sm font-medium">
-                  Medium bottle ({settings.credit_tier_s_max_ml}–
-                  {settings.credit_tier_m_max_ml}ml)
-                </p>
-                <p className="text-gray-400 text-xs">Credits per deposit</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  className="w-16 border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-green-500"
-                  min="1"
-                  step="1"
-                  type="number"
-                  value={settings.credit_tier_m_credits}
-                  onChange={(e) => set("credit_tier_m_credits", e.target.value)}
-                />
-                <span className="text-gray-500 text-sm">credits</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between py-3">
-              <div>
-                <p className="text-gray-700 text-sm font-medium">
-                  Large bottle (&gt;{settings.credit_tier_m_max_ml}ml)
-                </p>
-                <p className="text-gray-400 text-xs">Credits per deposit</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  className="w-16 border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-green-500"
-                  min="1"
-                  step="1"
-                  type="number"
-                  value={settings.credit_tier_l_credits}
-                  onChange={(e) => set("credit_tier_l_credits", e.target.value)}
-                />
-                <span className="text-gray-500 text-sm">credits</span>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
         {/* Volume Thresholds */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-gray-800 font-semibold mb-1">
+        <div className="rounded-2xl p-6" style={GLASS}>
+          <h2
+            className="text-sm font-bold mb-0.5"
+            style={{ color: "rgba(255,255,255,0.80)" }}
+          >
             Volume Thresholds (ml)
           </h2>
-          <p className="text-gray-400 text-xs mb-4">
+          <p
+            className="text-xs mb-5"
+            style={{ color: "rgba(255,255,255,0.35)" }}
+          >
             Define where S/M/L boundaries fall.
           </p>
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                className="text-xs text-gray-500 block mb-1"
-                htmlFor="tier-s-max"
-              >
-                S/M boundary (max ml for Small)
-              </label>
-              <input
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                id="tier-s-max"
-                min="100"
-                step="50"
-                type="number"
-                value={settings.credit_tier_s_max_ml}
-                onChange={(e) => set("credit_tier_s_max_ml", e.target.value)}
-              />
-            </div>
-            <div>
-              <label
-                className="text-xs text-gray-500 block mb-1"
-                htmlFor="tier-m-max"
-              >
-                M/L boundary (max ml for Medium)
-              </label>
-              <input
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                id="tier-m-max"
-                min="200"
-                step="50"
-                type="number"
-                value={settings.credit_tier_m_max_ml}
-                onChange={(e) => set("credit_tier_m_max_ml", e.target.value)}
-              />
-            </div>
+            {[
+              {
+                id: "tier-s-max",
+                label: "S/M boundary (max ml for Small)",
+                key: "credit_tier_s_max_ml" as keyof Settings,
+                min: 100,
+                step: 50,
+              },
+              {
+                id: "tier-m-max",
+                label: "M/L boundary (max ml for Medium)",
+                key: "credit_tier_m_max_ml" as keyof Settings,
+                min: 200,
+                step: 50,
+              },
+            ].map(({ id, label, key, min, step }) => (
+              <div key={id}>
+                <label
+                  className="text-xs block mb-1.5"
+                  htmlFor={id}
+                  style={{ color: "rgba(255,255,255,0.42)" }}
+                >
+                  {label}
+                </label>
+                <input
+                  className="w-full rounded-xl px-3 py-2 text-sm"
+                  id={id}
+                  min={min}
+                  step={step}
+                  style={inputStyle}
+                  type="number"
+                  value={settings[key]}
+                  onBlur={(e) => {
+                    e.target.style.border = "1px solid rgba(255,255,255,0.12)";
+                    e.target.style.boxShadow = "none";
+                  }}
+                  onChange={(e) => set(key, e.target.value)}
+                  onFocus={(e) => {
+                    e.target.style.border = "1px solid rgba(148,163,184,0.50)";
+                    e.target.style.boxShadow =
+                      "0 0 0 3px rgba(148,163,184,0.10)";
+                  }}
+                />
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Charging */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-gray-800 font-semibold mb-1">
+        {/* Charging Settings */}
+        <div className="rounded-2xl p-6" style={GLASS}>
+          <h2
+            className="text-sm font-bold mb-0.5"
+            style={{ color: "rgba(255,255,255,0.80)" }}
+          >
             Charging Settings
           </h2>
-          <p className="text-gray-400 text-xs mb-4">
+          <p
+            className="text-xs mb-5"
+            style={{ color: "rgba(255,255,255,0.35)" }}
+          >
             Controls how long each credit lasts and energy budget per credit.
           </p>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between py-3 border-b border-gray-50">
-              <div>
-                <p className="text-gray-700 text-sm font-medium">
-                  Energy budget per credit (Wh)
-                </p>
-                <p className="text-gray-400 text-xs">
-                  Actual Wh allocated; dynamic duration based on real draw
-                </p>
+          <div className="space-y-1">
+            {[
+              {
+                label: "Energy budget per credit (Wh)",
+                sub: "Actual Wh allocated; dynamic duration based on real draw",
+                key: "energy_budget_wh_per_credit" as keyof Settings,
+                unit: "Wh",
+                w: "w-20",
+                min: 1,
+                step: 0.5,
+              },
+              {
+                label: "Base minutes per credit",
+                sub: "Fallback when no telemetry available",
+                key: "base_minutes_per_credit" as keyof Settings,
+                unit: "min",
+                w: "w-20",
+                min: 1,
+                step: 1,
+              },
+              {
+                label: "Max charging duration",
+                sub: "Hard cap regardless of credits",
+                key: "max_charging_seconds" as keyof Settings,
+                unit: "sec",
+                w: "w-24",
+                min: 60,
+                step: 60,
+              },
+            ].map(({ label, sub, key, unit, w, min, step }) => (
+              <div
+                key={key}
+                className="flex items-center justify-between py-3"
+                style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+              >
+                <div>
+                  <p
+                    className="text-sm font-medium"
+                    style={{ color: "rgba(255,255,255,0.78)" }}
+                  >
+                    {label}
+                  </p>
+                  <p
+                    className="text-xs"
+                    style={{ color: "rgba(255,255,255,0.35)" }}
+                  >
+                    {sub}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    className={`${w} rounded-xl px-3 py-1.5 text-sm text-center`}
+                    min={min}
+                    step={step}
+                    style={inputStyle}
+                    type="number"
+                    value={settings[key]}
+                    onBlur={(e) => {
+                      e.target.style.border =
+                        "1px solid rgba(255,255,255,0.12)";
+                      e.target.style.boxShadow = "none";
+                    }}
+                    onChange={(e) => set(key, e.target.value)}
+                    onFocus={(e) => {
+                      e.target.style.border =
+                        "1px solid rgba(148,163,184,0.50)";
+                      e.target.style.boxShadow =
+                        "0 0 0 3px rgba(148,163,184,0.10)";
+                    }}
+                  />
+                  <span
+                    className="text-xs"
+                    style={{ color: "rgba(255,255,255,0.40)" }}
+                  >
+                    {unit}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  className="w-20 border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-green-500"
-                  min="1"
-                  step="0.5"
-                  type="number"
-                  value={settings.energy_budget_wh_per_credit}
-                  onChange={(e) =>
-                    set("energy_budget_wh_per_credit", e.target.value)
-                  }
-                />
-                <span className="text-gray-500 text-sm">Wh</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between py-3 border-b border-gray-50">
-              <div>
-                <p className="text-gray-700 text-sm font-medium">
-                  Base minutes per credit
-                </p>
-                <p className="text-gray-400 text-xs">
-                  Fallback when no telemetry available
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  className="w-20 border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-green-500"
-                  min="1"
-                  step="1"
-                  type="number"
-                  value={settings.base_minutes_per_credit}
-                  onChange={(e) =>
-                    set("base_minutes_per_credit", e.target.value)
-                  }
-                />
-                <span className="text-gray-500 text-sm">min</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between py-3">
-              <div>
-                <p className="text-gray-700 text-sm font-medium">
-                  Max charging duration
-                </p>
-                <p className="text-gray-400 text-xs">
-                  Hard cap regardless of credits
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  className="w-24 border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-green-500"
-                  min="60"
-                  step="60"
-                  type="number"
-                  value={settings.max_charging_seconds}
-                  onChange={(e) => set("max_charging_seconds", e.target.value)}
-                />
-                <span className="text-gray-500 text-sm">sec</span>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
         {/* Economics */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-gray-800 font-semibold mb-1">Economics</h2>
-          <p className="text-gray-400 text-xs mb-4">
+        <div className="rounded-2xl p-6" style={GLASS}>
+          <h2
+            className="text-sm font-bold mb-0.5"
+            style={{ color: "rgba(255,255,255,0.80)" }}
+          >
+            Economics
+          </h2>
+          <p
+            className="text-xs mb-5"
+            style={{ color: "rgba(255,255,255,0.35)" }}
+          >
             Used to calculate gain/loss in analytics.
           </p>
           <div className="flex items-center justify-between py-3">
             <div>
-              <p className="text-gray-700 text-sm font-medium">
+              <p
+                className="text-sm font-medium"
+                style={{ color: "rgba(255,255,255,0.78)" }}
+              >
                 Electricity rate (PHP/kWh)
               </p>
-              <p className="text-gray-400 text-xs">
+              <p
+                className="text-xs"
+                style={{ color: "rgba(255,255,255,0.35)" }}
+              >
                 Meralco / local utility rate
               </p>
             </div>
             <div className="flex items-center gap-2">
               <input
-                className="w-24 border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-24 rounded-xl px-3 py-1.5 text-sm text-center"
                 min="1"
                 step="0.1"
+                style={inputStyle}
                 type="number"
                 value={settings.electricity_rate_php_per_kwh}
+                onBlur={(e) => {
+                  e.target.style.border = "1px solid rgba(255,255,255,0.12)";
+                  e.target.style.boxShadow = "none";
+                }}
                 onChange={(e) =>
                   set("electricity_rate_php_per_kwh", e.target.value)
                 }
+                onFocus={(e) => {
+                  e.target.style.border = "1px solid rgba(148,163,184,0.50)";
+                  e.target.style.boxShadow = "0 0 0 3px rgba(148,163,184,0.10)";
+                }}
               />
-              <span className="text-gray-500 text-sm">₱/kWh</span>
+              <span
+                className="text-xs"
+                style={{ color: "rgba(255,255,255,0.40)" }}
+              >
+                ₱/kWh
+              </span>
             </div>
           </div>
         </div>
 
-        {error && <p className="text-red-600 text-sm">{error}</p>}
-        {saved && (
-          <p className="text-green-600 text-sm font-medium">
-            Settings saved successfully.
-          </p>
-        )}
-
         <button
-          className="px-6 py-3 rounded-xl text-white font-semibold text-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
+          className="px-6 py-3.5 rounded-xl font-bold text-sm transition-all duration-200 active:scale-[0.97] disabled:opacity-50"
           disabled={saving}
-          style={{ backgroundColor: "#1B5E20" }}
+          style={{
+            background: "linear-gradient(135deg, #4CAF50, #16A34A)",
+            color: "#fff",
+            boxShadow: "0 8px 24px rgba(76,175,80,0.28)",
+          }}
           onClick={handleSave}
         >
-          {saving ? "Saving..." : "Save Settings"}
+          {saving ? "Saving…" : "Save Settings"}
         </button>
       </div>
     </div>

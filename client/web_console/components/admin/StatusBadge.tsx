@@ -1,4 +1,5 @@
 "use client";
+
 type StatusType =
   | "online"
   | "offline"
@@ -9,70 +10,92 @@ type StatusType =
   | "idle"
   | "full"
   | "low"
-  | "completed";
+  | "completed"
+  | "pending"
+  | "confirmed"
+  | "rejected";
+
 const statusConfig: Record<
   StatusType,
-  { bg: string; text: string; dot: string; label: string }
+  { dot: string; bg: string; color: string; label: string }
 > = {
   online: {
-    bg: "bg-green-100",
-    text: "text-green-700",
-    dot: "bg-green-500",
+    dot: "#4ADE80",
+    bg: "rgba(74,222,128,0.14)",
+    color: "#4ADE80",
     label: "Online",
   },
   offline: {
-    bg: "bg-gray-100",
-    text: "text-gray-600",
-    dot: "bg-gray-400",
+    dot: "#94A3B8",
+    bg: "rgba(148,163,184,0.12)",
+    color: "#94A3B8",
     label: "Offline",
   },
   warning: {
-    bg: "bg-amber-100",
-    text: "text-amber-700",
-    dot: "bg-amber-500",
+    dot: "#FBBF24",
+    bg: "rgba(251,191,36,0.14)",
+    color: "#FBBF24",
     label: "Warning",
   },
   fault: {
-    bg: "bg-red-100",
-    text: "text-red-700",
-    dot: "bg-red-500",
+    dot: "#F87171",
+    bg: "rgba(248,113,113,0.14)",
+    color: "#F87171",
     label: "Fault",
   },
   error: {
-    bg: "bg-red-100",
-    text: "text-red-700",
-    dot: "bg-red-500",
+    dot: "#F87171",
+    bg: "rgba(248,113,113,0.14)",
+    color: "#F87171",
     label: "Error",
   },
   active: {
-    bg: "bg-blue-100",
-    text: "text-blue-700",
-    dot: "bg-blue-500",
+    dot: "#38BDF8",
+    bg: "rgba(56,189,248,0.14)",
+    color: "#38BDF8",
     label: "Active",
   },
   idle: {
-    bg: "bg-gray-100",
-    text: "text-gray-600",
-    dot: "bg-gray-400",
+    dot: "#94A3B8",
+    bg: "rgba(148,163,184,0.12)",
+    color: "#94A3B8",
     label: "Idle",
   },
   full: {
-    bg: "bg-red-100",
-    text: "text-red-700",
-    dot: "bg-red-500",
+    dot: "#F87171",
+    bg: "rgba(248,113,113,0.14)",
+    color: "#F87171",
     label: "Full",
   },
   low: {
-    bg: "bg-green-100",
-    text: "text-green-700",
-    dot: "bg-green-500",
+    dot: "#4ADE80",
+    bg: "rgba(74,222,128,0.14)",
+    color: "#4ADE80",
     label: "Low",
   },
   completed: {
-    bg: "bg-green-100",
-    text: "text-green-700",
-    dot: "bg-green-500",
+    dot: "#4ADE80",
+    bg: "rgba(74,222,128,0.14)",
+    color: "#4ADE80",
     label: "Completed",
+  },
+  pending: {
+    dot: "#FBBF24",
+    bg: "rgba(251,191,36,0.14)",
+    color: "#FBBF24",
+    label: "Pending",
+  },
+  confirmed: {
+    dot: "#4ADE80",
+    bg: "rgba(74,222,128,0.14)",
+    color: "#4ADE80",
+    label: "Confirmed",
+  },
+  rejected: {
+    dot: "#F87171",
+    bg: "rgba(248,113,113,0.14)",
+    color: "#F87171",
+    label: "Rejected",
   },
 };
 
@@ -83,14 +106,22 @@ export function StatusBadge({
   status: StatusType;
   label?: string;
 }) {
-  const config = statusConfig[status];
+  const cfg = statusConfig[status] ?? statusConfig.idle;
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+      style={{
+        background: cfg.bg,
+        color: cfg.color,
+        border: `1px solid ${cfg.dot}35`,
+      }}
     >
-      <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
-      {label || config.label}
+      <span
+        className="w-1.5 h-1.5 rounded-full"
+        style={{ backgroundColor: cfg.dot }}
+      />
+      {label ?? cfg.label}
     </span>
   );
 }
