@@ -77,7 +77,7 @@ export function MascotAvatar({ mood = "idle" }: { mood?: MascotMood }) {
 
   return (
     <div
-      className="w-20 h-20 rounded-full flex items-center justify-center text-4xl float-anim"
+      className="w-20 h-20 rounded-full flex items-center justify-center text-4xl"
       style={{
         background: `radial-gradient(circle at 35% 35%, ${c.from}, ${c.to})`,
         border: "3px solid rgba(255,255,255,0.18)",

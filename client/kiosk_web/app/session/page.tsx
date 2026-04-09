@@ -31,7 +31,7 @@ export default function SessionPage() {
   const router = useRouter();
 
   return (
-    <div className="flex flex-col min-h-screen page-enter">
+    <div className="flex flex-col flex-1 page-enter">
       <KioskHeader showAccount />
 
       <div className="flex-1 flex flex-col items-center justify-center px-6 gap-7 py-8">
@@ -91,7 +91,7 @@ export default function SessionPage() {
           className="w-full glass rounded-3xl p-5 text-center page-fade"
           style={{ animationDelay: "0.35s" }}
         >
-          <p className="text-4xl float-anim mb-2">🍶</p>
+          <p className="text-4xl mb-2">🍶</p>
           <p className="text-white font-bold text-lg">Have a bottle?</p>
           <p className="text-white/40 text-sm">
             Drop it in the slot above to earn credits.

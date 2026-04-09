@@ -45,18 +45,21 @@ const startSchema = z.object({
 router.post('/start', requireAuth, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const body = startSchema.parse(req.body)
+    console.log(`[Charging] START — user #${req.userId} kiosk #${body.kiosk_id} port #${body.port_number} credits=${body.credits}`)
 
     // Check port not already active
     const activeOnPort = await prisma.chargingSession.findFirst({
       where: { kioskId: body.kiosk_id, portNumber: body.port_number, status: 'active' },
     })
     if (activeOnPort) {
+      console.warn(`[Charging] START failed — kiosk #${body.kiosk_id} port #${body.port_number} already in use`)
       res.status(409).json({ error: 'port already in use' }); return
     }
 
     // Check user has enough credits
     const user = await prisma.user.findUniqueOrThrow({ where: { id: req.userId! } })
     if (user.creditBalance < body.credits) {
+      console.warn(`[Charging] START failed — user #${req.userId} insufficient credits (has ${user.creditBalance}, needs ${body.credits})`)
       res.status(400).json({ error: 'insufficient credits' }); return
     }
 
@@ -64,6 +67,7 @@ router.post('/start', requireAuth, async (req: AuthRequest, res: Response, next:
     const { durationSeconds, wattSnapshot } = await calcDurationSeconds(
       body.kiosk_id, body.port_number, body.credits
     )
+    console.log(`[Charging] START — duration=${durationSeconds}s watt=${wattSnapshot ?? 0}W`)
 
     // Create charging session
     const chargingSession = await prisma.chargingSession.create({
@@ -86,6 +90,7 @@ router.post('/start', requireAuth, async (req: AuthRequest, res: Response, next:
       port: body.port_number,
       duration_seconds: durationSeconds,
     })
+    console.log(`[Charging] Session #${chargingSession.id} started — activate_port queued for kiosk #${body.kiosk_id} port #${body.port_number}`)
 
     res.status(201).json({
       charging_session: sessionToJson(chargingSession),
@@ -100,11 +105,12 @@ router.post('/start', requireAuth, async (req: AuthRequest, res: Response, next:
 router.post('/stop/:id', requireAuth, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const id = parseInt(req.params.id)
+    console.log(`[Charging] STOP — user #${req.userId} session #${id}`)
 
     const session = await prisma.chargingSession.findFirst({
       where: { id, userId: req.userId!, status: 'active' },
     })
-    if (!session) { res.status(404).json({ error: 'active session not found' }); return }
+    if (!session) { console.warn(`[Charging] STOP failed — session #${id} not found or not active for user #${req.userId}`); res.status(404).json({ error: 'active session not found' }); return }
 
     const updated = await prisma.chargingSession.update({
       where: { id },
@@ -112,6 +118,7 @@ router.post('/stop/:id', requireAuth, async (req: AuthRequest, res: Response, ne
     })
 
     await queueCommand(session.kioskId, 'deactivate_port', { port: session.portNumber })
+    console.log(`[Charging] Session #${id} interrupted — deactivate_port queued for kiosk #${session.kioskId} port #${session.portNumber}`)
 
     res.json(sessionToJson(updated))
   } catch (err) {

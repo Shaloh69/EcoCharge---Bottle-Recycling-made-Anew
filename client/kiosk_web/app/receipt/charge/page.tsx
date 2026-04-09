@@ -24,7 +24,7 @@ function ChargeReceiptContent() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen page-enter">
+    <div className="flex flex-col flex-1 page-enter">
       <KioskHeader showAccount />
 
       <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
@@ -35,7 +35,7 @@ function ChargeReceiptContent() {
         >
           {/* Success icon */}
           <div
-            className="w-20 h-20 rounded-full flex items-center justify-center text-4xl float-anim"
+            className="w-20 h-20 rounded-full flex items-center justify-center text-4xl"
             style={{
               background: "linear-gradient(135deg, #4ADE80, #16A34A)",
               boxShadow: "0 0 32px rgba(76,175,80,0.4)",

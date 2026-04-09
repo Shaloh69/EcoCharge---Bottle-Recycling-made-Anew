@@ -21,7 +21,7 @@ export default function LinkingPage() {
   }, [router]);
 
   return (
-    <div className="flex flex-col min-h-screen page-enter">
+    <div className="flex flex-col flex-1 page-enter">
       <KioskHeader />
 
       <div className="flex-1 flex flex-col items-center justify-center px-6 gap-8">

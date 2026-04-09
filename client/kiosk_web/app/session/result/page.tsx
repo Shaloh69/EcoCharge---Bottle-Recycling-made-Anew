@@ -13,7 +13,7 @@ function ResultContent() {
   const accepted = params.get("status") === "accepted";
 
   return (
-    <div className="flex flex-col min-h-screen page-enter">
+    <div className="flex flex-col flex-1 page-enter">
       <KioskHeader showAccount />
 
       <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
@@ -24,7 +24,7 @@ function ResultContent() {
           className="glass-white rounded-3xl p-8 w-full max-w-sm shadow-2xl text-center bounce-in"
           style={{ animationDelay: "0.1s" }}
         >
-          <div className="text-6xl mb-3 float-anim">
+          <div className="text-6xl mb-3">
             {accepted ? "✅" : "❌"}
           </div>
           <h2

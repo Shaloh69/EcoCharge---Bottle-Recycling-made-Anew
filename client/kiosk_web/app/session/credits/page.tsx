@@ -8,7 +8,7 @@ export default function CreditsPage() {
   const router = useRouter();
 
   return (
-    <div className="flex flex-col min-h-screen page-enter">
+    <div className="flex flex-col flex-1 page-enter">
       <KioskHeader showAccount />
 
       <div className="flex-1 flex flex-col items-center px-6 pt-8 gap-5">
@@ -52,7 +52,7 @@ export default function CreditsPage() {
             Latest Deposit
           </p>
           <div className="flex items-center gap-3">
-            <span className="text-3xl float-anim">🍶</span>
+            <span className="text-3xl">🍶</span>
             <div>
               <p className="text-white font-bold">1 Plastic Bottle</p>
               <p className="text-white/40 text-sm">+1 min credit earned</p>

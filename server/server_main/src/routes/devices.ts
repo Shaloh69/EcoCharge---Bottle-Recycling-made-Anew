@@ -33,6 +33,9 @@ router.get('/commands', async (req: DeviceRequest, res: Response, next: NextFunc
     await touchKiosk(kioskId)
 
     const commands = await getPendingCommands(kioskId)
+    if (commands.length > 0) {
+      console.log(`[Device] kiosk #${kioskId} poll — ${commands.length} pending command(s): ${commands.map(c => c.commandType).join(', ')}`)
+    }
 
     res.json({
       commands: commands.map(c => ({
@@ -58,6 +61,7 @@ router.post('/commands/:id/ack', async (req: DeviceRequest, res: Response, next:
   try {
     const commandId = parseInt(req.params.id)
     const body = ackBodySchema.parse(req.body)
+    console.log(`[Device] kiosk #${body.kiosk_id} ACK command #${commandId}`)
     await ackCommand(commandId, body.kiosk_id)
     res.json({ acked: commandId })
   } catch (err) {
@@ -110,6 +114,9 @@ router.post('/telemetry', async (req: DeviceRequest, res: Response, next: NextFu
       },
     })
 
+    const activePorts = ports.filter(p => p.relay_on).length
+    console.log(`[Device] kiosk #${kioskId} telemetry — fsm=${fsm_state ?? 'idle'} bin=${bin_level ?? '?'}% activePorts=${activePorts} entrance=${bottle_at_entrance ?? false} inBin=${bottle_in_bin ?? false}`)
+
     // Auto-complete expired charging sessions
     const activeSessions = await prisma.chargingSession.findMany({
       where: { kioskId, status: 'active' },
@@ -118,16 +125,20 @@ router.post('/telemetry', async (req: DeviceRequest, res: Response, next: NextFu
     for (const session of activeSessions) {
       const elapsed = Math.floor((Date.now() - session.startedAt.getTime()) / 1000)
       if (elapsed >= session.durationSeconds) {
+        console.log(`[Device] kiosk #${kioskId} — charging session #${session.id} expired (port ${session.portNumber}), auto-completing`)
         await prisma.chargingSession.update({
           where: { id: session.id },
           data: { status: 'completed', endedAt: new Date() },
         })
         await queueCommand(kioskId, 'deactivate_port', { port: session.portNumber })
+        console.log(`[Device] kiosk #${kioskId} — queued deactivate_port for port ${session.portNumber}`)
       }
     }
 
     // ── Bin confirmation — award credits when bottle lands ────────────────
     if (bottle_in_bin === true) {
+      console.log(`[Device] kiosk #${kioskId} — bottle_in_bin=true, looking for pending deposit`)
+
       // Find the most recent pending deposit for this kiosk
       const pendingDeposit = await prisma.bottleDeposit.findFirst({
         where: {
@@ -139,6 +150,8 @@ router.post('/telemetry', async (req: DeviceRequest, res: Response, next: NextFu
       })
 
       if (pendingDeposit) {
+        console.log(`[Device] kiosk #${kioskId} — confirming deposit #${pendingDeposit.id} (${pendingDeposit.creditsAwarded} credits) for user #${pendingDeposit.session.userId}`)
+
         // Confirm deposit and award credits
         await prisma.bottleDeposit.update({
           where: { id: pendingDeposit.id },
@@ -152,6 +165,7 @@ router.post('/telemetry', async (req: DeviceRequest, res: Response, next: NextFu
             'bottle_deposit',
             pendingDeposit.id,
           )
+          console.log(`[Device] kiosk #${kioskId} — awarded ${pendingDeposit.creditsAwarded} credits to user #${pendingDeposit.session.userId}`)
         }
 
         // Notify kiosk UI — bottle confirmed in bin, credits awarded
@@ -161,8 +175,12 @@ router.post('/telemetry', async (req: DeviceRequest, res: Response, next: NextFu
           deposit_id: pendingDeposit.id,
           credits_awarded: pendingDeposit.creditsAwarded,
         })
+      } else {
+        console.log(`[Device] kiosk #${kioskId} — bottle_in_bin=true but no pending deposit found`)
       }
     } else if (bottle_in_bin === false && fsm_state === 'confirming') {
+      console.log(`[Device] kiosk #${kioskId} — bin timeout (fsm=confirming, bottle_in_bin=false), rejecting pending deposit`)
+
       // Timeout — bin sensors never fired. Mark deposit as rejected.
       const pendingDeposit = await prisma.bottleDeposit.findFirst({
         where: {
@@ -177,6 +195,7 @@ router.post('/telemetry', async (req: DeviceRequest, res: Response, next: NextFu
           where: { id: pendingDeposit.id },
           data: { status: 'rejected', creditsAwarded: 0 },
         })
+        console.log(`[Device] kiosk #${kioskId} — deposit #${pendingDeposit.id} rejected (bin timeout)`)
       }
 
       broadcastToKiosk(String(kioskId), {

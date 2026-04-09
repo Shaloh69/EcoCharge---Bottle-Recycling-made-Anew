@@ -4,7 +4,6 @@ import { Metadata, Viewport } from "next";
 import clsx from "clsx";
 
 import { Providers } from "./providers";
-
 import { KioskRoot } from "@/components/kiosk/KioskRoot";
 
 export const metadata: Metadata = {
@@ -14,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0A2E0F",
+  themeColor: "#07120A",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -30,10 +29,6 @@ export default function RootLayout({
     <html suppressHydrationWarning lang="en">
       <head />
       <body className={clsx("font-sans antialiased")}>
-        {/* Animated nature mesh gradient — always behind all content */}
-        <div className="bg-animated" />
-        <div className="bg-noise" />
-
         <Providers
           themeProps={{
             attribute: "class",

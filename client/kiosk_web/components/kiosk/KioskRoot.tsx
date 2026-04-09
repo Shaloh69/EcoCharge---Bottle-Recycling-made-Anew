@@ -1,7 +1,5 @@
 "use client";
-import { FallingLeaves } from "./FallingLeaves";
 import { IdleScreen } from "./IdleScreen";
-
 import { useIdle } from "@/hooks/useIdle";
 
 export function KioskRoot({ children }: { children: React.ReactNode }) {
@@ -9,25 +7,38 @@ export function KioskRoot({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {/* Ambient leaf animation — always behind everything */}
-      <FallingLeaves />
-
-      {/* Portrait content shell */}
+      {/*
+       * Portrait shell — fixed to viewport height, centred, scrollable inside.
+       * max-width 430 keeps kiosk UI portrait even on landscape monitors.
+       */}
       <div
         style={{
           position: "relative",
-          zIndex: 1,
-          minHeight: "100vh",
+          flex: 1,
+          height: "100%",
           maxWidth: 430,
+          width: "100%",
           margin: "0 auto",
           display: "flex",
           flexDirection: "column",
+          overflow: "hidden",
         }}
       >
-        {children}
+        {/* Scrollable content area */}
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflowY: "auto",
+            overflowX: "hidden",
+          }}
+        >
+          {children}
+        </div>
       </div>
 
-      {/* Idle overlay — clicking it resets idle via window click event in useIdle */}
+      {/* Idle overlay — covers full viewport when triggered */}
       {idle && <IdleScreen onDismiss={() => {}} />}
     </>
   );

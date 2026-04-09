@@ -18,6 +18,7 @@ function paginate<T>(items: T[], total: number, page: number, perPage: number) {
 // GET /overview
 router.get('/overview', async (_req: Request, res: Response, next: NextFunction) => {
   try {
+    console.log('[Admin] Fetching overview stats')
     const [totalUsers, totalDeposits, activeCharging, totalCreditsEarned, kiosksOnline] = await Promise.all([
       prisma.user.count(),
       prisma.bottleDeposit.count(),
@@ -29,6 +30,7 @@ router.get('/overview', async (_req: Request, res: Response, next: NextFunction)
       prisma.kiosk.count({ where: { status: 'online' } }),
     ])
 
+    console.log(`[Admin] Overview — users=${totalUsers} deposits=${totalDeposits} activeCharging=${activeCharging} kiosksOnline=${kiosksOnline}`)
     res.json({
       total_users: totalUsers,
       total_deposits: totalDeposits,
@@ -338,6 +340,8 @@ const settingsBodySchema = z.object({
 router.put('/settings', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const body = settingsBodySchema.parse(req.body)
+    const keys = Object.keys(body.settings)
+    console.log(`[Admin] Settings UPDATE — keys: ${keys.join(', ')}`)
     for (const [key, value] of Object.entries(body.settings)) {
       await prisma.systemSetting.upsert({
         where: { key },
@@ -346,6 +350,7 @@ router.put('/settings', async (req: Request, res: Response, next: NextFunction) 
       })
     }
     invalidateSettingsCache()
+    console.log(`[Admin] Settings updated and cache invalidated`)
 
     // Return updated settings
     const rows = await prisma.systemSetting.findMany()
@@ -425,8 +430,13 @@ router.get('/analytics', async (req: Request, res: Response, next: NextFunction)
 // GET /sse
 router.get('/sse', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
+    console.log(`[Admin] SSE client connected — user #${(req as AuthRequest).userId ?? 'unknown'}`)
     sseHeaders(res)
     addAdminClient(res)
+
+    res.on('close', () => {
+      console.log(`[Admin] SSE client disconnected`)
+    })
 
     // Send initial overview
     const [totalUsers, totalDeposits, activeCharging, totalCreditsEarned, kiosksOnline] = await Promise.all([

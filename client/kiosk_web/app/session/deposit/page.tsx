@@ -232,7 +232,7 @@ function DepositContent() {
   const isActive = phase === "scanning" || phase === "approved";
 
   return (
-    <div className="flex flex-col min-h-screen page-enter">
+    <div className="flex flex-col flex-1 page-enter">
       <KioskHeader showAccount />
       <canvas ref={canvasRef} className="hidden" />
       <video ref={videoRef} autoPlay muted playsInline className="hidden" />

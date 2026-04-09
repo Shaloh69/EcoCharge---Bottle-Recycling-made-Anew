@@ -60,9 +60,11 @@ const createSessionSchema = z.object({
 router.post('/sessions', requireAuth, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const body = createSessionSchema.parse(req.body)
+    console.log(`[Kiosk] Session CREATE — user #${req.userId} → kiosk #${body.kiosk_id}`)
     const session = await prisma.kioskSession.create({
       data: { userId: req.userId!, kioskId: body.kiosk_id },
     })
+    console.log(`[Kiosk] Session #${session.id} created — user #${req.userId} kiosk #${body.kiosk_id}`)
     res.status(201).json({
       id: session.id,
       user_id: session.userId,
@@ -79,14 +81,16 @@ router.post('/sessions', requireAuth, async (req: AuthRequest, res: Response, ne
 router.delete('/sessions/:id', requireAuth, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const id = parseInt(req.params.id)
+    console.log(`[Kiosk] Session DELETE #${id} — user #${req.userId}`)
     const session = await prisma.kioskSession.findFirst({
       where: { id, userId: req.userId! },
     })
-    if (!session) { res.status(404).json({ error: 'session not found' }); return }
+    if (!session) { console.warn(`[Kiosk] Session #${id} not found for user #${req.userId}`); res.status(404).json({ error: 'session not found' }); return }
     const updated = await prisma.kioskSession.update({
       where: { id },
       data: { endedAt: new Date() },
     })
+    console.log(`[Kiosk] Session #${id} ended`)
     res.json({
       id: updated.id,
       user_id: updated.userId,
@@ -111,13 +115,15 @@ const depositSchema = z.object({
 router.post('/deposits', requireAuth, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const body = depositSchema.parse(req.body)
+    console.log(`[Kiosk] Deposit (legacy) — user #${req.userId} session #${body.session_id} brand=${body.brand ?? '?'} vol=${body.volume_ml ?? '?'}mL`)
 
     const session = await prisma.kioskSession.findFirst({
       where: { id: body.session_id, userId: req.userId! },
     })
-    if (!session) { res.status(404).json({ error: 'session not found' }); return }
+    if (!session) { console.warn(`[Kiosk] Deposit failed — session #${body.session_id} not found for user #${req.userId}`); res.status(404).json({ error: 'session not found' }); return }
 
     const creditsAwarded = body.volume_ml ? await creditsForVolume(body.volume_ml) : 0
+    console.log(`[Kiosk] Deposit — creditsAwarded=${creditsAwarded} for ${body.volume_ml}mL`)
 
     const deposit = await prisma.bottleDeposit.create({
       data: {
@@ -137,6 +143,7 @@ router.post('/deposits', requireAuth, async (req: AuthRequest, res: Response, ne
 
     const updatedUser = await prisma.user.findUniqueOrThrow({ where: { id: req.userId! } })
     await queueCommand(session.kioskId, 'open_conveyor', { deposit_id: deposit.id })
+    console.log(`[Kiosk] Deposit #${deposit.id} confirmed — queued open_conveyor for kiosk #${session.kioskId}, credits=${creditsAwarded}`)
 
     res.status(201).json({
       deposit: {
@@ -174,13 +181,15 @@ const bottleApproveSchema = z.object({
 router.post('/bottle/approve', requireAuth, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const body = bottleApproveSchema.parse(req.body)
+    console.log(`[Kiosk] Bottle APPROVE — user #${req.userId} session #${body.session_id} brand=${body.brand ?? '?'} vol=${body.volume_ml ?? '?'}mL cond=${body.condition ?? '?'} conf=${body.confidence ?? '?'}`)
 
     const session = await prisma.kioskSession.findFirst({
       where: { id: body.session_id, userId: req.userId! },
     })
-    if (!session) { res.status(404).json({ error: 'session not found' }); return }
+    if (!session) { console.warn(`[Kiosk] Bottle approve failed — session #${body.session_id} not found for user #${req.userId}`); res.status(404).json({ error: 'session not found' }); return }
 
     const creditsAwarded = body.volume_ml ? await creditsForVolume(body.volume_ml) : 0
+    console.log(`[Kiosk] Bottle APPROVE — creditsPending=${creditsAwarded}, queuing approve_bottle for kiosk #${session.kioskId}`)
 
     // Save deposit as pending — credits awarded only after bin confirmation
     const deposit = await prisma.bottleDeposit.create({
@@ -197,6 +206,7 @@ router.post('/bottle/approve', requireAuth, async (req: AuthRequest, res: Respon
 
     // Tell ESP32 FSM to run fast-forward and drop bottle
     await queueCommand(session.kioskId, 'approve_bottle', { deposit_id: deposit.id })
+    console.log(`[Kiosk] Deposit #${deposit.id} created (pending_bin) — approve_bottle queued for kiosk #${session.kioskId}`)
 
     res.status(201).json({
       deposit_id: deposit.id,
@@ -212,13 +222,15 @@ router.post('/bottle/approve', requireAuth, async (req: AuthRequest, res: Respon
 router.post('/bottle/reject', requireAuth, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const body = z.object({ session_id: z.number().int().positive() }).parse(req.body)
+    console.log(`[Kiosk] Bottle REJECT — user #${req.userId} session #${body.session_id}`)
 
     const session = await prisma.kioskSession.findFirst({
       where: { id: body.session_id, userId: req.userId! },
     })
-    if (!session) { res.status(404).json({ error: 'session not found' }); return }
+    if (!session) { console.warn(`[Kiosk] Bottle reject failed — session #${body.session_id} not found for user #${req.userId}`); res.status(404).json({ error: 'session not found' }); return }
 
     await queueCommand(session.kioskId, 'reject_bottle', {})
+    console.log(`[Kiosk] reject_bottle queued for kiosk #${session.kioskId}`)
 
     res.json({ rejected: true })
   } catch (err) {
@@ -235,15 +247,18 @@ const qrLinkSchema = z.object({
 router.post('/qr-link', requireAuth, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const body = qrLinkSchema.parse(req.body)
+    console.log(`[Kiosk] QR-LINK — user #${req.userId} → kiosk #${body.kiosk_id}`)
 
     const kiosk = await prisma.kiosk.findUnique({ where: { id: body.kiosk_id } })
-    if (!kiosk) { res.status(404).json({ error: 'kiosk not found' }); return }
+    if (!kiosk) { console.warn(`[Kiosk] QR-LINK failed — kiosk #${body.kiosk_id} not found`); res.status(404).json({ error: 'kiosk not found' }); return }
 
     const session = await prisma.kioskSession.create({
       data: { userId: req.userId!, kioskId: body.kiosk_id },
     })
 
     const user = await prisma.user.findUniqueOrThrow({ where: { id: req.userId! } })
+
+    console.log(`[Kiosk] QR-LINK — session #${session.id} created, token stored (expires in 5m)`)
 
     // Store in pending map with 5-minute expiry
     _qrPending.set(body.session_token, {
@@ -286,12 +301,14 @@ router.get('/qr-status', async (req: Request, res: Response, next: NextFunction)
     }
 
     const entry = _qrPending.get(token)
-    if (!entry) { res.json({ linked: false }); return }
+    if (!entry) { console.log(`[Kiosk] QR-STATUS — token not found or expired`); res.json({ linked: false }); return }
 
     _qrPending.delete(token)
 
     const user = await prisma.user.findUnique({ where: { id: entry.userId } })
-    if (!user) { res.json({ linked: false }); return }
+    if (!user) { console.warn(`[Kiosk] QR-STATUS — user #${entry.userId} not found`); res.json({ linked: false }); return }
+
+    console.log(`[Kiosk] QR-STATUS — linked! user #${user.id} (${user.email}) session #${entry.sessionId}`)
 
     const access_token = jwt.sign(
       { sub: user.id.toString(), isAdmin: user.isAdmin },
@@ -347,8 +364,13 @@ router.get('/:id/sse', async (req: Request, res: Response, next: NextFunction) =
     const kiosk = await prisma.kiosk.findUnique({ where: { id: kioskId } })
     if (!kiosk) { res.status(404).json({ error: 'kiosk not found' }); return }
 
+    console.log(`[Kiosk] SSE client connected — kiosk #${kioskId}`)
     sseHeaders(res)
     addKioskClient(String(kioskId), res)
+
+    req.on('close', () => {
+      console.log(`[Kiosk] SSE client disconnected — kiosk #${kioskId}`)
+    })
 
     // Send initial port status
     const portStatus = await getPortStatus(kioskId)

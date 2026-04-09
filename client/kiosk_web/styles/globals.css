@@ -41,22 +41,37 @@
    BASE RESET
 ============================================================================ */
 * { box-sizing: border-box; }
-html, body { height: 100%; margin: 0; padding: 0; overflow-x: hidden; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;  /* kiosk — no page-level scroll; KioskRoot handles it */
+}
 
 html {
-  background: #051A08;
+  background: #07120A;
 }
 
 body {
-  margin: 0;
+  display: flex;
+  flex-direction: column;
   font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  color: var(--text);
-  background: transparent !important;
-  min-height: 100vh;
+  color: #F0FDF4;
+  background: #07120A;
+  overflow-x: hidden;
+}
+
+/* Next.js root div must stretch to fill body */
+#__next {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 /* ============================================================================
-   DESIGN TOKENS  (AIRAT-NA pattern — green edition)
+   DESIGN TOKENS
 ============================================================================ */
 :root {
   /* ── Full green scale ── */
@@ -154,7 +169,7 @@ body {
   --surface-1:      rgba(255,255,255,0.05);
   --surface-2:      rgba(255,255,255,0.09);
   --surface-3:      rgba(255,255,255,0.14);
-  --surface-card:   rgba(255,255,255,0.08);
+  --surface-card:   rgba(255,255,255,0.07);
   --surface-solid:  rgba(255,255,255,0.96);
   --surface-green:  rgba(76,175,80,0.13);
   --surface-teal:   rgba(20,184,166,0.13);
@@ -170,91 +185,29 @@ body {
   --text-faint:  #6EE7B7;
 
   /* ── Borders ── */
-  --border:        rgba(255,255,255,0.13);
-  --border-strong: rgba(255,255,255,0.22);
-  --border-accent: rgba(76,175,80,0.38);
+  --border:        rgba(255,255,255,0.10);
+  --border-strong: rgba(255,255,255,0.18);
+  --border-accent: rgba(76,175,80,0.35);
   --border-teal:   rgba(20,184,166,0.33);
   --border-amber:  rgba(245,158,11,0.33);
   --border-lime:   rgba(163,230,53,0.28);
   --border-sky:    rgba(14,165,233,0.28);
 
   /* ── Effects ── */
-  --glass-blur:    blur(18px);
-  --shadow:        0 12px 40px rgba(0,0,0,0.40);
-  --shadow-soft:   0 8px 20px rgba(0,0,0,0.28);
-  --shadow-green:  0 8px 32px rgba(76,175,80,0.28);
-  --shadow-teal:   0 8px 32px rgba(20,184,166,0.25);
-  --shadow-amber:  0 8px 32px rgba(245,158,11,0.25);
-  --glow-green:    0 0 28px rgba(76,175,80,0.50);
-  --glow-teal:     0 0 28px rgba(20,184,166,0.45);
-  --glow-amber:    0 0 28px rgba(245,158,11,0.42);
-  --glow-lime:     0 0 28px rgba(163,230,53,0.40);
+  --glass-blur:    blur(16px);
+  --shadow:        0 8px 32px rgba(0,0,0,0.45);
+  --shadow-soft:   0 4px 16px rgba(0,0,0,0.30);
+  --shadow-green:  0 6px 24px rgba(76,175,80,0.25);
+  --shadow-teal:   0 6px 24px rgba(20,184,166,0.22);
+  --shadow-amber:  0 6px 24px rgba(245,158,11,0.22);
+  --glow-green:    0 0 20px rgba(76,175,80,0.40);
+  --glow-teal:     0 0 20px rgba(20,184,166,0.38);
+  --glow-amber:    0 0 20px rgba(245,158,11,0.35);
+  --glow-lime:     0 0 20px rgba(163,230,53,0.32);
 }
 
 /* ============================================================================
-   ANIMATED NATURE BACKGROUND  (AIRAT-NA meshMove pattern)
-   Deep forest canopy with shafts of light, water, and new-growth colours.
-============================================================================ */
-
-.bg-animated {
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  pointer-events: none;
-
-  background:
-    radial-gradient(circle at 12% 20%, rgba(22,163,74,0.70),   transparent 35%),
-    radial-gradient(circle at 88% 15%, rgba(20,184,166,0.55),  transparent 40%),
-    radial-gradient(circle at 50% 70%, rgba(10,46,15,0.90),    transparent 50%),
-    radial-gradient(circle at 22% 80%, rgba(74,124,89,0.60),   transparent 40%),
-    radial-gradient(circle at 82% 72%, rgba(16,185,129,0.45),  transparent 42%),
-    radial-gradient(circle at 60% 38%, rgba(163,230,53,0.30),  transparent 38%),
-    radial-gradient(circle at 38% 50%, rgba(5,26,8,0.85),      transparent 55%),
-    radial-gradient(circle at 70% 88%, rgba(245,158,11,0.22),  transparent 32%),
-    radial-gradient(circle at 5%  55%, rgba(14,165,233,0.20),  transparent 28%);
-
-  filter: blur(80px);
-  transform: translateZ(0);
-  animation: meshMove 28s ease-in-out infinite alternate;
-  opacity: 1;
-}
-
-.bg-noise {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.20'/%3E%3C/svg%3E");
-  opacity: 0.09;
-  mix-blend-mode: overlay;
-}
-
-@keyframes meshMove {
-  0% {
-    transform: scale(1) translate(0px, 0px) rotate(0deg);
-    filter: blur(75px) hue-rotate(0deg);
-  }
-  25% {
-    transform: scale(1.12) translate(-50px, 35px) rotate(5deg);
-    filter: blur(90px) hue-rotate(4deg);
-  }
-  50% {
-    transform: scale(1.08) translate(45px, -28px) rotate(-4deg);
-    filter: blur(82px) hue-rotate(-2deg);
-  }
-  75% {
-    transform: scale(1.16) translate(-30px, 50px) rotate(7deg);
-    filter: blur(95px) hue-rotate(6deg);
-  }
-  100% {
-    transform: scale(1.18) translate(20px, 15px) rotate(2deg);
-    filter: blur(85px) hue-rotate(-3deg);
-  }
-}
-
-/* ============================================================================
-   GLASS UTILITY CLASSES  (AIRAT-NA pattern)
+   GLASS UTILITY CLASSES
 ============================================================================ */
 
 .glass {
@@ -331,11 +284,11 @@ body {
 .glass-btn-primary:active { transform: scale(0.97); }
 
 .glass-btn-secondary {
-  background: transparent;
+  background: var(--surface-1);
   color: var(--text);
   border: 1px solid var(--border-strong);
 }
-.glass-btn-secondary:hover  { background: var(--surface-1); }
+.glass-btn-secondary:hover  { background: var(--surface-2); }
 .glass-btn-secondary:active { transform: scale(0.97); }
 
 /* Sidebar / topbar */
@@ -354,7 +307,7 @@ body {
 }
 
 /* ============================================================================
-   HEROUI COMPONENT OVERRIDES  (AIRAT-NA [data-slot] pattern)
+   HEROUI COMPONENT OVERRIDES
 ============================================================================ */
 
 /* ── Cards ── */
@@ -397,7 +350,7 @@ body {
 [data-slot="input-wrapper"]:focus-within,
 [data-slot="input"]:focus-within {
   border-color: rgba(76,175,80,0.55) !important;
-  box-shadow: 0 0 0 4px rgba(76,175,80,0.18) !important;
+  box-shadow: 0 0 0 3px rgba(76,175,80,0.15) !important;
 }
 
 [data-slot="input-wrapper"] input,
@@ -421,23 +374,20 @@ body {
   background: linear-gradient(135deg, #4CAF50, #16A34A) !important;
   color: #ffffff !important;
   border-radius: 16px !important;
-  box-shadow: 0 8px 20px rgba(76,175,80,0.30) !important;
+  box-shadow: 0 6px 18px rgba(76,175,80,0.28) !important;
   font-weight: 600;
 }
 [data-slot="base"][class*="button"][data-color="primary"]:hover {
-  box-shadow: 0 10px 26px rgba(76,175,80,0.42) !important;
   opacity: 0.93;
 }
 
 /* ── Buttons — Secondary / Default ── */
 [data-slot="base"][class*="button"][data-color="default"],
 [data-slot="base"][class*="button"][data-variant="flat"] {
-  background: transparent !important;
+  background: var(--surface-1) !important;
   color: var(--text-strong) !important;
   border: 1px solid var(--border-strong) !important;
   border-radius: 16px !important;
-  backdrop-filter: blur(14px) !important;
-  -webkit-backdrop-filter: blur(14px) !important;
 }
 
 /* ── Buttons — Success ── */
@@ -445,7 +395,7 @@ body {
   background: linear-gradient(135deg, #A3E635, #65A30D) !important;
   color: #1A2E05 !important;
   border-radius: 16px !important;
-  box-shadow: 0 8px 20px rgba(163,230,53,0.28) !important;
+  box-shadow: 0 6px 18px rgba(163,230,53,0.25) !important;
 }
 
 /* ── Buttons — Warning ── */
@@ -453,7 +403,7 @@ body {
   background: linear-gradient(135deg, #FBBF24, #D97706) !important;
   color: #1C1917 !important;
   border-radius: 16px !important;
-  box-shadow: 0 8px 20px rgba(245,158,11,0.28) !important;
+  box-shadow: 0 6px 18px rgba(245,158,11,0.25) !important;
 }
 
 /* ── Buttons — Danger ── */
@@ -469,12 +419,11 @@ body {
 
 /* ── Modal ── */
 [data-slot="backdrop"] {
-  backdrop-filter: blur(22px) !important;
-  -webkit-backdrop-filter: blur(22px) !important;
-  background: rgba(5,26,8,0.55) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  background: rgba(5,26,8,0.60) !important;
 }
 
-/* Modal inputs — override global transparent styles */
 [role="dialog"] [data-slot="input-wrapper"],
 [role="dialog"] [data-slot="input"] {
   background: rgba(255,255,255,0.07) !important;
@@ -551,13 +500,13 @@ body {
   background: linear-gradient(90deg, #16A34A, #4CAF50) !important;
 }
 
-/* ── Toast (HeroUI) ── */
+/* ── Toast ── */
 [class*="toast"] {
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
   border: 1px solid var(--border) !important;
   border-radius: 16px !important;
-  background: rgba(10,46,15,0.88) !important;
+  background: rgba(10,46,15,0.90) !important;
 }
 
 /* ── Tabs ── */
@@ -574,21 +523,12 @@ body {
 }
 
 /* ============================================================================
-   KEYFRAMES
+   KEYFRAMES  (page transitions and UI feedback only — no background animation)
 ============================================================================ */
-
-/* Falling leaf */
-@keyframes leaf-fall {
-  0%   { transform: translateY(-60px) translateX(0px)   rotate(0deg);   opacity: 0;   }
-  10%  { opacity: 0.7; }
-  50%  { transform: translateY(42vh)  translateX(30px)  rotate(210deg); opacity: 0.5; }
-  90%  { opacity: 0.25; }
-  100% { transform: translateY(108vh) translateX(-18px) rotate(400deg); opacity: 0;   }
-}
 
 /* Page entrance */
 @keyframes slide-up-in {
-  from { transform: translateY(28px); opacity: 0; }
+  from { transform: translateY(24px); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }
 }
 @keyframes fade-in {
@@ -596,17 +536,17 @@ body {
   to   { opacity: 1; }
 }
 @keyframes scale-in {
-  from { transform: scale(0.93); opacity: 0; }
+  from { transform: scale(0.94); opacity: 0; }
   to   { transform: scale(1);    opacity: 1; }
 }
 
-/* Idle slide transitions */
+/* Idle screen transitions */
 @keyframes idle-slide-left {
   from { transform: translateX(100%); opacity: 0; }
   to   { transform: translateX(0);    opacity: 1; }
 }
 @keyframes idle-slide-up {
-  from { transform: translateY(72px); opacity: 0; }
+  from { transform: translateY(60px); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }
 }
 @keyframes idle-fade {
@@ -614,7 +554,7 @@ body {
   to   { opacity: 1; }
 }
 @keyframes idle-zoom {
-  from { transform: scale(0.84); opacity: 0; }
+  from { transform: scale(0.86); opacity: 0; }
   to   { transform: scale(1);    opacity: 1; }
 }
 @keyframes idle-flip {
@@ -622,18 +562,20 @@ body {
   to   { transform: scaleX(1);   opacity: 1; }
 }
 
-/* Misc */
+/* UI feedback */
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0   rgba(76,175,80,0.55); }
-  50%       { box-shadow: 0 0 0 18px rgba(76,175,80,0);   }
+  0%, 100% { box-shadow: 0 0 0 0   rgba(76,175,80,0.50); }
+  50%       { box-shadow: 0 0 0 14px rgba(76,175,80,0);   }
 }
-@keyframes float {
-  0%, 100% { transform: translateY(0px);  }
-  50%       { transform: translateY(-9px); }
+@keyframes ripple {
+  0%   { transform: scale(0.8); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0;   }
 }
-@keyframes float-slow {
-  0%, 100% { transform: translateY(0px)  rotate(0deg);  }
-  50%       { transform: translateY(-6px) rotate(3deg);  }
+@keyframes bounce-in {
+  0%   { transform: scale(0.3); opacity: 0; }
+  55%  { transform: scale(1.06); }
+  80%  { transform: scale(0.97); }
+  100% { transform: scale(1);   opacity: 1; }
 }
 @keyframes shimmer {
   from { background-position: -200% center; }
@@ -643,44 +585,26 @@ body {
   from { transform: rotate(0deg);   }
   to   { transform: rotate(360deg); }
 }
-@keyframes bounce-in {
-  0%   { transform: scale(0.3); opacity: 0; }
-  55%  { transform: scale(1.08); }
-  80%  { transform: scale(0.96); }
-  100% { transform: scale(1);   opacity: 1; }
-}
-@keyframes wiggle {
-  0%, 100% { transform: rotate(0deg);  }
-  25%       { transform: rotate(-8deg); }
-  75%       { transform: rotate(8deg);  }
-}
 @keyframes breathe {
   0%, 100% { transform: scale(1);    opacity: 1;   }
-  50%       { transform: scale(1.04); opacity: 0.85; }
-}
-@keyframes ripple {
-  0%   { transform: scale(0.8); opacity: 0.9; }
-  100% { transform: scale(2.4); opacity: 0;   }
+  50%       { transform: scale(1.03); opacity: 0.88; }
 }
 
 /* ============================================================================
    ANIMATION UTILITY CLASSES
 ============================================================================ */
-.page-enter  { animation: slide-up-in 0.45s cubic-bezier(0.16,1,0.3,1) both; }
-.page-fade   { animation: fade-in     0.35s ease both; }
-.page-scale  { animation: scale-in    0.40s cubic-bezier(0.16,1,0.3,1) both; }
+.page-enter  { animation: slide-up-in 0.40s cubic-bezier(0.16,1,0.3,1) both; }
+.page-fade   { animation: fade-in     0.30s ease both; }
+.page-scale  { animation: scale-in    0.38s cubic-bezier(0.16,1,0.3,1) both; }
 
-.float-anim      { animation: float      3s ease-in-out infinite; }
-.float-slow-anim { animation: float-slow 4s ease-in-out infinite; }
-.pulse-glow      { animation: pulse-glow 2.2s ease-in-out infinite; }
-.wiggle-anim     { animation: wiggle     0.55s ease-in-out; }
-.bounce-in       { animation: bounce-in  0.65s cubic-bezier(0.16,1,0.3,1) both; }
-.breathe-anim    { animation: breathe    4s ease-in-out infinite; }
-.spin-slow       { animation: spin-slow  12s linear infinite; }
+.pulse-glow  { animation: pulse-glow  2.5s ease-in-out infinite; }
+.bounce-in   { animation: bounce-in   0.60s cubic-bezier(0.16,1,0.3,1) both; }
+.breathe-anim{ animation: breathe     4s ease-in-out infinite; }
+.spin-slow   { animation: spin-slow   12s linear infinite; }
 
 /* idle */
-.idle-slide-left { animation: idle-slide-left 0.5s cubic-bezier(0.16,1,0.3,1) both; }
-.idle-slide-up   { animation: idle-slide-up   0.5s cubic-bezier(0.16,1,0.3,1) both; }
-.idle-fade       { animation: idle-fade       0.4s ease both; }
-.idle-zoom       { animation: idle-zoom       0.45s cubic-bezier(0.16,1,0.3,1) both; }
-.idle-flip       { animation: idle-flip       0.45s ease both; }
+.idle-slide-left { animation: idle-slide-left 0.45s cubic-bezier(0.16,1,0.3,1) both; }
+.idle-slide-up   { animation: idle-slide-up   0.45s cubic-bezier(0.16,1,0.3,1) both; }
+.idle-fade       { animation: idle-fade       0.38s ease both; }
+.idle-zoom       { animation: idle-zoom       0.42s cubic-bezier(0.16,1,0.3,1) both; }
+.idle-flip       { animation: idle-flip       0.42s ease both; }

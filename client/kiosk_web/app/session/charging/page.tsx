@@ -79,7 +79,7 @@ export default function ChargingPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen page-enter">
+    <div className="flex flex-col flex-1 page-enter">
       <KioskHeader showAccount />
 
       <div className="flex-1 flex flex-col items-center px-6 pt-6 gap-6">
