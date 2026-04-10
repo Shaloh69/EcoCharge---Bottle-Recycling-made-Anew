@@ -18,7 +18,7 @@ load_dotenv()
 
 ADMIN_NAME     = os.environ.get("ADMIN_NAME",     "EcoCharge Admin")
 ADMIN_EMAIL    = os.environ.get("ADMIN_EMAIL",    "admin@ecocharge.ph")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123!")
 KIOSK_NAME     = os.environ.get("KIOSK_NAME",     "Kiosk-001")
 KIOSK_LOCATION = os.environ.get("KIOSK_LOCATION", "Main Building Lobby")
 DEVICE_API_KEY = os.environ.get("DEVICE_API_KEY", secrets.token_hex(32))
