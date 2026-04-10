@@ -27,15 +27,32 @@ export async function runMigrations() {
       const e = err as { stdout?: string; stderr?: string; message?: string }
       const combined = (e.stdout ?? '') + (e.stderr ?? '') + (e.message ?? '')
 
-      // P3018 = migration failed due to schema drift (column/table already
-      // exists from a prior db push). Extract the name, mark it as applied,
-      // then retry the deploy loop.
+      // P3009 = Prisma's migration table has a *failed* record from a previous
+      // attempt (e.g. the last deploy crashed mid-migration). We must first
+      // mark it as rolled-back (clears the failure), then mark it as applied
+      // (since the column already exists in the DB), then retry.
+      if (combined.includes('P3009')) {
+        const match = combined.match(/The `(\S+)` migration started at .+ failed/)
+        if (match) {
+          const name = match[1]
+          console.warn(`[Startup] Failed migration record found: "${name}" (P3009)`)
+          console.warn(`[Startup] Clearing failure → rolling back then marking applied…`)
+          await execAsync(`npx prisma migrate resolve --rolled-back ${name}`)
+          await execAsync(`npx prisma migrate resolve --applied ${name}`)
+          console.log(`[Startup] Resolved "${name}". Retrying deploy…`)
+          continue
+        }
+      }
+
+      // P3018 = migration ran but failed due to schema drift (column/table
+      // already exists from a prior db push). Mark as applied and retry.
       if (combined.includes('P3018')) {
         const match = combined.match(/Migration name:\s*(\S+)/)
         if (match) {
           const name = match[1]
-          console.warn(`[Startup] Drift on "${name}" — marking as applied and retrying…`)
+          console.warn(`[Startup] Schema drift on "${name}" (P3018) — marking as applied…`)
           await execAsync(`npx prisma migrate resolve --applied ${name}`)
+          console.log(`[Startup] Resolved "${name}". Retrying deploy…`)
           continue
         }
       }
