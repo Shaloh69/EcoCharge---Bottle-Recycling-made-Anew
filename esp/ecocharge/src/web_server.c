@@ -2,6 +2,7 @@
 #include "config.h"
 #include "relay_control.h"
 #include "sensor_monitor.h"
+#include "ultrasonic.h"
 #include "conveyor_motor.h"
 #include "wifi_sta.h"
 #include "nvs_config.h"
@@ -135,7 +136,20 @@ static int _build_sensor_json(char *buf, size_t buf_len)
                       d.voltage_volts,
                       d.overcurrent ? "true" : "false");
     }
-    n += snprintf(buf + n, buf_len - n, "]}");
+
+    // Ultrasonic sensor data
+    ultrasonic_data_t ud = ultrasonic_get();
+    bool ent_det  = ud.entrance_cm < ULTRASONIC_ENTRANCE_THRESHOLD_CM;
+    bool btop_det = ud.bin_top_cm  < ULTRASONIC_BIN_THRESHOLD_CM;
+    bool bbot_det = ud.bin_bot_cm  < ULTRASONIC_BIN_THRESHOLD_CM;
+    n += snprintf(buf + n, buf_len - n,
+                  "],\"ultrasonic\":{"
+                  "\"entrance_cm\":%.1f,\"entrance_det\":%s,"
+                  "\"bin_top_cm\":%.1f,\"bin_top_det\":%s,"
+                  "\"bin_bot_cm\":%.1f,\"bin_bot_det\":%s}}",
+                  ud.entrance_cm, ent_det  ? "true" : "false",
+                  ud.bin_top_cm,  btop_det ? "true" : "false",
+                  ud.bin_bot_cm,  bbot_det ? "true" : "false");
     return n;
 }
 
@@ -214,7 +228,7 @@ static const char *s_html_provision =
 "</script></body></html>";
 
 // ---------------------------------------------------------------------------
-// Hardware test page — relays, live sensor readings via SSE, servo control
+// Hardware test page — manual component test + live sensor readings via SSE
 // ---------------------------------------------------------------------------
 static const char *s_html_test =
 "<!DOCTYPE html><html><head>"
@@ -223,148 +237,237 @@ static const char *s_html_test =
 "<title>EcoCharge Hardware Test</title>"
 "<style>"
 "*{box-sizing:border-box}"
-"body{font-family:sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:14px;max-width:700px;margin:0 auto}"
+"body{font-family:sans-serif;background:#0d1117;color:#c9d1d9;margin:0;padding:14px;max-width:720px;margin:0 auto}"
 "h1{color:#58a6ff;margin-bottom:2px}p.sub{color:#8b949e;margin-top:0;font-size:13px}"
 ".card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:16px;margin:12px 0}"
-".card h2{color:#58a6ff;font-size:15px;margin:0 0 12px}"
+".card h2{color:#58a6ff;font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:8px}"
 "table{width:100%;border-collapse:collapse;font-size:13px}"
-"td,th{padding:7px 10px;border:1px solid #30363d;text-align:left}"
+"td,th{padding:8px 10px;border:1px solid #30363d;text-align:left}"
 "th{background:#21262d;color:#8b949e;font-weight:600}"
-".on{color:#3fb950;font-weight:600}.off{color:#f85149;font-weight:600}"
-".warn{color:#d29922;font-weight:600}"
+".on{color:#3fb950;font-weight:600}.off{color:#f85149;font-weight:600}.warn{color:#d29922;font-weight:600}"
+".det{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;"
+"letter-spacing:.5px}"
+".det-yes{background:#0d3321;color:#3fb950;border:1px solid #3fb950}"
+".det-no{background:#21262d;color:#8b949e;border:1px solid #30363d}"
+".det-oc{background:#3d1a00;color:#d29922;border:1px solid #d29922}"
 ".port-card{display:flex;align-items:center;gap:10px;padding:10px;"
-"background:#21262d;border:1px solid #30363d;border-radius:8px;margin-bottom:8px;flex-wrap:wrap}"
-".port-label{font-weight:600;min-width:60px}"
-".port-stat{font-size:12px;color:#8b949e;flex:1}"
-".btn-row{display:flex;gap:6px}"
+"background:#21262d;border:1px solid #30363d;border-radius:8px;margin-bottom:8px;flex-wrap:wrap;"
+"transition:border-color .3s}"
+".port-label{font-weight:700;min-width:64px;font-size:14px}"
+".port-stat{font-size:12px;color:#8b949e;flex:1;min-width:120px}"
+".btn-row{display:flex;gap:6px;flex-wrap:wrap}"
 "button{background:#238636;color:#fff;border:none;border-radius:6px;"
-"padding:7px 12px;cursor:pointer;font-size:12px;font-weight:600}"
+"padding:7px 13px;cursor:pointer;font-size:12px;font-weight:700;transition:opacity .15s}"
+"button:active{opacity:.7}"
 "button.off-btn{background:#da3633}"
 "button.blue{background:#1f6feb}"
+"button.amber{background:#9a6700}"
 "button.grey{background:#21262d;border:1px solid #30363d}"
 "input[type=range]{width:100%;accent-color:#58a6ff}"
-"#servo-angle-label{font-size:18px;font-weight:600;color:#58a6ff;display:inline-block;min-width:50px}"
-".wifi-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}"
-"#sse-status{font-size:12px;color:#8b949e}"
+".speed-row{display:flex;align-items:center;gap:12px;margin-top:6px}"
+"#spd-label{font-size:18px;font-weight:700;color:#58a6ff;min-width:46px}"
+"#sse-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#8b949e;margin-right:4px}"
+"#sse-dot.live{background:#3fb950}"
 "</style></head><body>"
-"<h1>EcoCharge Hardware Test</h1>"
-"<p class='sub'>Live sensor data &mdash; <span id='sse-status'>connecting&#x2026;</span></p>"
 
+"<h1>EcoCharge Hardware Test</h1>"
+"<p class='sub'><span id='sse-dot'></span><span id='sse-status'>connecting&#x2026;</span>"
+" &mdash; data refreshes every 500 ms</p>"
+
+/* ── 1. Voltage & Current Live Readings ─────────────────────────────────── */
 "<div class='card'>"
-"<h2>Sensor Readings</h2>"
-"<table><thead><tr><th>Port</th><th>Relay</th><th>Current</th><th>Voltage</th><th>State</th></tr></thead>"
-"<tbody id='stbl'>"
-"<tr><td colspan='5' style='color:#8b949e'>Waiting for data&#x2026;</td></tr>"
+"<h2>&#x26A1; Voltage &amp; Current — Live</h2>"
+"<table>"
+"<thead><tr><th>Port</th><th>Source</th><th>Voltage</th><th>Current</th><th>Relay</th><th>State</th></tr></thead>"
+"<tbody id='stbl'><tr><td colspan='6' style='color:#8b949e;text-align:center'>Waiting&#x2026;</td></tr></tbody>"
+"</table>"
+"</div>"
+
+/* ── 2. Ultrasonic Sensors ───────────────────────────────────────────────── */
+"<div class='card'>"
+"<h2>&#x1F50D; Ultrasonic Sensors — Live</h2>"
+"<table>"
+"<thead><tr><th>Sensor</th><th>Distance</th><th>Threshold</th><th>Status</th></tr></thead>"
+"<tbody>"
+"<tr>"
+"<td><b>Entrance</b></td>"
+"<td id='us-ent-cm'>-</td>"
+"<td>&lt; 15 cm</td>"
+"<td id='us-ent-st'><span class='det det-no'>-</span></td>"
+"</tr>"
+"<tr>"
+"<td><b>Bin Top</b></td>"
+"<td id='us-btop-cm'>-</td>"
+"<td>&lt; 20 cm</td>"
+"<td id='us-btop-st'><span class='det det-no'>-</span></td>"
+"</tr>"
+"<tr>"
+"<td><b>Bin Bottom</b></td>"
+"<td id='us-bbot-cm'>-</td>"
+"<td>&lt; 20 cm</td>"
+"<td id='us-bbot-st'><span class='det det-no'>-</span></td>"
+"</tr>"
 "</tbody></table>"
 "</div>"
 
+/* ── 3. Relay Control ────────────────────────────────────────────────────── */
 "<div class='card'>"
-"<h2>Relay Control</h2>"
+"<h2>&#x1F50C; Relay Control</h2>"
 "<div id='relay-cards'>"
-"<div class='port-card' id='pc1'><span class='port-label'>Port 1</span>"
+"<div class='port-card' id='pc1'>"
+"<span class='port-label'>Port 1</span>"
 "<span class='port-stat' id='ps1'>-</span>"
 "<div class='btn-row'>"
-"<button onclick='relayOn(1,10)'>ON 10s</button>"
-"<button onclick='relayOn(1,30)'>ON 30s</button>"
-"<button onclick='relayOn(1,600)'>ON 10m</button>"
+"<button onclick='relayOn(1,10)'>ON 10 s</button>"
+"<button onclick='relayOn(1,30)'>ON 30 s</button>"
+"<button onclick='relayOn(1,600)'>ON 10 m</button>"
 "<button class='off-btn' onclick='relayOff(1)'>OFF</button>"
 "</div></div>"
-"<div class='port-card' id='pc2'><span class='port-label'>Port 2</span>"
+"<div class='port-card' id='pc2'>"
+"<span class='port-label'>Port 2</span>"
 "<span class='port-stat' id='ps2'>-</span>"
 "<div class='btn-row'>"
-"<button onclick='relayOn(2,10)'>ON 10s</button>"
-"<button onclick='relayOn(2,30)'>ON 30s</button>"
-"<button onclick='relayOn(2,600)'>ON 10m</button>"
+"<button onclick='relayOn(2,10)'>ON 10 s</button>"
+"<button onclick='relayOn(2,30)'>ON 30 s</button>"
+"<button onclick='relayOn(2,600)'>ON 10 m</button>"
 "<button class='off-btn' onclick='relayOff(2)'>OFF</button>"
 "</div></div>"
-"<div class='port-card' id='pc3'><span class='port-label'>Port 3</span>"
+"<div class='port-card' id='pc3'>"
+"<span class='port-label'>Port 3</span>"
 "<span class='port-stat' id='ps3'>-</span>"
 "<div class='btn-row'>"
-"<button onclick='relayOn(3,10)'>ON 10s</button>"
-"<button onclick='relayOn(3,30)'>ON 30s</button>"
-"<button onclick='relayOn(3,600)'>ON 10m</button>"
+"<button onclick='relayOn(3,10)'>ON 10 s</button>"
+"<button onclick='relayOn(3,30)'>ON 30 s</button>"
+"<button onclick='relayOn(3,600)'>ON 10 m</button>"
 "<button class='off-btn' onclick='relayOff(3)'>OFF</button>"
 "</div></div>"
-"<div class='port-card' id='pc4'><span class='port-label'>Port 4</span>"
+"<div class='port-card' id='pc4'>"
+"<span class='port-label'>Port 4</span>"
 "<span class='port-stat' id='ps4'>-</span>"
 "<div class='btn-row'>"
-"<button onclick='relayOn(4,10)'>ON 10s</button>"
-"<button onclick='relayOn(4,30)'>ON 30s</button>"
-"<button onclick='relayOn(4,600)'>ON 10m</button>"
+"<button onclick='relayOn(4,10)'>ON 10 s</button>"
+"<button onclick='relayOn(4,30)'>ON 30 s</button>"
+"<button onclick='relayOn(4,600)'>ON 10 m</button>"
 "<button class='off-btn' onclick='relayOff(4)'>OFF</button>"
 "</div></div>"
+"</div>"
 "<button class='off-btn' style='width:100%;margin-top:8px' onclick='post(\"/api/relay/all-off\")'>"
-"&#9888; Emergency OFF (all ports)</button>"
-"</div></div>"
+"&#9888;&#xFE0F; Emergency OFF — All Ports</button>"
+"</div>"
 
+/* ── 4. Conveyor Motor ───────────────────────────────────────────────────── */
 "<div class='card'>"
-"<h2>Conveyor Belt (L298N)</h2>"
-"<div id='conv-stat' style='margin-bottom:12px;font-size:14px'>Status: <span id='cdir'>-</span> &nbsp; Speed: <span id='cspd'>-</span>%</div>"
-"<div class='btn-row' style='margin-bottom:12px'>"
+"<h2>&#x2699;&#xFE0F; Conveyor Motor (L298N)</h2>"
+"<div style='margin-bottom:12px;font-size:14px'>"
+"Direction: <span id='cdir' style='font-weight:700'>-</span>"
+"&nbsp;&nbsp;Speed: <span id='cspd'>-</span>%"
+"</div>"
+"<div class='btn-row' style='margin-bottom:14px'>"
 "<button class='blue' onclick='post(\"/api/conveyor/forward\")'>&#9654; Forward</button>"
-"<button class='grey' onclick='post(\"/api/conveyor/reverse\")'>&#9664; Reverse</button>"
+"<button class='amber' onclick='post(\"/api/conveyor/reverse\")'>&#9664; Reverse</button>"
 "<button class='off-btn' onclick='post(\"/api/conveyor/stop\")'>&#9646;&#9646; Stop</button>"
 "</div>"
-"<label style='color:#8b949e;font-size:12px'>Speed</label>"
-"<div style='display:flex;align-items:center;gap:12px'>"
+"<label style='color:#8b949e;font-size:12px;display:block;margin-bottom:4px'>Speed (applies to next direction command)</label>"
+"<div class='speed-row'>"
 "<input type='range' min='0' max='100' value='75' id='spdrng' oninput='setSpeed(this.value)'>"
 "<span id='spd-label'>75%</span>"
-"</div></div>"
-
-"<div class='card'>"
-"<h2>WiFi &amp; System</h2>"
-"<div class='wifi-row'>"
-"<span>Status: <span id='wifi-stat'>-</span></span>"
 "</div>"
-"<div class='btn-row' style='margin-top:12px'>"
-"<button class='off-btn' onclick='resetWifi()'>Reset WiFi (reboot to setup)</button>"
-"<button class='grey' onclick='post(\"/api/reboot\")'>Reboot</button>"
-"</div></div>"
+"</div>"
 
+/* ── 5. WiFi & System ────────────────────────────────────────────────────── */
+"<div class='card'>"
+"<h2>&#x1F4F6; WiFi &amp; System</h2>"
+"<div style='margin-bottom:12px'>Status: <span id='wifi-stat'>-</span></div>"
+"<div class='btn-row'>"
+"<button class='off-btn' onclick='resetWifi()'>Reset WiFi Credentials</button>"
+"<button class='grey' onclick='post(\"/api/reboot\")'>Reboot</button>"
+"</div>"
+"</div>"
+
+/* ── JavaScript ─────────────────────────────────────────────────────────── */
 "<script>"
-// SSE connection for live sensor data
 "var evtSrc=null;"
+
+/* SSE connection */
 "function connectSSE(){"
 "  evtSrc=new EventSource('/api/sse');"
 "  evtSrc.onopen=function(){"
+"    document.getElementById('sse-dot').className='live';"
 "    document.getElementById('sse-status').textContent='live';"
 "  };"
 "  evtSrc.onmessage=function(e){"
-"    var d=JSON.parse(e.data);"
-"    updateSensors(d);"
+"    try{updateUI(JSON.parse(e.data));}catch(x){}"
 "  };"
 "  evtSrc.onerror=function(){"
+"    document.getElementById('sse-dot').className='';"
 "    document.getElementById('sse-status').textContent='reconnecting\\u2026';"
 "    evtSrc.close();"
 "    setTimeout(connectSSE,2000);"
 "  };"
 "}"
-"function updateSensors(d){"
+
+/* Main UI updater */
+"function updateUI(d){"
+
+/* Voltage / current table */
 "  var rows='';"
-"  d.ports.forEach(function(p){"
-"    var st=p.overcurrent?'<span class=\\'warn\\'>OVERCURRENT</span>'"
-"           :(p.relay_on?'<span class=\\'on\\'>ACTIVE</span>':'<span class=\\'off\\'>IDLE</span>');"
-"    rows+='<tr><td>'+p.port+'</td>'"
-"         +'<td class=\\''+(p.relay_on?'on':'off')+'\\''+'>'+(p.relay_on?'ON':'OFF')+'</td>'"
-"         +'<td class=\\''+(p.overcurrent?'warn':'')+'\\''+'>'+(p.current.toFixed(2))+'A</td>'"
-"         +'<td>'+(p.voltage.toFixed(0))+'V</td>'"
-"         +'<td>'+st+'</td></tr>';"
+"  var src=['ADC','Pico','ADC','Pico'];"
+"  d.ports.forEach(function(p,i){"
+"    var stCls=p.overcurrent?'warn':(p.relay_on?'on':'off');"
+"    var stTxt=p.overcurrent?'OVERCURRENT':(p.relay_on?'ACTIVE':'IDLE');"
+"    var relayCls=p.relay_on?'on':'off';"
+"    rows+='<tr>'"
+"         +'<td><b>SW'+(p.port)+'</b></td>'"
+"         +'<td style=\\'color:#8b949e\\'>'+(src[i])+'</td>'"
+"         +'<td style=\\'font-family:monospace\\'>'+(p.voltage.toFixed(1))+'&nbsp;V</td>'"
+"         +'<td style=\\'font-family:monospace\\'>'+(p.current.toFixed(3))+'&nbsp;A</td>'"
+"         +'<td class=\\''+relayCls+'\\'>'+(p.relay_on?'ON':'OFF')+'</td>'"
+"         +'<td><span class=\\'det '+(p.overcurrent?'det-oc':(p.relay_on?'det-yes':'det-no'))+'\\'>'+(stTxt)+'</span></td>'"
+"         +'</tr>';"
+
+/* Update relay card sidebar text */
 "    document.getElementById('ps'+(p.port)).textContent="
-"      (p.current.toFixed(2))+'A / '+(p.voltage.toFixed(0))+'V';"
+"      (p.voltage.toFixed(1))+'V  '+(p.current.toFixed(3))+'A';"
 "    var pc=document.getElementById('pc'+(p.port));"
 "    pc.style.borderColor=p.overcurrent?'#d29922':(p.relay_on?'#3fb950':'#30363d');"
 "  });"
 "  document.getElementById('stbl').innerHTML=rows;"
-"  document.getElementById('wifi-stat').innerHTML="
-"    d.wifi_ok?'<span class=\\'on\\'>Connected</span>':'<span class=\\'off\\'>Disconnected</span>';"
-"  var dirLabel=d.conveyor_running"
-"    ?(d.conveyor_dir==='forward'?'<span class=\\'on\\'>FORWARD</span>':'<span class=\\'on\\'>REVERSE</span>')"
-"    :'<span class=\\'off\\'>STOPPED</span>';"
-"  document.getElementById('cdir').innerHTML=dirLabel;"
+
+/* Conveyor status */
+"  var dirHtml=d.conveyor_running"
+"    ?(d.conveyor_dir==='forward'"
+"      ?'<span class=\\'on\\'>&#9654; FORWARD</span>'"
+"      :'<span class=\\'amber\\' style=\\'color:#d29922\\'>&#9664; REVERSE</span>')"
+"    :'<span class=\\'off\\'>&#9646;&#9646; STOPPED</span>';"
+"  document.getElementById('cdir').innerHTML=dirHtml;"
 "  document.getElementById('cspd').textContent=d.conveyor_speed;"
 "  document.getElementById('spdrng').value=d.conveyor_speed;"
 "  document.getElementById('spd-label').textContent=d.conveyor_speed+'%';"
+
+/* WiFi status */
+"  document.getElementById('wifi-stat').innerHTML="
+"    d.wifi_ok"
+"      ?'<span class=\\'on\\'>Connected</span>'"
+"      :'<span class=\\'off\\'>Disconnected</span>';"
+
+/* Ultrasonic sensors */
+"  if(d.ultrasonic){"
+"    setUS('us-ent-cm','us-ent-st',d.ultrasonic.entrance_cm,d.ultrasonic.entrance_det);"
+"    setUS('us-btop-cm','us-btop-st',d.ultrasonic.bin_top_cm,d.ultrasonic.bin_top_det);"
+"    setUS('us-bbot-cm','us-bbot-st',d.ultrasonic.bin_bot_cm,d.ultrasonic.bin_bot_det);"
+"  }"
 "}"
+
+/* Ultrasonic row helper */
+"function setUS(cmId,stId,cm,det){"
+"  var isMax=(cm>=399.9);"
+"  document.getElementById(cmId).textContent=isMax?'> 400 cm (no echo)':(cm.toFixed(1)+' cm');"
+"  document.getElementById(stId).innerHTML=det"
+"    ?'<span class=\\'det det-yes\\'>DETECTED</span>'"
+"    :'<span class=\\'det det-no\\'>CLEAR</span>';"
+"}"
+
+/* Relay helpers */
 "async function relayOn(p,dur){"
 "  await fetch('/api/relay/on',{method:'POST',"
 "    headers:{'Content-Type':'application/x-www-form-urlencoded'},"
@@ -375,19 +478,26 @@ static const char *s_html_test =
 "    headers:{'Content-Type':'application/x-www-form-urlencoded'},"
 "    body:'port='+p});"
 "}"
+
+/* Speed slider */
 "async function setSpeed(v){"
 "  document.getElementById('spd-label').textContent=v+'%';"
 "  await fetch('/api/conveyor/speed',{method:'POST',"
 "    headers:{'Content-Type':'application/x-www-form-urlencoded'},"
 "    body:'speed='+v});"
 "}"
+
+/* Generic POST */
 "async function post(url){"
 "  await fetch(url,{method:'POST'});"
 "}"
+
+/* WiFi reset */
 "function resetWifi(){"
-"  if(!confirm('This will erase saved WiFi credentials and reboot.\\n\\nContinue?'))return;"
+"  if(!confirm('Erase saved WiFi credentials and reboot into setup mode?\\n\\nContinue?'))return;"
 "  fetch('/provision/reset',{method:'POST'});"
 "}"
+
 "connectSSE();"
 "</script></body></html>";
 
@@ -485,7 +595,7 @@ static esp_err_t test_page_handler(httpd_req_t *req)
 // ---------------------------------------------------------------------------
 static esp_err_t status_handler(httpd_req_t *req)
 {
-    char buf[640];
+    char buf[900];
     int n = _build_sensor_json(buf, sizeof(buf));
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, buf, n);
@@ -509,8 +619,8 @@ static esp_err_t sse_handler(httpd_req_t *req)
     httpd_resp_set_hdr(req, "Connection",    "keep-alive");
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
 
-    char buf[700];
-    char event[730];
+    char buf[900];
+    char event[940];
 
     while (1) {
         int data_len = _build_sensor_json(buf, sizeof(buf));
