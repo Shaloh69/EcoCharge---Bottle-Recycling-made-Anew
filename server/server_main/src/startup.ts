@@ -4,60 +4,55 @@ import { promisify } from 'util'
 
 import bcrypt from 'bcryptjs'
 
+import { log } from './logger'
 import prisma from './prisma'
 import { SETTING_DEFAULTS } from './services/settingsService'
 
 const execAsync = promisify(exec)
 
 // ── Auto-migrate ───────────────────────────────────────────────────────────────
-// Uses async exec so the event loop stays unblocked (port is already bound by
-// the time this runs). Handles P3018 drift errors by auto-resolving the stuck
-// migration and retrying — up to 10 times for multiple stuck migrations.
 export async function runMigrations() {
-  console.log('[Startup] Running prisma migrate deploy…')
+  log.migration('Connecting to database…')
 
   for (let attempt = 1; attempt <= 10; attempt++) {
     try {
       const { stdout, stderr } = await execAsync('npx prisma migrate deploy')
       if (stdout) process.stdout.write(stdout)
       if (stderr) process.stderr.write(stderr)
-      console.log('[Startup] Migrations applied.')
+      log.migration('All migrations applied ✔')
       return
     } catch (err: unknown) {
-      const e = err as { stdout?: string; stderr?: string; message?: string }
+      const e       = err as { stdout?: string; stderr?: string; message?: string }
       const combined = (e.stdout ?? '') + (e.stderr ?? '') + (e.message ?? '')
 
-      // P3009 = Prisma's migration table has a *failed* record from a previous
-      // attempt (e.g. the last deploy crashed mid-migration). We must first
-      // mark it as rolled-back (clears the failure), then mark it as applied
-      // (since the column already exists in the DB), then retry.
+      // P3009 — previous deploy left a failed migration record.
+      // Roll it back first (clears the failure), then mark it applied.
       if (combined.includes('P3009')) {
         const match = combined.match(/The `(\S+)` migration started at .+ failed/)
         if (match) {
           const name = match[1]
-          console.warn(`[Startup] Failed migration record found: "${name}" (P3009)`)
-          console.warn(`[Startup] Clearing failure → rolling back then marking applied…`)
+          log.migration(`Failed record found: "${name}" (P3009)`)
+          log.migration('Clearing failure → rolling back then marking applied…')
           await execAsync(`npx prisma migrate resolve --rolled-back ${name}`)
           await execAsync(`npx prisma migrate resolve --applied ${name}`)
-          console.log(`[Startup] Resolved "${name}". Retrying deploy…`)
+          log.migration(`Resolved "${name}" — retrying… (attempt ${attempt + 1})`)
           continue
         }
       }
 
-      // P3018 = migration ran but failed due to schema drift (column/table
-      // already exists from a prior db push). Mark as applied and retry.
+      // P3018 — column/table already exists from a prior db push.
       if (combined.includes('P3018')) {
         const match = combined.match(/Migration name:\s*(\S+)/)
         if (match) {
           const name = match[1]
-          console.warn(`[Startup] Schema drift on "${name}" (P3018) — marking as applied…`)
+          log.migration(`Schema drift on "${name}" (P3018) — marking as applied…`)
           await execAsync(`npx prisma migrate resolve --applied ${name}`)
-          console.log(`[Startup] Resolved "${name}". Retrying deploy…`)
+          log.migration(`Resolved "${name}" — retrying… (attempt ${attempt + 1})`)
           continue
         }
       }
 
-      console.error('[Startup] Migration failed:\n', combined)
+      log.error('Migration', combined || String(err))
       throw new Error('migrate deploy failed')
     }
   }
@@ -65,18 +60,43 @@ export async function runMigrations() {
   throw new Error('Migration loop exceeded max attempts')
 }
 
-// ── Auto-seed (idempotent — safe on every boot) ───────────────────────────────
+// ── AI Server health check ─────────────────────────────────────────────────────
+export async function pingAIServer() {
+  const url = process.env.AI_SERVER_URL
+  if (!url) {
+    log.aiWarn('AI_SERVER_URL not set — AI classification disabled')
+    return
+  }
+
+  log.ai(`Connecting to AI server: ${url}`)
+  try {
+    const res = await fetch(`${url}/health`, {
+      signal: AbortSignal.timeout(5000),
+    })
+    if (res.ok) {
+      log.ai(`AI server reachable ✔  (${url})`)
+    } else {
+      log.aiWarn(`AI server responded ${res.status} — may be degraded`)
+    }
+  } catch {
+    log.aiError(`AI server unreachable at ${url} — bottle classification will fail`)
+  }
+}
+
+// ── Auto-seed (idempotent — safe on every boot) ────────────────────────────────
 export async function autoSeed() {
+  log.seed('Running seed checks…')
+
   // Admin user
   const email    = process.env.ADMIN_EMAIL    ?? 'admin@ecocharge.ph'
   const password = process.env.ADMIN_PASSWORD
 
   if (!password) {
-    console.warn('[Seed] ADMIN_PASSWORD not set — skipping admin user seed')
+    log.warn('Seed', 'ADMIN_PASSWORD not set — skipping admin user seed')
   } else {
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) {
-      console.log(`[Seed] Admin already exists: ${email}`)
+      log.seed(`Admin already exists: ${email}`)
     } else {
       const hash = await bcrypt.hash(password, 12)
       await prisma.user.create({
@@ -88,7 +108,7 @@ export async function autoSeed() {
           isAdmin:      true,
         },
       })
-      console.log(`[Seed] Admin created: ${email}`)
+      log.seed(`Admin created: ${email} ✔`)
     }
   }
 
@@ -103,7 +123,7 @@ export async function autoSeed() {
       apiKey,
     },
   })
-  console.log(`[Seed] Kiosk ready: ${process.env.KIOSK_NAME ?? 'Kiosk-001'}`)
+  log.seed(`Kiosk ready: ${process.env.KIOSK_NAME ?? 'Kiosk-001'} ✔`)
 
   // System settings
   for (const [key, value] of Object.entries(SETTING_DEFAULTS)) {
@@ -113,5 +133,8 @@ export async function autoSeed() {
       create: { key, value },
     })
   }
-  console.log('[Seed] System settings ready.')
+  log.seed('System settings ready ✔')
+
+  // Check AI server after DB is ready
+  await pingAIServer()
 }

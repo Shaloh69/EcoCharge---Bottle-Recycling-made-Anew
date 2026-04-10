@@ -4,6 +4,7 @@ import prisma from '../prisma'
 import { requireAdmin } from '../middleware/auth'
 import { addAdminClient, sseHeaders, broadcastToAdmin } from '../services/sseService'
 import { getSettings, n, invalidateSettingsCache, SETTING_DEFAULTS } from '../services/settingsService'
+import { log } from '../logger'
 import { AuthRequest } from '../types'
 
 const router = Router()
@@ -18,7 +19,7 @@ function paginate<T>(items: T[], total: number, page: number, perPage: number) {
 // GET /overview
 router.get('/overview', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log('[Admin] Fetching overview stats')
+    log.admin('Fetching overview stats')
     const [totalUsers, totalDeposits, activeCharging, totalCreditsEarned, kiosksOnline] = await Promise.all([
       prisma.user.count(),
       prisma.bottleDeposit.count(),
@@ -30,7 +31,7 @@ router.get('/overview', async (_req: Request, res: Response, next: NextFunction)
       prisma.kiosk.count({ where: { status: 'online' } }),
     ])
 
-    console.log(`[Admin] Overview — users=${totalUsers} deposits=${totalDeposits} activeCharging=${activeCharging} kiosksOnline=${kiosksOnline}`)
+    log.admin(`Overview — users=${totalUsers} deposits=${totalDeposits} charging=${activeCharging} kiosksOnline=${kiosksOnline}`)
     res.json({
       total_users: totalUsers,
       total_deposits: totalDeposits,
@@ -341,7 +342,7 @@ router.put('/settings', async (req: Request, res: Response, next: NextFunction) 
   try {
     const body = settingsBodySchema.parse(req.body)
     const keys = Object.keys(body.settings)
-    console.log(`[Admin] Settings UPDATE — keys: ${keys.join(', ')}`)
+    log.admin(`Settings UPDATE — keys: ${keys.join(', ')}`)
     for (const [key, value] of Object.entries(body.settings)) {
       await prisma.systemSetting.upsert({
         where: { key },
@@ -350,7 +351,7 @@ router.put('/settings', async (req: Request, res: Response, next: NextFunction) 
       })
     }
     invalidateSettingsCache()
-    console.log(`[Admin] Settings updated and cache invalidated`)
+    log.admin('Settings updated and cache invalidated')
 
     // Return updated settings
     const rows = await prisma.systemSetting.findMany()
@@ -430,12 +431,12 @@ router.get('/analytics', async (req: Request, res: Response, next: NextFunction)
 // GET /sse
 router.get('/sse', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    console.log(`[Admin] SSE client connected — user #${(req as AuthRequest).userId ?? 'unknown'}`)
+    log.admin(`SSE client connected — user #${(req as AuthRequest).userId ?? 'unknown'}`)
     sseHeaders(res)
     addAdminClient(res)
 
     res.on('close', () => {
-      console.log(`[Admin] SSE client disconnected`)
+      log.admin('SSE client disconnected')
     })
 
     // Send initial overview

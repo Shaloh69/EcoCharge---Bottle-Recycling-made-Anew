@@ -3,6 +3,7 @@ import cors from 'cors'
 
 import { config } from './config'
 import { errorHandler } from './middleware/errorHandler'
+import { log, printBanner } from './logger'
 import authRouter from './routes/auth'
 import usersRouter from './routes/users'
 import kioskRouter from './routes/kiosk'
@@ -19,22 +20,14 @@ const allowedOrigins = config.ALLOWED_ORIGINS
   .map(o => o.trim())
   .filter(Boolean)
 
-// Log exact value at startup so we can diagnose mismatches from Render logs
-console.log(`[CORS] Raw ALLOWED_ORIGINS env: "${process.env.ALLOWED_ORIGINS ?? '(not set)'}"`)
-console.log(`[CORS] Parsed allowlist (${allowedOrigins.length}): ${allowedOrigins.join(' | ')}`)
+log.cors(`Raw ALLOWED_ORIGINS: "${process.env.ALLOWED_ORIGINS ?? '(not set)'}"`)
+log.cors(`Parsed allowlist (${allowedOrigins.length}): ${allowedOrigins.join(' | ')}`)
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    // No origin = same-origin request, curl, or mobile app — always allow
     if (!origin) return callback(null, true)
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true)
-    }
-    // IMPORTANT: use callback(null, false) NOT callback(new Error(...))
-    // Throwing an error routes through the Express error handler which responds
-    // with a 500 that has NO CORS headers — the browser then misreports this
-    // as a CORS error, hiding the real cause.
-    console.warn(`[CORS] Rejected: "${origin}" not in [${allowedOrigins.join(', ')}]`)
+    if (allowedOrigins.includes(origin)) return callback(null, true)
+    log.warn('CORS', `Rejected origin: "${origin}"`)
     return callback(null, false)
   },
   credentials: true,
@@ -43,53 +36,43 @@ const corsOptions: cors.CorsOptions = {
   maxAge: 86400,
 }
 
-// Handle OPTIONS preflight for ALL routes BEFORE other middleware
-// Without this explicit handler, preflight on some routes can fall through
 app.options('*', cors(corsOptions))
 app.use(cors(corsOptions))
-
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
 // ── Request logger ────────────────────────────────────────────────────────────
-app.use((req: Request, _res: Response, next: NextFunction) => {
-  const ts = new Date().toISOString()
-  console.log(`[${ts}] ${req.method} ${req.path}`)
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const start = Date.now()
+  res.on('finish', () => log.request(req.method, req.path, res.statusCode, Date.now() - start))
   next()
 })
 
 // ── Health ────────────────────────────────────────────────────────────────────
 app.get('/health', (_req: Request, res: Response) => {
-  console.log('[Health] ping')
+  log.health('ping')
   res.json({ status: 'ok', ts: new Date().toISOString() })
 })
 
 // ── Routes ────────────────────────────────────────────────────────────────────
-app.use('/api/auth',    authRouter)
-app.use('/api/users',   usersRouter)
-app.use('/api/kiosk',   kioskRouter)
+app.use('/api/auth',     authRouter)
+app.use('/api/users',    usersRouter)
+app.use('/api/kiosk',    kioskRouter)
 app.use('/api/charging', chargingRouter)
-app.use('/api/devices', devicesRouter)
-app.use('/api/admin',   adminRouter)
+app.use('/api/devices',  devicesRouter)
+app.use('/api/admin',    adminRouter)
 
 app.use(errorHandler)
 
-// ── Start ─────────────────────────────────────────────────────────────────────
-// Bind the port FIRST so Render's port-detection passes immediately.
-// Migrations and seed run async in the background — the DB schema already
-// exists, so any requests that arrive during the ~2-3 second window are fine.
+// ── Start — bind port first so Render detects it, then migrate + seed ─────────
 app.listen(config.PORT, () => {
-  console.log('─────────────────────────────────────────')
-  console.log(`  EcoCharge API  •  port ${config.PORT}`)
-  console.log(`  ENV            •  ${config.NODE_ENV}`)
-  console.log(`  Allowed origins: ${allowedOrigins.join(', ')}`)
-  console.log('─────────────────────────────────────────')
+  printBanner(config.PORT, config.NODE_ENV, allowedOrigins)
 })
 
 runMigrations()
   .then(() => autoSeed())
-  .then(() => console.log('[Startup] Ready.'))
+  .then(() => log.startup('Ready ✔'))
   .catch((err) => {
-    console.error('[Startup] Fatal startup error:', err)
+    log.error('Startup', `Fatal error: ${err}`)
     process.exit(1)
   })
