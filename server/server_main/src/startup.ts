@@ -91,6 +91,8 @@ export async function autoSeed() {
   const email    = process.env.ADMIN_EMAIL    ?? 'admin@ecocharge.ph'
   const password = process.env.ADMIN_PASSWORD
 
+  log.seed(`Admin email target: ${email} (set ADMIN_EMAIL env var to change)`)
+
   if (!password) {
     log.warn('Seed', 'ADMIN_PASSWORD not set — skipping admin user seed')
   } else {
