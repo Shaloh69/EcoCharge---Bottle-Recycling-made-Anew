@@ -123,7 +123,7 @@
 // ----------------------------------------------------------------------------
 // Render backend API
 // ----------------------------------------------------------------------------
-#define RENDER_BASE_URL      "https://your-ecocharge-app.onrender.com"
+#define RENDER_BASE_URL      "https://ecocharge-server.onrender.com"
 #define DEVICE_API_KEY       "esp32-device-secret"   // must match .env on server
 #define KIOSK_ID             1
 
@@ -155,12 +155,25 @@
 // NOTE: GPIO 2 (built-in LED) is now used for SW3 current sensor.
 //       Status LED moved to GPIO 27.  Wire an LED + resistor to GPIO 27,
 //       or remove the LED from the circuit if not needed.
+//
+// LED blink patterns (100 ms frames — see main.c led_mode_t):
+//   LED_MODE_FAST   : ·· ·· ··          100 ms toggle — booting / WiFi connecting
+//   LED_MODE_SLOW   : ─────·····        500 ms on / 500 ms off — WiFi failed/offline
+//   LED_MODE_DOUBLE : ·· ─────────      double-blink, 1.0 s cycle — WiFi ready ✓
+//   LED_MODE_TRIPLE : ··· ──────────    triple-blink, 1.2 s cycle — provisioning AP
+//   LED_MODE_FIVE   : ····· ──────────  5-blink, 2.0 s cycle — self-test failure
+//   LED_MODE_SOLID  : ─────────────     always on — self-test in progress
 // ----------------------------------------------------------------------------
 #define STATUS_LED_PIN        27     // ← was GPIO 2; moved due to SW3 conflict
-#define LED_BLINK_INIT        100    // fast blink during init (ms)
-#define LED_BLINK_ERROR       500    // slow blink on error (ms)
-#define LED_SOLID_ON          0      // solid on = connected and OK
-#define LED_OFF              -1      // off
+
+// ----------------------------------------------------------------------------
+// Self-test configuration (runs on first boot / no WiFi credentials stored)
+// ----------------------------------------------------------------------------
+#define SELFTEST_PICO_WAIT_MS    1500   // max wait for first valid Pico UART packet
+#define SELFTEST_MOTOR_SPEED       50   // % speed used during motor test
+#define SELFTEST_MOTOR_FWD_MS    1000   // forward run duration (ms)
+#define SELFTEST_MOTOR_PAUSE_MS   500   // pause between directions (ms)
+#define SELFTEST_MOTOR_REV_MS    1000   // reverse run duration (ms)
 
 // ----------------------------------------------------------------------------
 // Serial / UART (for debug output only)

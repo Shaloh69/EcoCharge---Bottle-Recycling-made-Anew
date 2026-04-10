@@ -5,6 +5,7 @@
 #include "conveyor_motor.h"
 #include "wifi_sta.h"
 #include "nvs_config.h"
+#include "self_test.h"
 #include "esp_log.h"
 #include "esp_http_server.h"
 #include "esp_wifi.h"
@@ -703,6 +704,19 @@ static esp_err_t wifi_scan_handler(httpd_req_t *req)
 }
 
 // ---------------------------------------------------------------------------
+// GET /api/selftest — return last self-test results as JSON
+// ---------------------------------------------------------------------------
+static esp_err_t selftest_handler(httpd_req_t *req)
+{
+    char buf[768];
+    int  n = self_test_to_json(buf, sizeof(buf));
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_send(req, buf, n);
+    return ESP_OK;
+}
+
+// ---------------------------------------------------------------------------
 // POST /api/reboot
 // ---------------------------------------------------------------------------
 static esp_err_t reboot_handler(httpd_req_t *req)
@@ -733,6 +747,7 @@ static const httpd_uri_t s_uris[] = {
     { .uri = "/api/relay/off",     .method = HTTP_POST, .handler = relay_off_handler       },
     { .uri = "/api/relay/all-off", .method = HTTP_POST, .handler = relay_all_off_handler   },
     { .uri = "/api/wifi/scan",     .method = HTTP_GET,  .handler = wifi_scan_handler       },
+    { .uri = "/api/selftest",      .method = HTTP_GET,  .handler = selftest_handler        },
     { .uri = "/api/reboot",        .method = HTTP_POST, .handler = reboot_handler          },
 };
 #define NUM_URIS  (sizeof(s_uris) / sizeof(s_uris[0]))

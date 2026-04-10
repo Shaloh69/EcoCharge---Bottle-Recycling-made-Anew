@@ -18,22 +18,70 @@
 #include "wifi_ap.h"
 #include "wifi_provision.h"
 #include "web_server.h"
+#include "self_test.h"
 
 // ============================================================================
 // EcoCharge Kiosk Controller — Main Application
 //
 // Boot sequence
 // ─────────────
-//  1. NVS + peripherals initialised (always)
-//  2. Safety + sensor FreeRTOS tasks started (always — needed for test page)
+//  1. NVS + peripherals initialised
+//  2. Safety task started (LED + relay timeouts)
 //  3. Check NVS for WiFi credentials
-//     a) Credentials present  → STA mode → normal operation (command poll +
-//                                telemetry tasks) + web server on 192.168.4.1
-//     b) No credentials       → AP + captive-portal DNS → web server serves
-//                                /provision; user saves creds → reboot
+//
+//  a) Credentials present  → sensor_task + bottle_fsm started immediately
+//                            STA WiFi connect → command_poll + telemetry tasks
+//                            LED: FAST (connecting) → DOUBLE (ready)
+//                                              or SLOW (WiFi failed)
+//
+//  b) No credentials       → self-test runs first (LED SOLID while testing)
+//                            LED FIVE for 5 s if any critical failure
+//                            sensor_task + bottle_fsm started after test
+//                            AP + captive-portal DNS + web server on /provision
+//                            LED TRIPLE (provisioning mode)
+//
+// LED blink patterns (safety_task, 100 ms frame clock):
+//   FAST   ·· ·· ··          200 ms cycle — booting / WiFi connecting
+//   SLOW   ─────·····        1000 ms cycle — WiFi failed / offline
+//   DOUBLE ·· ────────       1000 ms cycle — WiFi connected, ready ✓
+//   TRIPLE ··· ─────────     1200 ms cycle — provisioning AP mode active
+//   FIVE   ····· ─────────── 2000 ms cycle — self-test critical failure
+//   SOLID  ──────────────    always on — self-test in progress
 // ============================================================================
 
-static int s_led_blink_ms = LED_BLINK_INIT;
+// ============================================================================
+// LED mode definitions
+// ============================================================================
+
+typedef enum {
+    LED_MODE_OFF    = 0,  // always off
+    LED_MODE_SOLID  = 1,  // always on (self-test in progress)
+    LED_MODE_FAST   = 2,  // ·· ·· —  fast blink: booting / WiFi connecting
+    LED_MODE_SLOW   = 3,  // ─────····  slow blink: WiFi failed / offline
+    LED_MODE_DOUBLE = 4,  // ·· ──────  double-blink: WiFi connected + ready
+    LED_MODE_TRIPLE = 5,  // ··· ─────  triple-blink: provisioning AP mode
+    LED_MODE_FIVE   = 6,  // ····· ──── 5-blink: self-test critical failure
+} led_mode_t;
+
+// Frame pattern arrays — each element = 100 ms, 1=ON, 0=OFF
+static const uint8_t PAT_FAST[]   = {1, 0};
+static const uint8_t PAT_SLOW[]   = {1, 1, 1, 1, 1, 0, 0, 0, 0, 0};
+static const uint8_t PAT_DOUBLE[] = {1, 0, 1, 0, 0, 0, 0, 0, 0, 0};
+static const uint8_t PAT_TRIPLE[] = {1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0};
+static const uint8_t PAT_FIVE[]   = {1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+                                      0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+typedef struct { const uint8_t *frames; int len; } led_pat_t;
+
+static const led_pat_t s_patterns[] = {
+    [LED_MODE_FAST]   = { PAT_FAST,   2  },
+    [LED_MODE_SLOW]   = { PAT_SLOW,   10 },
+    [LED_MODE_DOUBLE] = { PAT_DOUBLE, 10 },
+    [LED_MODE_TRIPLE] = { PAT_TRIPLE, 12 },
+    [LED_MODE_FIVE]   = { PAT_FIVE,   20 },
+};
+
+static volatile led_mode_t s_led_mode = LED_MODE_FAST;
 
 // ---------------------------------------------------------------------------
 // LED helper
@@ -52,29 +100,38 @@ static void led_init(void)
 }
 
 // ---------------------------------------------------------------------------
-// Safety task — enforces relay timeouts and overcurrent shutoff
+// Safety task — enforces relay timeouts and drives the status LED
 // ---------------------------------------------------------------------------
 static void safety_task(void *arg)
 {
     ESP_LOGI(LOG_TAG, "Safety task started");
-    TickType_t last_blink = 0;
-    int led_state = 0;
+
+    int        pat_idx   = 0;
+    led_mode_t last_mode = (led_mode_t)(-1);
 
     while (1) {
         relay_check_timeouts();
 
-        // Status LED
-        TickType_t now = xTaskGetTickCount();
-        if (s_led_blink_ms > 0 &&
-            pdTICKS_TO_MS(now - last_blink) >= (uint32_t)s_led_blink_ms) {
-            led_state = !led_state;
-            gpio_set_level(STATUS_LED_PIN, led_state);
-            last_blink = now;
-        } else if (s_led_blink_ms == LED_SOLID_ON) {
-            gpio_set_level(STATUS_LED_PIN, 1);
-        } else if (s_led_blink_ms == LED_OFF) {
-            gpio_set_level(STATUS_LED_PIN, 0);
+        // ── LED state machine ──────────────────────────────────────────────
+        led_mode_t mode = s_led_mode;
+
+        // Reset pattern index when mode changes
+        if (mode != last_mode) {
+            pat_idx   = 0;
+            last_mode = mode;
         }
+
+        if (mode == LED_MODE_OFF) {
+            gpio_set_level(STATUS_LED_PIN, 0);
+        } else if (mode == LED_MODE_SOLID) {
+            gpio_set_level(STATUS_LED_PIN, 1);
+        } else {
+            // Pattern-based modes
+            const led_pat_t *pat = &s_patterns[mode];
+            gpio_set_level(STATUS_LED_PIN, pat->frames[pat_idx]);
+            pat_idx = (pat_idx + 1) % pat->len;
+        }
+        // ──────────────────────────────────────────────────────────────────
 
         vTaskDelay(pdMS_TO_TICKS(100));
     }
@@ -88,7 +145,7 @@ static void sensor_task(void *arg)
     ESP_LOGI(LOG_TAG, "Sensor task started");
     while (1) {
         sensor_sample_all();
-        ultrasonic_read_all();   // reads all 3 HC-SR04 sensors (~90 ms total)
+        ultrasonic_read_all();
         vTaskDelay(pdMS_TO_TICKS(SENSOR_SAMPLE_MS));
     }
 }
@@ -132,10 +189,11 @@ void app_main(void)
     printf("\n\n");
     printf("=================================================\n");
     printf("  EcoCharge Kiosk Controller v%s\n", FIRMWARE_VERSION);
-    printf("  ESP32 — Servo + 4-Port Charging Controller\n");
+    printf("  ESP32 — 4-Port Charging + Bottle FSM\n");
+    printf("  Backend: %s\n", RENDER_BASE_URL);
     printf("=================================================\n\n");
 
-    // ---- NVS flash init ----
+    // ── NVS flash init ───────────────────────────────────────────────────────
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
@@ -144,38 +202,42 @@ void app_main(void)
     ESP_ERROR_CHECK(ret);
     nvs_config_init();
 
-    // ---- GPIO / peripherals ----
+    // ── Peripherals ──────────────────────────────────────────────────────────
     led_init();
-    s_led_blink_ms = LED_BLINK_INIT;
+    s_led_mode = LED_MODE_FAST;  // fast blink = booting
 
     ESP_LOGI(LOG_TAG, "Initializing peripherals...");
     ESP_ERROR_CHECK(conveyor_init());
     ESP_ERROR_CHECK(relay_init());
     ESP_ERROR_CHECK(sensor_init());
     ESP_ERROR_CHECK(ultrasonic_init());
-    bottle_fsm_start();   // starts FSM task + watches entrance sensor
 
-    // Safety + sensor tasks run in both modes (needed for hardware test page)
+    // Safety task drives LED + relay watchdog from this point forward
     xTaskCreate(safety_task, "safety", SAFETY_TASK_STACK, NULL,
                 SAFETY_TASK_PRIORITY, NULL);
-    xTaskCreate(sensor_task, "sensor", SENSOR_TASK_STACK, NULL,
-                SENSOR_TASK_PRIORITY, NULL);
 
-    // ---- Boot mode decision ----
+    // ── Boot mode decision ───────────────────────────────────────────────────
     if (nvs_config_has_wifi_creds()) {
-        // ================================================================
-        // NORMAL MODE — STA WiFi + Render polling
-        // ================================================================
-        ESP_LOGI(LOG_TAG, "WiFi credentials found in NVS — starting in normal mode");
+        // ====================================================================
+        // NORMAL MODE — STA WiFi + Render server polling
+        // ====================================================================
+        ESP_LOGI(LOG_TAG, "WiFi credentials found — normal mode");
 
+        // Start background tasks immediately in normal mode
+        bottle_fsm_start();
+        xTaskCreate(sensor_task, "sensor", SENSOR_TASK_STACK, NULL,
+                    SENSOR_TASK_PRIORITY, NULL);
+
+        s_led_mode = LED_MODE_FAST;  // fast blink = connecting
         ret = wifi_sta_connect();
+
         if (ret != ESP_OK) {
             ESP_LOGE(LOG_TAG, "WiFi failed — offline mode (relays disabled)");
-            s_led_blink_ms = LED_BLINK_ERROR;
+            s_led_mode = LED_MODE_SLOW;   // slow blink = offline
             relay_disable_all();
         } else {
-            s_led_blink_ms = LED_SOLID_ON;
             ESP_LOGI(LOG_TAG, "WiFi connected — starting API tasks");
+            s_led_mode = LED_MODE_DOUBLE;  // ·· = connected + ready
 
             api_client_init();
             xTaskCreate(command_poll_task, "cmd_poll",  COMMAND_TASK_STACK,
@@ -184,28 +246,52 @@ void app_main(void)
                         NULL, TELEMETRY_TASK_PRIORITY, NULL);
         }
 
-        // Web server accessible at kiosk IP for hardware testing
         web_server_start();
         printf("\nEcoCharge controller ready.\n");
-        printf("Polling: %s/api/devices/commands?kiosk_id=%d\n\n",
-               RENDER_BASE_URL, KIOSK_ID);
+        printf("Backend: %s\n", RENDER_BASE_URL);
+        printf("Kiosk ID: %d\n\n", KIOSK_ID);
 
     } else {
-        // ================================================================
-        // PROVISIONING MODE — AP + captive portal
-        // ================================================================
-        ESP_LOGI(LOG_TAG, "No WiFi credentials — starting provisioning mode");
+        // ====================================================================
+        // PROVISIONING MODE — self-test → AP + captive portal
+        //
+        // sensor_task and bottle_fsm are NOT started before the self-test
+        // to avoid concurrent UART reads and motor commands during the test.
+        // ====================================================================
+        ESP_LOGI(LOG_TAG, "No WiFi credentials — running hardware self-test");
 
+        s_led_mode = LED_MODE_SOLID;  // solid on = self-test in progress
+
+        selftest_results_t st;
+        esp_err_t st_ret = self_test_run(&st);
+
+        if (st_ret != ESP_OK) {
+            // 5-blink alert for 5 seconds, then continue booting anyway
+            ESP_LOGE(LOG_TAG, "%d critical failure(s) — continuing boot in 5 s", st.fail_count);
+            s_led_mode = LED_MODE_FIVE;
+            vTaskDelay(pdMS_TO_TICKS(5000));
+        } else {
+            ESP_LOGI(LOG_TAG, "Self-test passed — continuing to provisioning");
+        }
+
+        // Start background tasks after self-test completes
+        bottle_fsm_start();
+        xTaskCreate(sensor_task, "sensor", SENSOR_TASK_STACK, NULL,
+                    SENSOR_TASK_PRIORITY, NULL);
+
+        // ··· triple-blink = provisioning AP mode active
+        s_led_mode = LED_MODE_TRIPLE;
+
+        ESP_LOGI(LOG_TAG, "Starting provisioning mode (AP + captive portal)");
         ESP_ERROR_CHECK(wifi_ap_init());
         ESP_ERROR_CHECK(wifi_provision_start());
         ESP_ERROR_CHECK(web_server_start());
 
-        s_led_blink_ms = LED_BLINK_ERROR; // slow blink = provisioning mode
-
         printf("\nProvisioning mode active.\n");
-        printf("Connect phone to: %s\n", WIFI_AP_SSID);
-        printf("Password:         %s\n", WIFI_AP_PASSWORD);
-        printf("Open browser:     http://%s/provision\n\n", AP_IP_ADDR);
+        printf("  Connect to WiFi:  %s\n",         WIFI_AP_SSID);
+        printf("  Password:         %s\n",         WIFI_AP_PASSWORD);
+        printf("  Setup page:       http://%s/provision\n",   AP_IP_ADDR);
+        printf("  Self-test results:http://%s/api/selftest\n\n", AP_IP_ADDR);
     }
 
     // Keep FreeRTOS scheduler alive

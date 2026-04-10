@@ -12,6 +12,7 @@ idf_component_register(
         "wifi_ap.c"
         "nvs_config.c"
         "wifi_provision.c"
+        "self_test.c"
     INCLUDE_DIRS
         "."
         "../include"
