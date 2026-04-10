@@ -24,7 +24,7 @@ function ChargeReceiptContent() {
   };
 
   return (
-    <div className="flex flex-col flex-1 page-enter">
+    <div className="flex flex-col flex-1 page-enter text-black">
       <KioskHeader showAccount />
 
       <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">

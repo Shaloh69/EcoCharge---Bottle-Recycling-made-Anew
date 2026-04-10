@@ -4,6 +4,8 @@ idf_component_register(
         "conveyor_motor.c"
         "relay_control.c"
         "sensor_monitor.c"
+        "ultrasonic.c"
+        "bottle_fsm.c"
         "api_client.c"
         "wifi_sta.c"
         "web_server.c"

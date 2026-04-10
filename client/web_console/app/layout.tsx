@@ -18,13 +18,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html suppressHydrationWarning lang="en">
+    <html suppressHydrationWarning className="dark" lang="en">
       <head />
       <body
         className={clsx(
           "min-h-screen font-sans antialiased",
           fontSans.variable,
         )}
+        style={{ background: "#051A08" }}
       >
         {/* Animated nature mesh gradient — always behind all content */}
         <div className="bg-animated" />
