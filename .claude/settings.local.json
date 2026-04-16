@@ -54,7 +54,12 @@
       "Read(//c/Projects/Thesis/2026/EcoCharge/**)",
       "Read(//d/Projects-Shem/Thesis/2026/EcoCharge/**)",
       "WebFetch(domain:serves-passage-server-oxygen.trycloudflare.com)",
-      "Bash(curl -s \"https://serves-passage-server-oxygen.trycloudflare.com/openapi.json\")"
+      "Bash(curl -s \"https://serves-passage-server-oxygen.trycloudflare.com/openapi.json\")",
+      "Bash(curl -s -X POST https://ecocharge-server.onrender.com/api/auth/guest -H 'Content-Type: application/json' -d '{\"kiosk_id\":1}')",
+      "Bash(curl -s -X POST https://ecocharge-api.onrender.com/api/auth/guest -H 'Content-Type: application/json' -d '{\"kiosk_id\":1}')",
+      "Bash(curl -s https://ecocharge-api.onrender.com/health)",
+      "Bash(curl -s https://ecocharge-server.onrender.com/health)",
+      "Bash(curl -s https://ecocharge-server.onrender.com/api/kiosk/list)"
     ],
     "additionalDirectories": [
       "C:\\Projects\\Thesis\\2026\\EcoCharge",
