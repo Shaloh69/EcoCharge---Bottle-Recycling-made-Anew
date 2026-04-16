@@ -98,6 +98,13 @@ export default function SplashPage() {
         <p className="text-center text-white/25 text-[10px] mt-2.5 tracking-widest uppercase">
           Scan · Deposit · Charge
         </p>
+        <button
+          className="mt-4 w-full py-2.5 rounded-2xl text-white/25 text-[11px] tracking-widest uppercase transition-all active:text-white/50"
+          style={{ border: "1px solid rgba(255,255,255,0.07)" }}
+          onClick={() => router.push("/diag")}
+        >
+          System Check
+        </button>
       </div>
     </div>
   );
