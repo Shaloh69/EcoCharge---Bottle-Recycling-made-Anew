@@ -192,7 +192,6 @@ export interface KioskSSEEvent {
     voltage_v: number;
     relay_on: boolean;
   }>;
-  activePorts?: number[];
   binLevel?: number;
 }
 

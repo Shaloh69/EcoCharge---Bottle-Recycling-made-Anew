@@ -41,10 +41,11 @@ export default function ChargingPage() {
       KIOSK_ID,
       (event) => {
         setLive(true);
-        if (event.activePorts != null) {
-          setActivePorts(event.activePorts);
+        if (event.ports != null) {
+          const occupied = event.ports.filter((p) => !p.available).map((p) => p.port);
+          setActivePorts(occupied);
           setSelected((prev) =>
-            prev != null && event.activePorts!.includes(prev) ? null : prev,
+            prev != null && occupied.includes(prev) ? null : prev,
           );
         }
       },

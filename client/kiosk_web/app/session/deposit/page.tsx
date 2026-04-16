@@ -37,6 +37,7 @@ function DepositContent() {
   // phaseRef mirrors phase state so SSE handler always sees current value
   // without needing to be in the useEffect dependency array (avoids reconnects)
   const phaseRef = useRef<Phase>("waiting");
+  const lastResultRef = useRef<DetectionResult | null>(null);
 
   const [phase, setPhase] = useState<Phase>("waiting");
   const [attempt, setAttempt] = useState(0);
@@ -129,6 +130,7 @@ function DepositContent() {
 
       if (result.detected && result.confidence >= 0.5) {
         // ── AI Approved ──────────────────────────────────────────────────────
+        lastResultRef.current = result;
         setPhase("approved");
         setBinPending(true);
         setStatusMsg("Bottle approved! Dropping into bin…");
@@ -193,9 +195,14 @@ function DepositContent() {
           setStatusMsg(`Bottle received! +${awarded} credits earned.`);
 
           setTimeout(() => {
+            const ai = lastResultRef.current;
             sessionStorage.setItem(
               "lastDeposit",
-              JSON.stringify({ credits_awarded: awarded }),
+              JSON.stringify({
+                credits_awarded: awarded,
+                brand: ai?.brand ?? null,
+                volume_ml: ai?.volume_ml ?? null,
+              }),
             );
             router.push(`/session/result?mode=${mode}&status=accepted`);
           }, 2500);
