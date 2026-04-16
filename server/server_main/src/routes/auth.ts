@@ -105,6 +105,53 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
   }
 })
 
+// POST /guest — issues a short-lived JWT for unauthenticated kiosk users.
+// Finds or creates a shared "Guest" account so the rest of the deposit flow
+// (which requires requireAuth) works without forcing users to register.
+// Guest accounts earn credits to a pooled balance that is effectively discarded.
+const guestSchema = z.object({
+  kiosk_id: z.number().int().positive(),
+})
+
+router.post('/guest', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const body = guestSchema.parse(req.body)
+    const guestEmail = 'guest@kiosk.local'
+
+    // Upsert the shared guest user — one per deployment, never deleted
+    let guest = await prisma.user.findUnique({ where: { email: guestEmail } })
+    if (!guest) {
+      const passwordHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10)
+      const qrCode       = crypto.randomBytes(16).toString('hex')
+      guest = await prisma.user.create({
+        data: { name: 'Guest', email: guestEmail, passwordHash, qrCode },
+      })
+      log.auth(`Guest user created — id #${guest.id}`)
+    }
+
+    // Create a fresh kiosk session for this guest visit
+    const kioskSession = await prisma.kioskSession.create({
+      data: { userId: guest.id, kioskId: body.kiosk_id },
+    })
+
+    log.auth(`Guest session #${kioskSession.id} created for kiosk #${body.kiosk_id}`)
+
+    const access_token = jwt.sign(
+      { sub: guest.id.toString(), isAdmin: false },
+      config.JWT_SECRET,
+      { expiresIn: '4h' } as jwt.SignOptions,
+    )
+
+    res.json({
+      access_token,
+      session_id: kioskSession.id,
+      user: userToJson(guest),
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
 // POST /refresh
 router.post('/refresh', async (req: Request, res: Response, next: NextFunction) => {
   try {

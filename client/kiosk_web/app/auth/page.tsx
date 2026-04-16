@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { BackButton } from "@/components/kiosk/BackButton";
 import { KioskHeader } from "@/components/kiosk/KioskHeader";
 import { MascotAvatar } from "@/components/kiosk/MascotDisplay";
-import { session, token, userStore } from "@/lib/api";
+import { auth, session, token, userStore } from "@/lib/api";
 
 const KIOSK_ID = process.env.NEXT_PUBLIC_KIOSK_ID ?? "1";
 const API = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -72,10 +72,26 @@ export default function AuthPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const handleGuest = () => {
-    token.clear();
-    session.set("0");
-    router.push("/auth/linking");
+  const [guestLoading, setGuestLoading] = useState(false);
+
+  const handleGuest = async () => {
+    setGuestLoading(true);
+    try {
+      const kioskId = parseInt(KIOSK_ID);
+      const data = await auth.guest(kioskId);
+      token.set(data.access_token);
+      session.set(String(data.session_id));
+      userStore.set(data.user);
+      router.push("/auth/linking");
+    } catch {
+      // Backend unreachable — still let guest through with no session
+      // (deposit will fail gracefully rather than crash on 401)
+      token.clear();
+      session.set("0");
+      router.push("/auth/linking");
+    } finally {
+      setGuestLoading(false);
+    }
   };
 
   const formatTime = (s: number) =>
@@ -132,11 +148,12 @@ export default function AuthPage() {
 
         {/* Guest button */}
         <button
-          className="glass-btn-secondary w-full max-w-sm py-4 rounded-2xl text-lg font-semibold transition-all active:scale-95 page-fade"
+          disabled={guestLoading}
+          className={`glass-btn-secondary w-full max-w-sm py-4 rounded-2xl text-lg font-semibold transition-all active:scale-95 page-fade ${guestLoading ? "opacity-50" : ""}`}
           style={{ animationDelay: "0.4s" }}
           onClick={handleGuest}
         >
-          Continue as Guest
+          {guestLoading ? "Please wait…" : "Continue as Guest"}
         </button>
       </div>
 

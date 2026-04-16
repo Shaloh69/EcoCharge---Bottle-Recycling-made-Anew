@@ -59,6 +59,12 @@ export const auth = {
       method: "POST",
       body: JSON.stringify({ name, email, password, phone }),
     }),
+  // Issues a short-lived JWT for guest kiosk users so requireAuth passes.
+  guest: (kiosk_id: number) =>
+    req<{ access_token: string; session_id: number; user: User }>(
+      `${API}/api/auth/guest`,
+      { method: "POST", body: JSON.stringify({ kiosk_id }) },
+    ),
 };
 
 // ── kiosk session ────────────────────────────────────────────────────────────
@@ -159,19 +165,41 @@ export async function detectBottle(imageBlob: Blob): Promise<DetectionResult> {
   return res.json();
 }
 
+// ── SSE event types ───────────────────────────────────────────────────────────
+export interface KioskSSEEvent {
+  // port telemetry broadcast
+  type?: "ports" | "bottleInBin";
+  ports?: Array<{
+    port: number;
+    available: boolean;
+    relay_on: boolean;
+    voltage: number;
+    current: number;
+    watts: number;
+    remaining_seconds: number | null;
+  }>;
+  // bottle FSM fields
+  bottleAtEntrance?: boolean;
+  fsmState?: string;
+  // bin confirmation
+  confirmed?: boolean;
+  deposit_id?: number;
+  credits_awarded?: number;
+  // legacy fields
+  portData?: Array<{
+    port: number;
+    current_a: number;
+    voltage_v: number;
+    relay_on: boolean;
+  }>;
+  activePorts?: number[];
+  binLevel?: number;
+}
+
 // ── SSE ──────────────────────────────────────────────────────────────────────
 export function openKioskSSE(
   kioskId: number,
-  onEvent: (event: {
-    portData?: Array<{
-      port: number;
-      current_a: number;
-      voltage_v: number;
-      relay_on: boolean;
-    }>;
-    activePorts?: number[];
-    binLevel?: number;
-  }) => void,
+  onEvent: (event: KioskSSEEvent) => void,
   onError?: () => void,
 ): () => void {
   const tok =

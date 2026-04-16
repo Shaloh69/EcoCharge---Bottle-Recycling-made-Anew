@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: { Authorization: `Bearer ${AI_KEY}` },
       body: upstream,
+      signal: AbortSignal.timeout(12_000), // don't hang longer than one scan slot
     });
   } catch (err) {
     // eslint-disable-next-line no-console

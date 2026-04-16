@@ -10,7 +10,7 @@ import {
   openKioskSSE,
   session,
   type DetectionResult,
-  type BinConfirmEvent,
+  type KioskSSEEvent,
 } from "@/lib/api";
 
 const KIOSK_ID = parseInt(process.env.NEXT_PUBLIC_KIOSK_ID ?? "1");
@@ -34,11 +34,20 @@ function DepositContent() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scanActive = useRef(false); // prevents overlapping scan loops
 
+  // phaseRef mirrors phase state so SSE handler always sees current value
+  // without needing to be in the useEffect dependency array (avoids reconnects)
+  const phaseRef = useRef<Phase>("waiting");
+
   const [phase, setPhase] = useState<Phase>("waiting");
   const [attempt, setAttempt] = useState(0);
   const [statusMsg, setStatusMsg] = useState("Waiting for bottle…");
   const [credits, setCredits] = useState(0);
   const [binPending, setBinPending] = useState(false);
+
+  // Keep phaseRef in sync with phase state
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
 
   // ── Camera init ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -63,12 +72,23 @@ function DepositContent() {
     const video = videoRef.current!;
     const canvas = canvasRef.current!;
 
+    // Bug fix: ensure the video has produced at least one frame before drawing.
+    // readyState < 2 (HAVE_CURRENT_DATA) means the stream hasn't started yet
+    // → canvas.drawImage would produce a black frame that YOLO cannot detect.
+    if (video.readyState < 2) {
+      throw new Error("Camera not ready");
+    }
+
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
     canvas.getContext("2d")!.drawImage(video, 0, 0);
 
-    return new Promise<Blob>((resolve) =>
-      canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.9),
+    return new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("Canvas toBlob returned null"))),
+        "image/jpeg",
+        0.9,
+      ),
     );
   }, []);
 
@@ -146,10 +166,15 @@ function DepositContent() {
   }, [captureFrame]);
 
   // ── SSE listener — responds to bottle events from ESP32 telemetry ──────────
+  // Bug fix: phase is NOT in the dependency array.
+  // Instead we read phaseRef.current inside the handler so we always see the
+  // current phase without tearing down and rebuilding the SSE connection on
+  // every setPhase() call (which would cause bottleAtEntrance/bottleInBin
+  // events to be missed during the brief reconnect window).
   useEffect(() => {
-    const unsubscribe = openKioskSSE(KIOSK_ID, (event) => {
+    const unsubscribe = openKioskSSE(KIOSK_ID, (event: KioskSSEEvent) => {
       // bottleAtEntrance — auto-trigger scan when ESP32 detects bottle
-      if ((event as any).bottleAtEntrance === true && phase === "waiting") {
+      if (event.bottleAtEntrance === true && phaseRef.current === "waiting") {
         setPhase("scanning");
         setStatusMsg("Bottle detected! Starting scan…");
         runScanLoop();
@@ -158,24 +183,19 @@ function DepositContent() {
       }
 
       // bottleInBin — bin sensor confirmation from ESP32
-      if ((event as any).type === "bottleInBin") {
-        const binEvent = event as unknown as BinConfirmEvent;
-
+      if (event.type === "bottleInBin") {
         setBinPending(false);
-        if (binEvent.confirmed) {
-          setCredits(binEvent.credits_awarded);
-          setPhase("bin_confirmed");
-          setStatusMsg(
-            `Bottle received! +${binEvent.credits_awarded} credits earned.`,
-          );
 
-          // Navigate to result after brief display
+        if (event.confirmed) {
+          const awarded = event.credits_awarded ?? 0;
+          setCredits(awarded);
+          setPhase("bin_confirmed");
+          setStatusMsg(`Bottle received! +${awarded} credits earned.`);
+
           setTimeout(() => {
             sessionStorage.setItem(
               "lastDeposit",
-              JSON.stringify({
-                credits_awarded: binEvent.credits_awarded,
-              }),
+              JSON.stringify({ credits_awarded: awarded }),
             );
             router.push(`/session/result?mode=${mode}&status=accepted`);
           }, 2500);
@@ -190,7 +210,8 @@ function DepositContent() {
     });
 
     return unsubscribe;
-  }, [phase, mode, router, runScanLoop]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, router, runScanLoop]);
 
   // ── Bin confirmation timeout — fallback if SSE misses the event ────────────
   useEffect(() => {
