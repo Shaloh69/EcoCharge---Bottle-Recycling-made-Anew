@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   if (!image || !(image instanceof Blob)) {
     return NextResponse.json({ error: "No image provided" }, { status: 400 });
   }
-  upstream.append("file", image, "capture.jpg");
+  upstream.append("image", image, "capture.jpg");
 
   let res: Response;
 

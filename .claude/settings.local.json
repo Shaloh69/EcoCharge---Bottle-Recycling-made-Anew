@@ -52,7 +52,9 @@
       "Bash(cmd /c \"powershell -Command \"\"Get-Command dart -ErrorAction SilentlyContinue | Select-Object Source\"\"\")",
       "Bash(cmd /c \"powershell -Command \"\"Get-ChildItem -Path C:\\\\,D:\\\\ -Recurse -Filter ''flutter.bat'' -ErrorAction SilentlyContinue -Depth 5 | Select-Object -First 3 FullName\"\" 2>&1\")",
       "Read(//c/Projects/Thesis/2026/EcoCharge/**)",
-      "Read(//d/Projects-Shem/Thesis/2026/EcoCharge/**)"
+      "Read(//d/Projects-Shem/Thesis/2026/EcoCharge/**)",
+      "WebFetch(domain:serves-passage-server-oxygen.trycloudflare.com)",
+      "Bash(curl -s \"https://serves-passage-server-oxygen.trycloudflare.com/openapi.json\")"
     ],
     "additionalDirectories": [
       "C:\\Projects\\Thesis\\2026\\EcoCharge",

@@ -18,6 +18,14 @@
 // The FSM only controls the mechanical side:
 //   • Starts conveyor slow when bottle arrives
 //   • Auto-nudges on BOTTLE_SCAN_INTERVAL_MS so the camera gets new angles
+
+
+
+
+
+
+
+
 //   • On approve → ramps to fast speed → drops bottle → waits for bin confirm
 //   • On reject  → reverses until entrance clears → returns to idle
 // ============================================================================

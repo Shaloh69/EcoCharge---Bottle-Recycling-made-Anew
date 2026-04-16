@@ -76,8 +76,12 @@
 // ----------------------------------------------------------------------------
 #define CURRENT_PORT1_ADC_CHANNEL   ADC_CHANNEL_5   // GPIO 33  SW1 — ADC1_CH5
 #define CURRENT_PORT3_ADC_CHANNEL   ADC_CHANNEL_7   // GPIO 35  SW3 — ADC1_CH7
+#define CURRENT_PORT4_ADC_CHANNEL   ADC_CHANNEL_5   // GPIO 12  SW4 — ADC2_CH5
 // SW2 current: Pico GP27 (A1) — received via UART
-// SW4 current: Pico GP29 (A3) — received via UART
+// SW4 current: ESP32 GPIO 12 (ADC2_CH5) — direct read
+// ⚠ GPIO 12 is ADC2 — ADC2 is shared with WiFi on ESP32.
+//   Readings may be unreliable while WiFi is active.
+//   Add a 10 kΩ pull-down between GPIO12 and GND (boot strapping pin).
 
 #define CURRENT_SENSOR_SENSITIVITY  0.100f   // V/A (ACS712-20A = 100 mV/A)
 #define CURRENT_SENSOR_VOFFSET      1.65f    // V at 0A (Vcc/2)
@@ -103,7 +107,8 @@
 // ----------------------------------------------------------------------------
 // Pico UART — SW2 and SW4 sensor data received from Raspberry Pi Pico
 // Pico GP0(TX) → ESP32 GPIO17(RX),  Pico GP1(RX) ← ESP32 GPIO4(TX)
-// Protocol: "<SW2V>,<SW2I>,<SW4V>,<SW4I>\n"  (raw 12-bit integers, every 500ms)
+// Protocol: "<SW2V>,<SW2I>,<SW4V>\n"  (raw 12-bit integers, every 500ms)
+// SW4 current is now read directly by ESP32 on GPIO12 — not sent by Pico.
 // ----------------------------------------------------------------------------
 #define PICO_UART_PORT       UART_NUM_2
 #define PICO_UART_RX_GPIO    17      // ESP32 RX ← Pico GP0 (TX)
@@ -202,10 +207,10 @@
 // GPIO 2  used as ECHO: strapping pin, stays LOW on boot naturally.
 // ----------------------------------------------------------------------------
 #define ULTRASONIC_ENTRANCE_TRIG_GPIO    13
-#define ULTRASONIC_ENTRANCE_ECHO_GPIO    36   // VP — input-only
+#define ULTRASONIC_ENTRANCE_ECHO_GPIO    21   // freed from ADS1115 SDA (GPIO36/EN not usable on 30-pin board)
 
 #define ULTRASONIC_BIN_TOP_TRIG_GPIO     14
-#define ULTRASONIC_BIN_TOP_ECHO_GPIO     39   // VN — input-only
+#define ULTRASONIC_BIN_TOP_ECHO_GPIO     22   // freed from ADS1115 SCL (GPIO39/SP not usable on 30-pin board)
 
 #define ULTRASONIC_BIN_BOT_TRIG_GPIO     15
 #define ULTRASONIC_BIN_BOT_ECHO_GPIO      2

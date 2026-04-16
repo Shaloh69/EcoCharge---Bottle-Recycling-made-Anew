@@ -44,9 +44,9 @@ static bool _test_pico(void)
 
         if (ch == '\n') {
             line[pos] = '\0';
-            int a, b, c, d;
-            if (sscanf(line, "%d,%d,%d,%d", &a, &b, &c, &d) == 4) {
-                ESP_LOGI(TAG, "  Pico UART: raw data = %d,%d,%d,%d  [PASS]", a, b, c, d);
+            int a, b, c;
+            if (sscanf(line, "%d,%d,%d", &a, &b, &c) == 3) {
+                ESP_LOGI(TAG, "  Pico UART: SW2V=%d SW2I=%d SW4V=%d  [PASS]", a, b, c);
                 return true;
             }
             pos = 0;  // bad line — reset and keep waiting

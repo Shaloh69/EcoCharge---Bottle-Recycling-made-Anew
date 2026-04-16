@@ -20,6 +20,7 @@ static const adc_channel_t VOLTAGE_CH[2] = {
 };
 
 static adc_oneshot_unit_handle_t s_adc1;
+static adc_oneshot_unit_handle_t s_adc2; // GPIO 12 — SW4 current (ADC2_CH5)
 static port_sensor_data_t s_data[NUM_CHARGING_PORTS] = {0};
 static uint32_t s_overcurrent_ms[NUM_CHARGING_PORTS] = {0};
 
@@ -73,7 +74,22 @@ esp_err_t sensor_init(void)
         s_data[i].port = i + 1;
     }
 
-    ESP_LOGI(LOG_TAG, "Sensor monitor initialized (ADC1 + Pico UART)");
+    // --- ADC2 init (SW4 current — GPIO 12) ---
+    // ⚠ ADC2 is shared with WiFi. Readings will be 0 when WiFi is active.
+    //   A 10 kΩ pull-down on GPIO12 is required (boot strapping pin).
+    adc_oneshot_unit_init_cfg_t init_cfg2 = { .unit_id = ADC_UNIT_2 };
+    ret = adc_oneshot_new_unit(&init_cfg2, &s_adc2);
+    if (ret == ESP_OK) {
+        ret = adc_oneshot_config_channel(s_adc2, CURRENT_PORT4_ADC_CHANNEL, &chan_cfg);
+        if (ret != ESP_OK) {
+            ESP_LOGW(LOG_TAG, "ADC2 SW4 current channel config failed: %s (WiFi active?)",
+                     esp_err_to_name(ret));
+        }
+    } else {
+        ESP_LOGW(LOG_TAG, "ADC2 init failed: %s — SW4 current will read 0", esp_err_to_name(ret));
+    }
+
+    ESP_LOGI(LOG_TAG, "Sensor monitor initialized (ADC1 + ADC2 GPIO12 + Pico UART)");
     return ESP_OK;
 }
 
@@ -91,9 +107,10 @@ static float _adc_to_voltage(int raw)
 }
 
 // Read and parse the latest complete line from the Pico.
-// Format: "<SW2V>,<SW2I>,<SW4V>,<SW4I>\n"  (raw 12-bit integers)
+// Format: "<SW2V>,<SW2I>,<SW4V>\n"  (raw 12-bit integers, 3 values)
+// SW4 current is now read directly by ESP32 on GPIO12 — not in this stream.
 // Returns true when a valid line was consumed.
-static bool _pico_uart_read(int *sw2v, int *sw2i, int *sw4v, int *sw4i)
+static bool _pico_uart_read(int *sw2v, int *sw2i, int *sw4v)
 {
     static char buf[64];
     static int  pos = 0;
@@ -105,12 +122,11 @@ static bool _pico_uart_read(int *sw2v, int *sw2i, int *sw4v, int *sw4i)
     while (uart_read_bytes(PICO_UART_PORT, &ch, 1, 0) == 1) {
         if (ch == '\n') {
             buf[pos] = '\0';
-            int a, b, c, d;
-            if (sscanf(buf, "%d,%d,%d,%d", &a, &b, &c, &d) == 4) {
+            int a, b, c;
+            if (sscanf(buf, "%d,%d,%d", &a, &b, &c) == 3) {
                 *sw2v = a;
                 *sw2i = b;
                 *sw4v = c;
-                *sw4i = d;
                 got = true;
             }
             pos = 0;
@@ -143,13 +159,21 @@ void sensor_sample_all(void)
         s_data[2].voltage_volts = _adc_to_voltage(raw);
     }
 
-    // SW2 (index 1) and SW4 (index 3) — Pico via UART
-    int sw2v, sw2i, sw4v, sw4i;
-    if (_pico_uart_read(&sw2v, &sw2i, &sw4v, &sw4i)) {
+    // SW2 (index 1) voltage + current — Pico GP26/GP27 via UART
+    // SW4 (index 3) voltage          — Pico GP28 via UART
+    int sw2v, sw2i, sw4v;
+    if (_pico_uart_read(&sw2v, &sw2i, &sw4v)) {
         s_data[1].voltage_volts = _adc_to_voltage(sw2v);
         s_data[1].current_amps  = _adc_to_current(sw2i);
         s_data[3].voltage_volts = _adc_to_voltage(sw4v);
-        s_data[3].current_amps  = _adc_to_current(sw4i);
+    }
+
+    // SW4 (index 3) current — ESP32 GPIO 12 (ADC2_CH5)
+    // ⚠ ADC2 is unavailable while WiFi is active — will silently read 0.
+    if (s_adc2) {
+        if (adc_oneshot_read(s_adc2, CURRENT_PORT4_ADC_CHANNEL, &raw) == ESP_OK) {
+            s_data[3].current_amps = _adc_to_current(raw);
+        }
     }
 
     // Relay state + overcurrent detection
