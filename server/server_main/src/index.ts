@@ -44,7 +44,26 @@ app.use(express.urlencoded({ extended: true }))
 // ── Request logger ────────────────────────────────────────────────────────────
 app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now()
-  res.on('finish', () => log.request(req.method, req.path, res.statusCode, Date.now() - start))
+  const ip = (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0].trim()
+    ?? req.socket.remoteAddress
+    ?? '?'
+
+  res.on('finish', () => {
+    const ms = Date.now() - start
+    log.request(req.method, req.path, res.statusCode, ms)
+
+    // Log extra context on errors so Render logs are self-contained
+    if (res.statusCode >= 400) {
+      const body = req.body && typeof req.body === 'object' ? req.body : {}
+      const safe = { ...body }
+      if (safe.password) safe.password = '***'
+      if (safe.access_token) safe.access_token = '***'
+      console.warn(
+        `[Request] ${req.method} ${req.path} ${res.statusCode} | ip=${ip}` +
+        ` | body=${JSON.stringify(safe).slice(0, 200)}`,
+      )
+    }
+  })
   next()
 })
 
@@ -52,6 +71,16 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.get('/health', (_req: Request, res: Response) => {
   log.health('ping')
   res.json({ status: 'ok', ts: new Date().toISOString() })
+})
+
+// ── AI error relay — kiosk web posts AI failures here so they appear in Render logs ──
+app.post('/api/log/ai-error', (req: Request, res: Response) => {
+  const { status, detail, url, session_id } = req.body ?? {}
+  log.aiError(
+    `AI server returned ${status ?? '?'} — ${detail ?? 'no detail'}` +
+    ` | url=${url ?? '?'} | session=${session_id ?? '?'}`,
+  )
+  res.json({ logged: true })
 })
 
 // ── Routes ────────────────────────────────────────────────────────────────────
