@@ -289,7 +289,7 @@ Make sure the server venv is active, then:
 
 ```bash
 cd server/server_AI
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+
 ```
 
 Open `http://localhost:8000/health` — should return `{"status": "ok"}`.
@@ -387,60 +387,11 @@ Your server is now reachable at `https://ai.yourdomain.com`.
 
 ### Step 5: Register cloudflared as a Windows service (auto-start on boot)
 
-> **Run all commands below in PowerShell or CMD as Administrator.**
-
-When cloudflared runs as a Windows service, it runs as the **SYSTEM** user — not your personal account. SYSTEM's home directory is `C:\Windows\System32\config\systemprofile\`, not `C:\Users\Shaloh\`. If you skip this step, the service starts and immediately crashes because it can't find your config, cert, or credentials.
-
-**Step 5a — Create the system profile directory:**
-
-```powershell
-mkdir "C:\Windows\System32\config\systemprofile\.cloudflared"
-```
-
-**Step 5b — Copy your login certificate:**
-
-```powershell
-copy C:\Users\Shaloh\.cloudflared\cert.pem "C:\Windows\System32\config\systemprofile\.cloudflared\cert.pem"
-```
-
-**Step 5c — Copy the tunnel credentials JSON** (replace `<tunnel-id>` with the UUID printed when you ran `cloudflared tunnel create`):
-
-```powershell
-copy "C:\Users\Shaloh\.cloudflared\<tunnel-id>.json" "C:\Windows\System32\config\systemprofile\.cloudflared\<tunnel-id>.json"
-```
-
-**Step 5d — Update config.yml** so the `credentials-file` path points to the system profile location. Edit `C:\Users\Shaloh\.cloudflared\config.yml` to:
-
-```yaml
-tunnel: ecocharge-ai
-credentials-file: C:\Windows\System32\config\systemprofile\.cloudflared\<tunnel-id>.json
-
-ingress:
-  - hostname: ai.yourdomain.com
-    service: http://localhost:8000
-  - service: http_status:404
-```
-
-**Step 5e — Copy the updated config.yml to the system profile:**
-
-```powershell
-copy "C:\Users\Shaloh\.cloudflared\config.yml" "C:\Windows\System32\config\systemprofile\.cloudflared\config.yml"
-```
-
-**Step 5f — Install and start the service:**
-
-```powershell
+```bash
 cloudflared service install
-sc start cloudflared
 ```
 
-Verify it's running:
-
-```powershell
-sc query cloudflared
-```
-
-Should show `STATE: RUNNING`. The tunnel now starts automatically when Windows boots and restarts on crash.
+The tunnel now starts automatically when Windows boots and restarts on crash.
 
 ---
 
@@ -482,53 +433,22 @@ Now `uvicorn` runs as a Windows service, restarts on crash, and starts on every 
 
 ---
 
-## Part 5 — Update the Kiosk Web App
+## Part 5 — Update ESP32 Firmware
 
-### Why this is needed
+Once the tunnel is running, update `esp/ecocharge/include/config.h`:
 
-The ESP32 does **not** call the AI server. Its job is hardware control only: running the conveyor belt, switching charging port relays, reading current/voltage sensors, and polling the backend for commands. It has no knowledge of AI inference.
+```c
+// Change this:
+#define AI_SERVER_URL   "https://your-runpod-endpoint.runpod.net"
 
-The AI server is called by the **kiosk web app** (`client/kiosk_web`) — the Next.js touchscreen UI that runs on the kiosk display. During the bottle deposit flow, the kiosk web app:
+// To your Cloudflare Tunnel URL:
+#define AI_SERVER_URL   "https://ai.yourdomain.com"
 
-1. Captures a frame from the camera when a bottle is inserted
-2. POSTs the image to your AI server (`/api/detect`)
-3. Receives the detection result — bottle detected, brand, volume, condition, confidence
-4. If the bottle is valid (confidence ≥ 0.5), it calls the Render backend to credit the user and issue the `open_conveyor` command to the ESP32
-5. The ESP32 receives `open_conveyor` from the backend on its next poll and starts the belt
-
-So the AI server sits between the camera and the credit-awarding logic. Without a reachable AI server URL, bottle deposits fail silently.
-
-### Update the kiosk web app environment
-
-Edit `client/kiosk_web/.env.local`:
-
-```env
-NEXT_PUBLIC_API_URL=https://ecocharge-api.onrender.com
-NEXT_PUBLIC_KIOSK_ID=1
-
-# AI server — server-side only, never sent to the browser
-AI_URL=https://ai.yourdomain.com
-AI_KEY=your-strong-api-key
+// Update the API key to match your .env
+#define AI_API_KEY      "your-strong-api-key"
 ```
 
-- `AI_URL` — your Cloudflare Tunnel URL (from Part 3)
-- `AI_KEY` — must match `AI_API_KEY` in `server/server_AI/.env`
-- These are **not** prefixed with `NEXT_PUBLIC_` — they stay on the Next.js server process and are never exposed in the browser's JS bundle
-
-### Rebuild and redeploy the kiosk web app
-
-```bash
-cd client/kiosk_web
-npm install
-npm run build
-npm start
-```
-
-Or if the kiosk web app is deployed to a hosting service, trigger a redeploy with the updated env vars set in that service's dashboard.
-
-### The ESP32 config does not change
-
-`esp/ecocharge/include/config.h` only contains `RENDER_BASE_URL` and `DEVICE_API_KEY` — both point to the Render backend, not the AI server. No reflash is needed when changing the AI server URL.
+Reflash the ESP32 via PlatformIO (`pio run --target upload`).
 
 ---
 
@@ -579,13 +499,11 @@ Plug the server PC and router into the UPS.
 
 ## Security Checklist
 
-- [ ] `AI_API_KEY` in `server/server_AI/.env` is a random 32+ character string (not `dev-ai-secret`)
-- [ ] `AI_KEY` in `client/kiosk_web/.env.local` matches `AI_API_KEY` in `server/server_AI/.env`
-- [ ] `DEVICE_API_KEY` in `esp/ecocharge/include/config.h` matches the key on the Render backend (separate from AI key)
+- [ ] `AI_API_KEY` is a random 32+ character string (not `dev-ai-secret`)
+- [ ] `DEVICE_API_KEY` in `config.h` matches `AI_API_KEY` in `.env`
 - [ ] Windows Firewall allows port 8000 inbound (for LAN access; tunnel handles internet)
 - [ ] Only port 8000 is tunneled — not port 80 (local web server / provisioning page)
-- [ ] `server/server_AI/.env` is in `.gitignore` (never commit API keys)
-- [ ] Cloudflare tunnel service confirmed `RUNNING` via `sc query cloudflared`
+- [ ] `.env` file is in `.gitignore` (never commit API keys)
 
 ---
 
@@ -633,7 +551,6 @@ sc stop cloudflared && sc start cloudflared
 |---------|-------------|-----|
 | `/health` returns 502 | Uvicorn not running | `nssm start EcoChargeAI`; check logs |
 | Tunnel URL unreachable | cloudflared service stopped | `sc start cloudflared` |
-| `sc query cloudflared` shows STOPPED immediately after start | Credentials/cert not in systemprofile | Re-do Part 3 Step 5a–5e, then `sc start cloudflared` |
 | `torch.cuda.is_available()` = False | No NVIDIA GPU or wrong CUDA | Install PyTorch with correct CUDA version; or use CPU |
 | Training OOM (out of memory) | Batch size too large for VRAM | Add `--batch 8` or `--batch 4` |
 | `data.yaml not found` | Dataset not downloaded | Follow Part 0 — Dataset section |
@@ -642,4 +559,4 @@ sc stop cloudflared && sc start cloudflared
 | ESP32 TLS handshake error | Certificate validation | Set `esp_http_client_config_t.skip_cert_common_name_check = true` |
 | CORS error from kiosk browser | FastAPI CORS not configured | Add `CORSMiddleware` to `app/main.py` |
 | Inference takes >5s | Running on CPU, large image | Resize image to 640px before sending; expected on CPU |
-| `Activate.ps1 cannot be loaded` | PowerShell execution policy | Run: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
+| `Activate.ps1 cannot be loaded` | PowerShell execution policy | Run: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |            

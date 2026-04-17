@@ -1,7 +1,7 @@
 task: detect
 mode: train
-model: scripts\yolo26s.pt
-data: D:\Projects-Shem\Thesis\2026\EcoCharge\scripts\dataset\Eco-Charge.v1\data_runtime.yaml
+model: yolo26n.pt
+data: D:\EcoCharge\EcoCharge\scripts\dataset\Eco-Charge.v1\data_runtime.yaml
 epochs: 100
 time: null
 patience: 50
@@ -10,9 +10,9 @@ imgsz: 640
 save: true
 save_period: 10
 cache: true
-device: '0'
+device: cpu
 workers: 4
-project: D:\Projects-Shem\Thesis\2026\EcoCharge\runs\detect
+project: D:\EcoCharge\EcoCharge\runs\detect
 name: ecocharge_bottle_det
 exist_ok: true
 pretrained: true
@@ -106,4 +106,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: botsort.yaml
-save_dir: D:\Projects-Shem\Thesis\2026\EcoCharge\runs\detect\ecocharge_bottle_det
+save_dir: D:\EcoCharge\EcoCharge\runs\detect\ecocharge_bottle_det
