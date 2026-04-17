@@ -62,7 +62,7 @@ export async function runMigrations() {
 
 // ── AI Server health check ─────────────────────────────────────────────────────
 export async function pingAIServer() {
-  const url    = process.env.AI_SERVER_URL
+  const url    = (process.env.AI_SERVER_URL ?? '').replace(/\/+$/, '')
   const apiKey = process.env.AI_API_KEY ?? ''
 
   const maskedKey = apiKey
@@ -100,7 +100,7 @@ export async function pingAIServer() {
     const form = new FormData()
     const res  = await fetch(`${url}/api/detect`, {
       method:  'POST',
-      headers: { Authorization: `Bearer ${apiKey}` },
+      headers: { 'X-Api-Key': apiKey },
       body:    form,
       signal:  AbortSignal.timeout(5000),
     })
