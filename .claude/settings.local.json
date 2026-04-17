@@ -60,7 +60,8 @@
       "Bash(curl -s https://ecocharge-api.onrender.com/health)",
       "Bash(curl -s https://ecocharge-server.onrender.com/health)",
       "Bash(curl -s https://ecocharge-server.onrender.com/api/kiosk/list)",
-      "WebFetch(domain:community.cloudflare.com)"
+      "WebFetch(domain:community.cloudflare.com)",
+      "Read(//d/EcoCharge/EcoCharge/server/server_AI/app/**)"
     ],
     "additionalDirectories": [
       "C:\\Projects\\Thesis\\2026\\EcoCharge",
