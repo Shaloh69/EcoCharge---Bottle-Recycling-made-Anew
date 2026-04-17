@@ -40,8 +40,16 @@ async function req<T>(url: string, opts: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
+    const message = (body as { error?: string }).error ?? `HTTP ${res.status}`;
 
-    throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+    // Token expired — clear session and redirect to auth so user re-links
+    if (res.status === 401 && typeof window !== "undefined") {
+      console.warn(`[api] 401 on ${url} — token expired or invalid, redirecting to /auth`);
+      token.clear();
+      window.location.href = "/auth";
+    }
+
+    throw new Error(message);
   }
 
   return res.json() as Promise<T>;

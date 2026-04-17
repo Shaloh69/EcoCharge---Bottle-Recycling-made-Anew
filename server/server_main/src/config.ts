@@ -7,7 +7,7 @@ const schema = z.object({
   PORT: z.coerce.number().default(3001),
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(1).default('dev-jwt-secret'),
-  JWT_EXPIRES_IN: z.string().default('60m'),
+  JWT_EXPIRES_IN: z.string().default('4h'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
   DEVICE_API_KEY: z.string().default('esp32-device-secret'),
   // Comma-separated list of allowed CORS origins, e.g.:
