@@ -45,8 +45,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No image provided" }, { status: 400 });
   }
 
-  console.log(`[Stage 2] detect route — session=${sessionId ?? "?"} image=${image.size} bytes → ${AI_URL}/api/detect`);
-  upstream.append("image", image, "capture.jpg");
+  console.log(`[Stage 2] detect route — session=${sessionId ?? "?"} image=${image.size} bytes type=${image.type} → ${AI_URL}/api/detect`);
+
+  // Fully buffer the blob before forwarding — avoids multipart boundary corruption
+  // when Node.js re-streams an incoming request Blob into an outgoing FormData
+  const arrayBuffer = await image.arrayBuffer();
+  const bufferedImage = new Blob([arrayBuffer], { type: image.type || "image/jpeg" });
+  upstream.append("image", bufferedImage, "capture.jpg");
 
   let res: Response;
   try {
