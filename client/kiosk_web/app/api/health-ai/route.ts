@@ -47,7 +47,7 @@ export async function GET() {
     const form = new FormData();
     const res = await fetch(`${AI_URL}/api/detect`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${AI_KEY}` },
+      headers: { "X-Api-Key": AI_KEY },
       body: form,
       signal: AbortSignal.timeout(5_000),
     });

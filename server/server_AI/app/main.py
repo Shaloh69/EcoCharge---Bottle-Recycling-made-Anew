@@ -30,19 +30,33 @@ logging.basicConfig(
 logger = logging.getLogger("ecocharge.ai")
 
 # ── API key auth ───────────────────────────────────────────────────────────────
-API_KEY_NAME = "Authorization"
-_api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 _API_KEY = os.environ.get("AI_API_KEY", "dev-ai-secret")
 
 logger.info(f"AI_API_KEY loaded: {'(set)' if _API_KEY != 'dev-ai-secret' else '(using default dev-ai-secret — set AI_API_KEY env var!)'}")
 
+# Accept key from X-Api-Key header (Cloudflare strips Authorization on content bodies)
+_api_key_header = APIKeyHeader(name="X-Api-Key", auto_error=False)
+# Fallback: also check Authorization header for health-ai empty-body checks
+_auth_header = APIKeyHeader(name="Authorization", auto_error=False)
 
-def _check_api_key(api_key: str = Security(_api_key_header)):
-    if not api_key:
-        logger.warning("AUTH FAILED — no Authorization header provided")
+
+def _check_api_key(
+    x_api_key: str = Security(_api_key_header),
+    authorization: str = Security(_auth_header),
+):
+    # Prefer X-Api-Key; fall back to Authorization Bearer
+    provided = None
+    if x_api_key:
+        provided = x_api_key.strip()
+        logger.debug(f"AUTH via X-Api-Key: prefix={provided[:8]}...")
+    elif authorization:
+        provided = authorization.removeprefix("Bearer ").strip()
+        logger.debug(f"AUTH via Authorization header: prefix={provided[:8]}...")
+
+    if not provided:
+        logger.warning("AUTH FAILED — no API key provided (X-Api-Key or Authorization)")
         raise HTTPException(status_code=401, detail="unauthorized — no API key")
 
-    provided = api_key.removeprefix("Bearer ").strip()
     if provided != _API_KEY:
         logger.warning(
             f"AUTH FAILED — key mismatch | provided_prefix={provided[:8]}... "
@@ -50,7 +64,7 @@ def _check_api_key(api_key: str = Security(_api_key_header)):
         )
         raise HTTPException(status_code=401, detail="unauthorized — invalid API key")
 
-    return api_key
+    return provided
 
 
 @asynccontextmanager

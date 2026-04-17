@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   try {
     res = await fetch(`${AI_URL}/api/detect`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${AI_KEY}` },
+      headers: { "X-Api-Key": AI_KEY },
       body: upstream,
       signal: AbortSignal.timeout(12_000),
     });
