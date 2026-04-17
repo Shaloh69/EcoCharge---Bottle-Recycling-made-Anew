@@ -142,7 +142,7 @@ router.post('/telemetry', async (req: DeviceRequest, res: Response, next: NextFu
 
     // ── Bin confirmation — award credits when bottle lands ────────────────────
     if (bottle_in_bin === true) {
-      log.device(`kiosk #${kioskId} — bottle_in_bin=true, looking for pending deposit`)
+      log.device(`[Stage 5] bottle_in_bin=true received from ESP32 — kiosk #${kioskId}, looking for pending deposit`)
 
       const pendingDeposit = await prisma.bottleDeposit.findFirst({
         where:   { status: 'pending_bin', session: { kioskId } },
@@ -151,7 +151,7 @@ router.post('/telemetry', async (req: DeviceRequest, res: Response, next: NextFu
       })
 
       if (pendingDeposit) {
-        log.device(`kiosk #${kioskId} — confirming deposit #${pendingDeposit.id} (${pendingDeposit.creditsAwarded} credits) for user #${pendingDeposit.session.userId}`)
+        log.device(`[Stage 5] Confirming deposit #${pendingDeposit.id} — ${pendingDeposit.creditsAwarded} credits → user #${pendingDeposit.session.userId}`)
 
         await prisma.bottleDeposit.update({
           where: { id: pendingDeposit.id },

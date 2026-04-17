@@ -159,10 +159,12 @@ export const user = {
 };
 
 // ── AI detect ────────────────────────────────────────────────────────────────
-export async function detectBottle(imageBlob: Blob): Promise<DetectionResult> {
+export async function detectBottle(imageBlob: Blob, sessionId?: string): Promise<DetectionResult> {
   const form = new FormData();
 
   form.append("image", imageBlob, "capture.jpg");
+  if (sessionId) form.append("session_id", sessionId);
+
   const res = await fetch("/api/detect", {
     method: "POST",
     body: form,

@@ -121,9 +121,12 @@ function DepositContent() {
 
       try {
         const blob = await captureFrame();
+        console.log(`[Stage 1] Frame captured — ${blob.size} bytes, attempt ${i}/${MAX_RETRIES}`);
 
-        result = await detectBottle(blob);
-      } catch {
+        result = await detectBottle(blob, sid);
+        console.log(`[Stage 3→kiosk] Detection result — detected=${result.detected} conf=${result.confidence} brand=${result.brand} vol=${result.volume_ml}mL`);
+      } catch (err) {
+        console.warn(`[Stage 1] Attempt ${i} failed — ${(err as Error).message}`);
         setStatusMsg(`Attempt ${i} failed — retrying`);
         continue;
       }
@@ -131,6 +134,7 @@ function DepositContent() {
       if (result.detected && result.confidence >= 0.5) {
         // ── AI Approved ──────────────────────────────────────────────────────
         lastResultRef.current = result;
+        console.log(`[Stage 4] Bottle approved — sending to server | brand=${result.brand} vol=${result.volume_ml}mL conf=${result.confidence}`);
         setPhase("approved");
         setBinPending(true);
         setStatusMsg("Bottle approved! Dropping into bin…");
@@ -186,6 +190,7 @@ function DepositContent() {
 
       // bottleInBin — bin sensor confirmation from ESP32
       if (event.type === "bottleInBin") {
+        console.log(`[Stage 6→kiosk] SSE bottleInBin received — confirmed=${event.confirmed} credits=${event.credits_awarded ?? 0}`);
         setBinPending(false);
 
         if (event.confirmed) {

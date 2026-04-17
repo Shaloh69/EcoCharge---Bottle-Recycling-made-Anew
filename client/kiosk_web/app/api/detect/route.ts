@@ -38,13 +38,14 @@ export async function POST(req: NextRequest) {
   const form = await req.formData();
   const upstream = new FormData();
   const image = form.get("image");
+  const sessionId = form.get("session_id")?.toString() ?? undefined;
 
   if (!image || !(image instanceof Blob)) {
     console.warn("[detect] No image in request body");
     return NextResponse.json({ error: "No image provided" }, { status: 400 });
   }
 
-  console.log(`[detect] Forwarding image (${image.size} bytes) → ${AI_URL}/api/detect`);
+  console.log(`[Stage 2] detect route — session=${sessionId ?? "?"} image=${image.size} bytes → ${AI_URL}/api/detect`);
   upstream.append("image", image, "capture.jpg");
 
   let res: Response;
@@ -81,12 +82,12 @@ export async function POST(req: NextRequest) {
 
     console.error(
       `[detect] AI server error — status=${res.status} detail=${detail}` +
-        ` | url=${AI_URL} | key=${maskKey(AI_KEY)}`,
+        ` | url=${AI_URL} | key=${maskKey(AI_KEY)} | session=${sessionId ?? "?"}`,
     );
-    await relayAiError(res.status, String(detail));
+    await relayAiError(res.status, String(detail), sessionId);
     return NextResponse.json(data, { status: res.status });
   }
 
-  console.log(`[detect] AI response OK — ${JSON.stringify(data).slice(0, 120)}`);
+  console.log(`[Stage 2→3] AI response OK — ${JSON.stringify(data).slice(0, 120)}`);
   return NextResponse.json(data, { status: res.status });
 }

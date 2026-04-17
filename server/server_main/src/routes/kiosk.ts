@@ -192,7 +192,7 @@ router.post('/bottle/approve', requireAuth, async (req: AuthRequest, res: Respon
   try {
     const body = bottleApproveSchema.parse(req.body)
     log.kiosk(
-      `Bottle APPROVE — user #${req.userId} session #${body.session_id} ` +
+      `[Stage 4] Bottle APPROVE received — user #${req.userId} session #${body.session_id} ` +
       `brand=${body.brand ?? '?'} vol=${body.volume_ml ?? '?'}mL ` +
       `cond=${body.condition ?? '?'} conf=${body.confidence ?? '?'}`,
     )
@@ -221,7 +221,7 @@ router.post('/bottle/approve', requireAuth, async (req: AuthRequest, res: Respon
     })
 
     await queueCommand(session.kioskId, 'approve_bottle', { deposit_id: deposit.id })
-    log.kiosk(`Deposit #${deposit.id} created (pending_bin) — approve_bottle queued for kiosk #${session.kioskId}`)
+    log.kiosk(`[Stage 4] Deposit #${deposit.id} created (pending_bin) — approve_bottle queued for kiosk #${session.kioskId} | credits_pending=${creditsAwarded}`)
 
     res.status(201).json({
       deposit_id:      deposit.id,

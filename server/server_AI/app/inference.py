@@ -8,7 +8,9 @@ Models are loaded once at startup; `run()` is safe to call from multiple request
 """
 from __future__ import annotations
 
+import logging
 import os
+import time
 from pathlib import Path
 
 import torch
@@ -16,6 +18,8 @@ from PIL import Image
 from torchvision import transforms
 
 from .model_arch import BottleAttributeNet
+
+logger = logging.getLogger("ecocharge.inference")
 
 # ---------------------------------------------------------------------------
 # Paths (override via env vars for flexibility on RunPod)
@@ -48,18 +52,33 @@ def load_models():
     from ultralytics import YOLO
 
     _device = _get_device()
+    logger.info(f"Using device: {_device}")
+    logger.info(f"YOLO weights   : {YOLO_WEIGHTS}")
+    logger.info(f"Classifier     : {CLASSIFIER_WEIGHTS}")
+    logger.info(f"Conf threshold : {CONF_THRESHOLD}")
 
     if not YOLO_WEIGHTS.exists():
+        logger.error(f"YOLO weights NOT FOUND: {YOLO_WEIGHTS}")
         raise FileNotFoundError(f"YOLO weights not found: {YOLO_WEIGHTS}")
+
+    t0 = time.perf_counter()
     _yolo = YOLO(str(YOLO_WEIGHTS))
+    logger.info(f"YOLO loaded in {int((time.perf_counter()-t0)*1000)}ms")
 
     if not CLASSIFIER_WEIGHTS.exists():
+        logger.error(f"Classifier weights NOT FOUND: {CLASSIFIER_WEIGHTS}")
         raise FileNotFoundError(f"Classifier weights not found: {CLASSIFIER_WEIGHTS}")
 
+    t0 = time.perf_counter()
     checkpoint = torch.load(str(CLASSIFIER_WEIGHTS), map_location=_device, weights_only=False)
     label_maps: dict = checkpoint["label_maps"]
     backbone: str = checkpoint.get("backbone", "efficientnet_b0")
     imgsz: int = checkpoint.get("imgsz", 224)
+    logger.info(
+        f"Classifier checkpoint loaded in {int((time.perf_counter()-t0)*1000)}ms | "
+        f"backbone={backbone} imgsz={imgsz} "
+        f"brands={len(label_maps['brand'])} volumes={len(label_maps['volume'])} conditions={len(label_maps['condition'])}"
+    )
 
     _inv_maps = {key: {v: k for k, v in mapping.items()} for key, mapping in label_maps.items()}
 
@@ -72,6 +91,7 @@ def load_models():
     model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()
     _classifier = model
+    logger.info("Classifier model ready ✔")
 
     _cls_transform = transforms.Compose([
         transforms.Resize((imgsz, imgsz)),
@@ -82,53 +102,60 @@ def load_models():
 
 @torch.no_grad()
 def _classify_crop(crop: Image.Image) -> dict:
+    t0 = time.perf_counter()
     tensor = _cls_transform(crop).unsqueeze(0).to(_device)
     outputs = _classifier(tensor)
 
-    brand_idx = outputs["brand"].argmax(dim=1).item()
-    volume_idx = outputs["volume"].argmax(dim=1).item()
+    brand_idx     = outputs["brand"].argmax(dim=1).item()
+    volume_idx    = outputs["volume"].argmax(dim=1).item()
     condition_idx = outputs["condition"].argmax(dim=1).item()
 
+    brand     = _inv_maps["brand"][brand_idx]
+    volume    = int(_inv_maps["volume"][volume_idx])
+    condition = _inv_maps["condition"][condition_idx]
+    brand_conf  = round(torch.softmax(outputs["brand"], dim=1).max().item(), 4)
+    vol_conf    = round(torch.softmax(outputs["volume"], dim=1).max().item(), 4)
+    cond_conf   = round(torch.softmax(outputs["condition"], dim=1).max().item(), 4)
+
+    ms = int((time.perf_counter() - t0) * 1000)
+    logger.info(
+        f"Classifier {ms}ms | brand={brand}({brand_conf:.0%}) "
+        f"vol={volume}mL({vol_conf:.0%}) cond={condition}({cond_conf:.0%})"
+    )
+
     return {
-        "brand": _inv_maps["brand"][brand_idx],
-        "brand_confidence": torch.softmax(outputs["brand"], dim=1).max().item(),
-        "volume_ml": int(_inv_maps["volume"][volume_idx]),
-        "volume_confidence": torch.softmax(outputs["volume"], dim=1).max().item(),
-        "condition": _inv_maps["condition"][condition_idx],
-        "condition_confidence": torch.softmax(outputs["condition"], dim=1).max().item(),
+        "brand": brand,
+        "brand_confidence": brand_conf,
+        "volume_ml": volume,
+        "volume_confidence": vol_conf,
+        "condition": condition,
+        "condition_confidence": cond_conf,
     }
 
 
 def run(image: Image.Image) -> dict:
-    """Run the full two-stage pipeline on a PIL image.
-
-    Returns a dict:
-    {
-        "detected": bool,
-        "confidence": float | None,
-        "bounding_box": [x1, y1, x2, y2] | None,
-        "brand": str | None,
-        "brand_confidence": float | None,
-        "volume_ml": int | None,
-        "volume_confidence": float | None,
-        "condition": str | None,
-        "condition_confidence": float | None,
-    }
-    """
+    """Run the full two-stage pipeline on a PIL image."""
     if _yolo is None:
         raise RuntimeError("Models not loaded. Call load_models() first.")
 
+    w, h = image.size
+    logger.info(f"[Stage 3a] YOLO detection — image {w}x{h}px conf_threshold={CONF_THRESHOLD}")
+
+    t0 = time.perf_counter()
     results = _yolo.predict(
         source=image,
         conf=CONF_THRESHOLD,
         verbose=False,
         device=str(_device),
     )
+    yolo_ms = int((time.perf_counter() - t0) * 1000)
 
     result = results[0]
-    boxes = result.boxes
+    boxes  = result.boxes
+    logger.info(f"[Stage 3a] YOLO done {yolo_ms}ms — {len(boxes)} detection(s)")
 
     if len(boxes) == 0:
+        logger.info("[Stage 3a] No bottle detected → returning detected=False")
         return {
             "detected": False,
             "confidence": None,
@@ -141,25 +168,30 @@ def run(image: Image.Image) -> dict:
             "condition_confidence": None,
         }
 
-    # Use the highest-confidence detection
     best_idx = int(boxes.conf.argmax())
     conf = float(boxes.conf[best_idx].item())
     x1, y1, x2, y2 = [float(v) for v in boxes.xyxy[best_idx].tolist()]
+    logger.info(
+        f"[Stage 3a] Best detection conf={conf:.4f} bbox=[{x1:.0f},{y1:.0f},{x2:.0f},{y2:.0f}]"
+    )
 
-    pad = 5
-    w, h = image.size
+    pad  = 5
     crop = image.crop((
-        max(0, int(x1) - pad),
-        max(0, int(y1) - pad),
-        min(w, int(x2) + pad),
-        min(h, int(y2) + pad),
+        max(0, int(x1) - pad), max(0, int(y1) - pad),
+        min(w, int(x2) + pad), min(h, int(y2) + pad),
     ))
+    logger.info(f"[Stage 3b] Classifier — crop size {crop.size}")
 
     attrs = _classify_crop(crop)
 
-    return {
+    final = {
         "detected": True,
         "confidence": round(conf, 4),
         "bounding_box": [round(x1), round(y1), round(x2), round(y2)],
         **attrs,
     }
+    logger.info(
+        f"[Stage 3b] Pipeline complete | detected=True conf={conf:.2%} "
+        f"brand={attrs['brand']} vol={attrs['volume_ml']}mL cond={attrs['condition']}"
+    )
+    return final
