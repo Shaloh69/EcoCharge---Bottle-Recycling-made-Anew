@@ -163,9 +163,9 @@ export async function detectBottle(imageBlob: Blob, sessionId?: string): Promise
   const form = new FormData();
 
   form.append("image", imageBlob, "capture.jpg");
-  if (sessionId) form.append("session_id", sessionId);
 
-  const res = await fetch("/api/detect", {
+  const url = sessionId ? `/api/detect?session_id=${sessionId}` : "/api/detect";
+  const res = await fetch(url, {
     method: "POST",
     body: form,
   });

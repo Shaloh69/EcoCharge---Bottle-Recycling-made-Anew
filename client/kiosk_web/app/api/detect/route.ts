@@ -4,9 +4,9 @@ const AI_URL = process.env.AI_URL ?? "";
 const AI_KEY = process.env.AI_KEY ?? "";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
-function maskKey(key: string) {
-  if (!key) return "(not set)";
-  return `${key.slice(0, 6)}...${key.slice(-4)}`;
+function maskKey(k: string) {
+  if (!k) return "(not set)";
+  return `${k.slice(0, 6)}...${k.slice(-4)}`;
 }
 
 async function relayAiError(status: number, detail: string, sessionId?: string) {
@@ -19,7 +19,7 @@ async function relayAiError(status: number, detail: string, sessionId?: string) 
       signal: AbortSignal.timeout(3_000),
     });
   } catch {
-    // best-effort — don't block the response
+    /* best-effort */
   }
 }
 
@@ -33,38 +33,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "AI_KEY not configured" }, { status: 503 });
   }
 
-  console.log(`[detect] AI_URL=${AI_URL} AI_KEY=${maskKey(AI_KEY)}`);
+  // Extract session_id from query param (passed by kiosk so it appears in logs)
+  const sessionId = req.nextUrl.searchParams.get("session_id") ?? undefined;
 
-  const form = await req.formData();
-  const upstream = new FormData();
-  const image = form.get("image");
-  const sessionId = form.get("session_id")?.toString() ?? undefined;
+  // Preserve the original Content-Type (includes the multipart boundary)
+  const contentType = req.headers.get("content-type") ?? "";
 
-  if (!image || !(image instanceof Blob)) {
-    console.warn("[detect] No image in request body");
-    return NextResponse.json({ error: "No image provided" }, { status: 400 });
-  }
-
-  console.log(`[Stage 2] detect route — session=${sessionId ?? "?"} image=${image.size} bytes type=${image.type} → ${AI_URL}/api/detect`);
-
-  // Fully buffer the blob before forwarding — avoids multipart boundary corruption
-  // when Node.js re-streams an incoming request Blob into an outgoing FormData
-  const arrayBuffer = await image.arrayBuffer();
-  const bufferedImage = new Blob([arrayBuffer], { type: image.type || "image/jpeg" });
-  upstream.append("image", bufferedImage, "capture.jpg");
+  console.log(
+    `[Stage 2] detect — session=${sessionId ?? "?"} AI_URL=${AI_URL} AI_KEY=${maskKey(AI_KEY)} content-type=${contentType.slice(0, 60)}`,
+  );
 
   let res: Response;
   try {
+    // Pipe the raw body directly — avoids re-encoding FormData and boundary corruption
     res = await fetch(`${AI_URL}/api/detect`, {
       method: "POST",
-      headers: { "X-Api-Key": AI_KEY },
-      body: upstream,
+      headers: {
+        "X-Api-Key": AI_KEY,
+        "Content-Type": contentType,
+      },
+      // @ts-expect-error — duplex required for streaming body in Node.js fetch
+      duplex: "half",
+      body: req.body,
       signal: AbortSignal.timeout(12_000),
     });
   } catch (err) {
     const msg = (err as Error).message ?? String(err);
     console.error(`[detect] AI server unreachable: ${msg} | url=${AI_URL}`);
-    await relayAiError(0, `unreachable: ${msg}`);
+    await relayAiError(0, `unreachable: ${msg}`, sessionId);
     return NextResponse.json({ error: "AI server unreachable" }, { status: 503 });
   }
 
@@ -73,7 +69,7 @@ export async function POST(req: NextRequest) {
     data = await res.json();
   } catch {
     console.error(`[detect] AI server returned non-JSON — status=${res.status}`);
-    await relayAiError(res.status, "non-JSON response");
+    await relayAiError(res.status, "non-JSON response", sessionId);
     return NextResponse.json({ error: `AI error ${res.status}` }, { status: res.status });
   }
 
@@ -86,13 +82,12 @@ export async function POST(req: NextRequest) {
         : String(data);
 
     console.error(
-      `[detect] AI server error — status=${res.status} detail=${detail}` +
-        ` | url=${AI_URL} | key=${maskKey(AI_KEY)} | session=${sessionId ?? "?"}`,
+      `[detect] AI error — status=${res.status} detail=${detail} | session=${sessionId ?? "?"}`,
     );
     await relayAiError(res.status, String(detail), sessionId);
     return NextResponse.json(data, { status: res.status });
   }
 
-  console.log(`[Stage 2→3] AI response OK — ${JSON.stringify(data).slice(0, 120)}`);
+  console.log(`[Stage 2→3] AI OK — ${JSON.stringify(data).slice(0, 120)}`);
   return NextResponse.json(data, { status: res.status });
 }
