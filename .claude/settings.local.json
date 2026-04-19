@@ -61,7 +61,18 @@
       "Bash(curl -s https://ecocharge-server.onrender.com/health)",
       "Bash(curl -s https://ecocharge-server.onrender.com/api/kiosk/list)",
       "WebFetch(domain:community.cloudflare.com)",
-      "Read(//d/EcoCharge/EcoCharge/server/server_AI/app/**)"
+      "Read(//d/EcoCharge/EcoCharge/server/server_AI/app/**)",
+      "Bash(grep -r \"Drawer\\\\|drawer\\\\|NavigationPane\" \"D:\\\\\\\\Projects-Shem\\\\\\\\Thesis\\\\\\\\2026\\\\\\\\AIRAT-NA\\\\\\\\client\\\\\\\\ariat_app\\\\\\\\lib\" --include=\"*.dart\")",
+      "Bash(grep -n \"categoryIcon\\\\|category_icon\\\\|icon.*display\\\\|CachedNetworkImage.*icon\" \"D:\\\\\\\\Projects-Shem\\\\\\\\Thesis\\\\\\\\2026\\\\\\\\AIRAT-NA\\\\\\\\client\\\\\\\\ariat_app\\\\\\\\lib\\\\\\\\screens\\\\\\\\destinations\\\\\\\\destinations_screen.dart\")",
+      "Bash(grep -n \"Add to itinerary\\\\|destination.*sidebar\\\\|selectedDestinations\\\\|_routeStops\" \"D:\\\\\\\\Projects-Shem\\\\\\\\Thesis\\\\\\\\2026\\\\\\\\AIRAT-NA\\\\\\\\client\\\\\\\\ariat_app\\\\\\\\lib\\\\\\\\screens\\\\\\\\map\\\\\\\\map_screen.dart\")",
+      "Bash(git pull *)",
+      "Bash(python -c ' *)",
+      "Bash(python -m pip show python-dotenv)",
+      "Bash(py -3 --version)",
+      "Bash(py -0)",
+      "Bash(py -3.12 -m venv .venv)",
+      "Bash(.venv/Scripts/pip install *)",
+      "Bash(.venv/Scripts/python -c ' *)"
     ],
     "additionalDirectories": [
       "C:\\Projects\\Thesis\\2026\\EcoCharge",
