@@ -146,7 +146,7 @@ async def detect(
 
     logger.info(
         f"DETECT result | detected={result.get('detected')} "
-        f"confidence={result.get('confidence', 0):.2f} "
+        f"confidence={result.get('confidence') or 0:.2f} "
         f"brand={result.get('brand')} volume={result.get('volume_ml')}mL "
         f"condition={result.get('condition')}"
     )
