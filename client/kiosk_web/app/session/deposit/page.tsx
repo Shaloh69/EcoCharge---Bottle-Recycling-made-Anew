@@ -76,12 +76,12 @@ function DepositContent() {
     // Bug fix: ensure the video has produced at least one frame before drawing.
     // readyState < 2 (HAVE_CURRENT_DATA) means the stream hasn't started yet
     // → canvas.drawImage would produce a black frame that YOLO cannot detect.
-    if (video.readyState < 2) {
+    if (video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
       throw new Error("Camera not ready");
     }
 
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
     canvas.getContext("2d")!.drawImage(video, 0, 0);
 
     return new Promise<Blob>((resolve, reject) =>
@@ -268,26 +268,47 @@ function DepositContent() {
     <div className="flex flex-col flex-1 page-enter">
       <KioskHeader showAccount />
       <canvas ref={canvasRef} className="hidden" />
-      <video ref={videoRef} autoPlay muted playsInline className="hidden" />
 
       <div className="flex-1 flex flex-col items-center px-6 pt-8 gap-6">
+        {/* Camera preview — must be visible so browser decodes frames */}
+        <div className="relative w-full max-w-sm rounded-3xl overflow-hidden shadow-xl bg-black aspect-video page-scale" style={{ animationDelay: "0s" }}>
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            className="w-full h-full object-cover"
+          />
+          {/* Phase overlay badge */}
+          <div
+            className="absolute bottom-3 left-3 right-3 rounded-2xl px-4 py-2 flex items-center gap-2"
+            style={{ background: phaseColor[phase], backdropFilter: "blur(8px)" }}
+          >
+            <span className={isActive ? "breathe-anim" : ""}>{phaseIcon[phase]}</span>
+            <p className="text-gray-800 text-sm font-bold truncate">
+              {phase === "waiting" && "Insert your plastic bottle"}
+              {phase === "scanning" && `Scanning — attempt ${attempt}/${MAX_RETRIES}`}
+              {phase === "approved" && "Dropping into bin…"}
+              {phase === "bin_confirmed" && `+${credits} credits earned!`}
+              {phase === "rejected" && "Bottle rejected"}
+              {phase === "error" && "Something went wrong"}
+            </p>
+          </div>
+          {phase === "scanning" && (
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gray-200">
+              <div
+                className="bg-teal-400 h-1 transition-all duration-500"
+                style={{ width: `${(attempt / MAX_RETRIES) * 100}%` }}
+              />
+            </div>
+          )}
+        </div>
+
         {/* Status card */}
         <div
           className="glass-white rounded-3xl p-7 w-full max-w-sm shadow-xl flex flex-col items-center gap-5 page-scale"
           style={{ animationDelay: "0.1s" }}
         >
-          <div
-            className="w-24 h-24 rounded-2xl flex items-center justify-center text-5xl"
-            style={{
-              background: phaseColor[phase],
-              border: `2px solid ${phaseColor[phase].replace("0.2", "0.4").replace("0.15", "0.3").replace("0.3", "0.5")}`,
-            }}
-          >
-            <span className={isActive ? "breathe-anim" : "float-anim"}>
-              {phaseIcon[phase]}
-            </span>
-          </div>
-
           <div className="text-center">
             <p className="text-gray-800 text-xl font-bold">
               {phase === "waiting" && "Insert your plastic bottle"}
@@ -299,15 +320,6 @@ function DepositContent() {
               {phase === "error" && "Something went wrong"}
             </p>
             <p className="text-gray-400 text-sm mt-1">{statusMsg}</p>
-
-            {phase === "scanning" && (
-              <div className="mt-3 w-full bg-gray-200 rounded-full h-1.5">
-                <div
-                  className="bg-teal-500 h-1.5 rounded-full transition-all duration-500"
-                  style={{ width: `${(attempt / MAX_RETRIES) * 100}%` }}
-                />
-              </div>
-            )}
           </div>
         </div>
 
