@@ -321,6 +321,8 @@ def evaluate(model, loader, criterion, device):
             preds = outputs[key].argmax(dim=1)
             correct[key] += (preds == targets[key]).sum().item()
 
+    if total == 0:
+        return float("inf"), {"brand": 0.0, "volume": 0.0, "condition": 0.0}
     avg_loss = running_loss / total
     accs = {k: v / total for k, v in correct.items()}
     return avg_loss, accs
@@ -414,6 +416,12 @@ def main():
     train_df = df[df["filename"].isin(train_filenames)].reset_index(drop=True)
     val_df = df[df["filename"].isin(val_filenames)].reset_index(drop=True)
     test_df = df[df["filename"].isin(test_filenames)].reset_index(drop=True)
+
+    # Auto-split 20% from train when val folder is empty
+    if len(val_df) == 0 and len(train_df) > 0:
+        val_df = train_df.sample(frac=0.2, random_state=42).reset_index(drop=True)
+        train_df = train_df.drop(val_df.index).reset_index(drop=True)
+        print("\n[INFO] No val images found — auto-split 20% from train as val")
 
     print(f"\nSplits:")
     print(f"  Train: {len(train_df)} images with CSV labels")
