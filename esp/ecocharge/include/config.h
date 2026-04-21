@@ -93,7 +93,7 @@
 #define BOTTLE_NUDGE_FORWARD_MS     300   // forward pulse duration per nudge
 #define BOTTLE_BIN_TIMEOUT_MS      8000   // max time to wait for bin confirmation
 #define BOTTLE_FSM_TASK_STACK      4096
-#define BOTTLE_FSM_TASK_PRIORITY      7
+#define BOTTLE_FSM_TASK_PRIORITY      6
 
 // ----------------------------------------------------------------------------
 // WiFi — Station (credentials saved in NVS; these are compile-time fallbacks)
@@ -161,14 +161,22 @@
 
 // ----------------------------------------------------------------------------
 // FreeRTOS task parameters
+//
+// Priority ladder (httpd default = 5):
+//   10  safety      — relay watchdog + LED, must never starve
+//    7  command     — admin command poll, fast response
+//    6  bottle_fsm  — mechanical FSM
+//    5  httpd       — web server (set by ESP-IDF default, not here)
+//    4  sensor      — ADC + ultrasonic + Pico UART (below web server!)
+//    3  telemetry   — background HTTP posts
 // ----------------------------------------------------------------------------
 #define SAFETY_TASK_STACK       4096
 #define SAFETY_TASK_PRIORITY      10
 #define COMMAND_TASK_STACK      6144
-#define COMMAND_TASK_PRIORITY      5
+#define COMMAND_TASK_PRIORITY      7
 #define TELEMETRY_TASK_STACK    6144
-#define TELEMETRY_TASK_PRIORITY    4
+#define TELEMETRY_TASK_PRIORITY    3
 #define SENSOR_TASK_STACK       4096
-#define SENSOR_TASK_PRIORITY       6
+#define SENSOR_TASK_PRIORITY       4
 
 #endif // CONFIG_H

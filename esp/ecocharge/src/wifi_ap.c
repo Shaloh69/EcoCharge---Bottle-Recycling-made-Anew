@@ -39,12 +39,17 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
 // Public Functions
 // ----------------------------------------------------------------------------
 
+static bool s_ap_netif_ready = false;
+
 esp_err_t wifi_ap_init(void) {
     ESP_LOGI(LOG_TAG, "Initializing WiFi Access Point...");
 
-    // Initialize TCP/IP stack
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    // Guard: esp_netif_init / esp_event_loop_create_default must only run once
+    if (!s_ap_netif_ready) {
+        ESP_ERROR_CHECK(esp_netif_init());
+        ESP_ERROR_CHECK(esp_event_loop_create_default());
+        s_ap_netif_ready = true;
+    }
 
     // Create default WiFi AP
     esp_netif_t *ap_netif = esp_netif_create_default_wifi_ap();

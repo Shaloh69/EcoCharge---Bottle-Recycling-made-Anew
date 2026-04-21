@@ -41,6 +41,7 @@ static float _measure_cm(int trig_gpio, int echo_gpio)
         if ((esp_timer_get_time() - start_wait) > ULTRASONIC_TIMEOUT_US) {
             return ULTRASONIC_MAX_DISTANCE_CM; // no echo — nothing in range
         }
+        taskYIELD(); // allow other tasks to run during wait
     }
 
     // --- Measure ECHO HIGH duration ---
@@ -49,6 +50,7 @@ static float _measure_cm(int trig_gpio, int echo_gpio)
         if ((esp_timer_get_time() - pulse_start) > ULTRASONIC_TIMEOUT_US) {
             return ULTRASONIC_MAX_DISTANCE_CM; // pulse too long
         }
+        taskYIELD(); // allow other tasks to run during measurement
     }
     int64_t pulse_us = esp_timer_get_time() - pulse_start;
 
