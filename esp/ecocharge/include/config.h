@@ -55,16 +55,23 @@
 #define PICO_UART_BAUD       115200
 #define PICO_UART_BUF        256
 
-#define WIFI_SSID_DEFAULT    "YourWiFi_SSID"
-#define WIFI_PASS_DEFAULT    "YourWiFi_Password"
+#define WIFI_SSID_DEFAULT    "YourWiFi_SSID"       // <-- your WiFi network name
+#define WIFI_PASS_DEFAULT    "YourWiFi_Password"   // <-- your WiFi password
 #define WIFI_RECONNECT_MS    5000
 #define WIFI_MAX_RETRIES     10
 
 // ----------------------------------------------------------------------------
-// AI Backend Server — Updated for Cloudflare Tunnel
+// Server identity — fill these in before flashing each kiosk unit
 // ----------------------------------------------------------------------------
-#define AI_SERVER_URL       "https://ai.yourdomain.com"  // <-- your tunnel URL
-#define AI_API_KEY          "your-strong-api-key"        // <-- match start.bat/.env
+#define RENDER_BASE_URL     "https://ecocharge-server.onrender.com"
+#define DEVICE_API_KEY      "SET_AT_BUILD_TIME"
+#define KIOSK_ID            1
+
+// ----------------------------------------------------------------------------
+// AI Backend Server
+// ----------------------------------------------------------------------------
+#define AI_SERVER_URL       "https://secondary-responsible-facility-accomplished.trycloudflare.com"
+#define AI_API_KEY          "SET_AT_BUILD_TIME"
 
 // ----------------------------------------------------------------------------
 // Polling intervals and other settings (same as original)
