@@ -3,13 +3,17 @@ import { useEffect, useState, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import { addToast } from "@heroui/toast";
 
-import { admin, type Kiosk, type KioskCommand, type TelemetryPort } from "@/lib/api";
+import {
+  admin,
+  type Kiosk,
+  type KioskCommand,
+  type TelemetryPort,
+} from "@/lib/api";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { BinGauge } from "@/components/admin/BinGauge";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "";
 
-// ── helpers ───────────────────────────────────────────────────────────────────
 const glass = {
   background: "rgba(255,255,255,0.05)",
   border: "1px solid rgba(20,184,166,0.18)",
@@ -20,25 +24,33 @@ const glass = {
 const dimText = (op: number) => ({ color: `rgba(255,255,255,${op})` });
 
 function Btn({
-  label, color = "teal", onClick, disabled, small,
+  label,
+  color = "teal",
+  onClick,
+  disabled,
+  small,
 }: {
-  label: string; color?: "teal" | "red" | "amber" | "gray";
-  onClick: () => void; disabled?: boolean; small?: boolean;
+  label: string;
+  color?: "teal" | "red" | "amber" | "gray";
+  onClick: () => void;
+  disabled?: boolean;
+  small?: boolean;
 }) {
   const bg: Record<string, string> = {
-    teal:  "rgba(20,184,166,0.18)",
-    red:   "rgba(239,68,68,0.18)",
+    teal: "rgba(20,184,166,0.18)",
+    red: "rgba(239,68,68,0.18)",
     amber: "rgba(245,158,11,0.18)",
-    gray:  "rgba(255,255,255,0.08)",
+    gray: "rgba(255,255,255,0.08)",
   };
   const border: Record<string, string> = {
-    teal:  "rgba(20,184,166,0.45)",
-    red:   "rgba(239,68,68,0.45)",
+    teal: "rgba(20,184,166,0.45)",
+    red: "rgba(239,68,68,0.45)",
     amber: "rgba(245,158,11,0.45)",
-    gray:  "rgba(255,255,255,0.15)",
+    gray: "rgba(255,255,255,0.15)",
   };
   return (
     <button
+      type="button"
       disabled={disabled}
       onClick={onClick}
       style={{
@@ -59,9 +71,12 @@ function Btn({
   );
 }
 
-// ── Port card ─────────────────────────────────────────────────────────────────
 function PortCard({
-  port, data, onActivate, onDeactivate, busy,
+  port,
+  data,
+  onActivate,
+  onDeactivate,
+  busy,
 }: {
   port: number;
   data?: TelemetryPort;
@@ -82,7 +97,9 @@ function PortCard({
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="font-bold text-sm" style={dimText(0.85)}>Port {port}</p>
+          <p className="font-bold text-sm" style={dimText(0.85)}>
+            Port {port}
+          </p>
           <p className="text-[10px] mt-0.5" style={dimText(0.38)}>
             {on ? "CHARGING" : "IDLE"}
           </p>
@@ -98,12 +115,25 @@ function PortCard({
           {[
             { label: "V", value: data.voltage_v?.toFixed(1) ?? "—" },
             { label: "A", value: data.current_a?.toFixed(2) ?? "—" },
-            { label: "W", value: data.voltage_v && data.current_a
-                ? (data.voltage_v * data.current_a).toFixed(1) : "—" },
+            {
+              label: "W",
+              value:
+                data.voltage_v && data.current_a
+                  ? (data.voltage_v * data.current_a).toFixed(1)
+                  : "—",
+            },
           ].map(({ label, value }) => (
-            <div key={label} className="rounded-lg p-2" style={{ background: "rgba(255,255,255,0.04)" }}>
-              <p className="text-xs font-bold" style={dimText(0.75)}>{value}</p>
-              <p className="text-[9px]" style={dimText(0.30)}>{label}</p>
+            <div
+              key={label}
+              className="rounded-lg p-2"
+              style={{ background: "rgba(255,255,255,0.04)" }}
+            >
+              <p className="text-xs font-bold" style={dimText(0.75)}>
+                {value}
+              </p>
+              <p className="text-[9px]" style={dimText(0.3)}>
+                {label}
+              </p>
             </div>
           ))}
         </div>
@@ -115,34 +145,55 @@ function PortCard({
           onChange={(e) => setDuration(Number(e.target.value))}
           disabled={on || busy}
           style={{
-            background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
-            color: "rgba(255,255,255,0.65)", borderRadius: 8, padding: "4px 8px",
-            fontSize: 11, flex: 1,
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            color: "rgba(255,255,255,0.65)",
+            borderRadius: 8,
+            padding: "4px 8px",
+            fontSize: 11,
+            flex: 1,
           }}
         >
-          {[15, 30, 60, 120, 300, 600, 900, 1800, 3600].map(s => (
+          {[15, 30, 60, 120, 300, 600, 900, 1800, 3600].map((s) => (
             <option key={s} value={s} style={{ background: "#1a1a2e" }}>
               {s < 60 ? `${s}s` : `${s / 60}m`}
             </option>
           ))}
         </select>
         {on ? (
-          <Btn label="Stop" color="red" disabled={busy} onClick={() => onDeactivate(port)} small />
+          <Btn
+            label="Stop"
+            color="red"
+            disabled={busy}
+            onClick={() => onDeactivate(port)}
+            small
+          />
         ) : (
-          <Btn label="Activate" color="teal" disabled={busy} onClick={() => onActivate(port, duration)} small />
+          <Btn
+            label="Activate"
+            color="teal"
+            disabled={busy}
+            onClick={() => onActivate(port, duration)}
+            small
+          />
         )}
       </div>
     </div>
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
-export default function KioskDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function KioskDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id: idStr } = use(params);
   const kioskId = parseInt(idStr);
   const router = useRouter();
 
-  const [kiosk, setKiosk] = useState<Kiosk & { api_key?: string } | null>(null);
+  const [kiosk, setKiosk] = useState<(Kiosk & { api_key?: string }) | null>(
+    null,
+  );
   const [ports, setPorts] = useState<TelemetryPort[]>([]);
   const [binLevel, setBinLevel] = useState(0);
   const [fsmState, setFsmState] = useState<string>("—");
@@ -150,13 +201,11 @@ export default function KioskDetailPage({ params }: { params: Promise<{ id: stri
   const [commands, setCommands] = useState<KioskCommand[]>([]);
   const [busy, setBusy] = useState(false);
 
-  // Edit state
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editLocation, setEditLocation] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Load kiosk + command history
   const refresh = useCallback(async () => {
     try {
       const [kiosks, hist] = await Promise.all([
@@ -175,13 +224,18 @@ export default function KioskDetailPage({ params }: { params: Promise<{ id: stri
     }
   }, [kioskId]);
 
-  useEffect(() => { refresh(); }, [refresh]);
-
-  // SSE — live telemetry
   useEffect(() => {
-    const token = typeof window !== "undefined"
-      ? sessionStorage.getItem("admin_token") : null;
-    const es = new EventSource(`${API}/api/admin/sse${token ? `?token=${token}` : ""}`);
+    refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    const token =
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("admin_token")
+        : null;
+    const es = new EventSource(
+      `${API}/api/admin/sse${token ? `?token=${token}` : ""}`,
+    );
     es.onmessage = (e) => {
       try {
         const ev = JSON.parse(e.data);
@@ -189,31 +243,38 @@ export default function KioskDetailPage({ params }: { params: Promise<{ id: stri
           if (ev.portData) setPorts(ev.portData);
           if (ev.binLevel !== undefined) setBinLevel(ev.binLevel);
           if (ev.fsmState) setFsmState(ev.fsmState);
-          if (ev.bottleAtEntrance !== undefined) setBottleAtEntrance(ev.bottleAtEntrance);
+          if (ev.bottleAtEntrance !== undefined)
+            setBottleAtEntrance(ev.bottleAtEntrance);
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     };
     return () => es.close();
   }, [kioskId]);
 
-  // ── Command sender ────────────────────────────────────────────────────────
-  const send = useCallback(async (type: string, payload?: object) => {
-    setBusy(true);
-    try {
-      await admin.sendCommand(kioskId, type, payload);
-      addToast({ title: `Command sent: ${type}`, color: "success" });
-      setTimeout(refresh, 2500);
-    } catch (err) {
-      addToast({ title: (err as Error).message, color: "danger" });
-    } finally {
-      setBusy(false);
-    }
-  }, [kioskId, refresh]);
+  const send = useCallback(
+    async (type: string, payload?: object) => {
+      setBusy(true);
+      try {
+        await admin.sendCommand(kioskId, type, payload);
+        addToast({ title: `Command sent: ${type}`, color: "success" });
+        setTimeout(refresh, 2500);
+      } catch (err) {
+        addToast({ title: (err as Error).message, color: "danger" });
+      } finally {
+        setBusy(false);
+      }
+    },
+    [kioskId, refresh],
+  );
 
-  // ── CRUD handlers ─────────────────────────────────────────────────────────
   const saveEdit = async () => {
     try {
-      await admin.updateKiosk(kioskId, { name: editName, location: editLocation });
+      await admin.updateKiosk(kioskId, {
+        name: editName,
+        location: editLocation,
+      });
       addToast({ title: "Kiosk updated", color: "success" });
       setEditing(false);
       refresh();
@@ -234,7 +295,10 @@ export default function KioskDetailPage({ params }: { params: Promise<{ id: stri
 
   if (!kiosk) {
     return (
-      <div className="p-8 flex items-center justify-center" style={dimText(0.35)}>
+      <div
+        className="p-8 flex items-center justify-center"
+        style={dimText(0.35)}
+      >
         Loading…
       </div>
     );
@@ -246,6 +310,7 @@ export default function KioskDetailPage({ params }: { params: Promise<{ id: stri
       <div className="flex items-start justify-between gap-4">
         <div>
           <button
+            type="button"
             onClick={() => router.push("/dashboard/kiosks")}
             className="text-xs mb-2 flex items-center gap-1"
             style={dimText(0.38)}
@@ -259,9 +324,14 @@ export default function KioskDetailPage({ params }: { params: Promise<{ id: stri
                 onChange={(e) => setEditName(e.target.value)}
                 placeholder="Kiosk name"
                 style={{
-                  background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)",
-                  color: "rgba(255,255,255,0.85)", borderRadius: 10, padding: "6px 12px",
-                  fontSize: 16, fontWeight: 700, width: "100%",
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  color: "rgba(255,255,255,0.85)",
+                  borderRadius: 10,
+                  padding: "6px 12px",
+                  fontSize: 16,
+                  fontWeight: 700,
+                  width: "100%",
                 }}
               />
               <input
@@ -269,22 +339,35 @@ export default function KioskDetailPage({ params }: { params: Promise<{ id: stri
                 onChange={(e) => setEditLocation(e.target.value)}
                 placeholder="Location"
                 style={{
-                  background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)",
-                  color: "rgba(255,255,255,0.65)", borderRadius: 10, padding: "6px 12px",
-                  fontSize: 13, width: "100%",
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  color: "rgba(255,255,255,0.65)",
+                  borderRadius: 10,
+                  padding: "6px 12px",
+                  fontSize: 13,
+                  width: "100%",
                 }}
               />
               <div className="flex gap-2">
                 <Btn label="Save" color="teal" onClick={saveEdit} />
-                <Btn label="Cancel" color="gray" onClick={() => setEditing(false)} />
+                <Btn
+                  label="Cancel"
+                  color="gray"
+                  onClick={() => setEditing(false)}
+                />
               </div>
             </div>
           ) : (
             <>
-              <h1 className="text-2xl font-extrabold tracking-tight" style={dimText(0.92)}>
+              <h1
+                className="text-2xl font-extrabold tracking-tight"
+                style={dimText(0.92)}
+              >
                 {kiosk.name}
               </h1>
-              <p className="text-sm mt-0.5" style={dimText(0.42)}>📍 {kiosk.location}</p>
+              <p className="text-sm mt-0.5" style={dimText(0.42)}>
+                📍 {kiosk.location}
+              </p>
             </>
           )}
         </div>
@@ -292,8 +375,18 @@ export default function KioskDetailPage({ params }: { params: Promise<{ id: stri
           <StatusBadge status={kiosk.status} />
           {!editing && (
             <>
-              <Btn label="Edit" color="gray" onClick={() => setEditing(true)} small />
-              <Btn label="Delete" color="red" onClick={() => setShowDeleteConfirm(true)} small />
+              <Btn
+                label="Edit"
+                color="gray"
+                onClick={() => setEditing(true)}
+                small
+              />
+              <Btn
+                label="Delete"
+                color="red"
+                onClick={() => setShowDeleteConfirm(true)}
+                small
+              />
             </>
           )}
         </div>
@@ -301,14 +394,24 @@ export default function KioskDetailPage({ params }: { params: Promise<{ id: stri
 
       {/* Delete confirm */}
       {showDeleteConfirm && (
-        <div className="rounded-2xl p-4 flex items-center justify-between gap-4"
-          style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.35)" }}>
-          <p className="text-sm" style={dimText(0.80)}>
+        <div
+          className="rounded-2xl p-4 flex items-center justify-between gap-4"
+          style={{
+            background: "rgba(239,68,68,0.12)",
+            border: "1px solid rgba(239,68,68,0.35)",
+          }}
+        >
+          <p className="text-sm" style={dimText(0.8)}>
             Delete <strong>{kiosk.name}</strong>? This cannot be undone.
           </p>
           <div className="flex gap-2">
             <Btn label="Yes, delete" color="red" onClick={deleteKiosk} small />
-            <Btn label="Cancel" color="gray" onClick={() => setShowDeleteConfirm(false)} small />
+            <Btn
+              label="Cancel"
+              color="gray"
+              onClick={() => setShowDeleteConfirm(false)}
+              small
+            />
           </div>
         </div>
       )}
@@ -319,12 +422,23 @@ export default function KioskDetailPage({ params }: { params: Promise<{ id: stri
           { label: "Kiosk ID", value: `#${kiosk.id}` },
           { label: "FSM State", value: fsmState },
           { label: "Bottle at Entrance", value: bottleAtEntrance ? "YES" : "No" },
-          { label: "Last Seen", value: kiosk.last_seen_at
-              ? new Date(kiosk.last_seen_at).toLocaleTimeString() : "Never" },
+          {
+            label: "Last Seen",
+            value: kiosk.last_seen_at
+              ? new Date(kiosk.last_seen_at).toLocaleTimeString()
+              : "Never",
+          },
         ].map(({ label, value }) => (
           <div key={label} className="rounded-xl p-3" style={glass}>
-            <p className="text-[10px] uppercase tracking-widest font-semibold mb-1" style={dimText(0.32)}>{label}</p>
-            <p className="text-sm font-bold" style={dimText(0.80)}>{value}</p>
+            <p
+              className="text-[10px] uppercase tracking-widest font-semibold mb-1"
+              style={dimText(0.32)}
+            >
+              {label}
+            </p>
+            <p className="text-sm font-bold" style={dimText(0.8)}>
+              {value}
+            </p>
           </div>
         ))}
       </div>
@@ -332,8 +446,13 @@ export default function KioskDetailPage({ params }: { params: Promise<{ id: stri
       {/* Bin level */}
       <div className="rounded-2xl p-5" style={glass}>
         <div className="flex justify-between items-center mb-3">
-          <p className="text-sm font-semibold" style={dimText(0.75)}>Bin Level</p>
-          <p className="text-xs font-bold" style={{ color: binLevel >= 80 ? "#ef4444" : "#14b8a6" }}>
+          <p className="text-sm font-semibold" style={dimText(0.75)}>
+            Bin Level
+          </p>
+          <p
+            className="text-xs font-bold"
+            style={{ color: binLevel >= 80 ? "#ef4444" : "#14b8a6" }}
+          >
             {binLevel}%
           </p>
         </div>
@@ -342,7 +461,9 @@ export default function KioskDetailPage({ params }: { params: Promise<{ id: stri
 
       {/* Port controls */}
       <div>
-        <p className="text-sm font-semibold mb-3" style={dimText(0.60)}>Charging Ports</p>
+        <p className="text-sm font-semibold mb-3" style={dimText(0.6)}>
+          Charging Ports
+        </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[1, 2, 3, 4].map((port) => (
             <PortCard
@@ -350,7 +471,9 @@ export default function KioskDetailPage({ params }: { params: Promise<{ id: stri
               port={port}
               data={ports.find((p) => p.port === port)}
               busy={busy}
-              onActivate={(p, dur) => send("activate_port", { port: p, duration_seconds: dur })}
+              onActivate={(p, dur) =>
+                send("activate_port", { port: p, duration_seconds: dur })
+              }
               onDeactivate={(p) => send("deactivate_port", { port: p })}
             />
           ))}
@@ -359,32 +482,70 @@ export default function KioskDetailPage({ params }: { params: Promise<{ id: stri
 
       {/* Conveyor & bottle controls */}
       <div className="rounded-2xl p-5 space-y-4" style={glass}>
-        <p className="text-sm font-semibold" style={dimText(0.60)}>Conveyor & Bottle Controls</p>
+        <p className="text-sm font-semibold" style={dimText(0.6)}>
+          Conveyor & Bottle Controls
+        </p>
         <div className="flex flex-wrap gap-2">
-          <Btn label="▶ Conveyor Forward" color="teal" disabled={busy}
-            onClick={() => send("open_conveyor")} />
-          <Btn label="■ Conveyor Stop" color="amber" disabled={busy}
-            onClick={() => send("close_conveyor")} />
-          <Btn label="◀ Conveyor Reverse" color="gray" disabled={busy}
-            onClick={() => send("reverse_conveyor")} />
+          <Btn
+            label="▶ Conveyor Forward"
+            color="teal"
+            disabled={busy}
+            onClick={() => send("open_conveyor")}
+          />
+          <Btn
+            label="■ Conveyor Stop"
+            color="amber"
+            disabled={busy}
+            onClick={() => send("close_conveyor")}
+          />
+          <Btn
+            label="◀ Conveyor Reverse"
+            color="gray"
+            disabled={busy}
+            onClick={() => send("reverse_conveyor")}
+          />
         </div>
-        <div className="flex flex-wrap gap-2 pt-1" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-          <Btn label="✓ Approve Bottle" color="teal" disabled={busy}
-            onClick={() => send("approve_bottle")} />
-          <Btn label="✕ Reject Bottle" color="red" disabled={busy}
-            onClick={() => send("reject_bottle")} />
-          <Btn label="⟳ Ping" color="gray" disabled={busy}
-            onClick={() => send("ping")} />
+        <div
+          className="flex flex-wrap gap-2 pt-1"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
+        >
+          <Btn
+            label="✓ Approve Bottle"
+            color="teal"
+            disabled={busy}
+            onClick={() => send("approve_bottle")}
+          />
+          <Btn
+            label="✕ Reject Bottle"
+            color="red"
+            disabled={busy}
+            onClick={() => send("reject_bottle")}
+          />
+          <Btn
+            label="⟳ Ping"
+            color="gray"
+            disabled={busy}
+            onClick={() => send("ping")}
+          />
         </div>
       </div>
 
       {/* API Key */}
       <div className="rounded-2xl p-5" style={glass}>
-        <p className="text-sm font-semibold mb-2" style={dimText(0.60)}>Device API Key</p>
-        <p className="text-xs font-mono break-all"
-          style={{ color: "rgba(20,184,166,0.80)", background: "rgba(20,184,166,0.06)",
-            borderRadius: 8, padding: "8px 12px" }}>
-          {(kiosk as Kiosk & { api_key?: string }).api_key ?? "Hidden — reload to see"}
+        <p className="text-sm font-semibold mb-2" style={dimText(0.6)}>
+          Device API Key
+        </p>
+        <p
+          className="text-xs font-mono break-all"
+          style={{
+            color: "rgba(20,184,166,0.80)",
+            background: "rgba(20,184,166,0.06)",
+            borderRadius: 8,
+            padding: "8px 12px",
+          }}
+        >
+          {(kiosk as Kiosk & { api_key?: string }).api_key ??
+            "Hidden — reload to see"}
         </p>
         <p className="text-[10px] mt-2" style={dimText(0.28)}>
           Flash this key as DEVICE_API_KEY in the ESP firmware.
@@ -394,20 +555,41 @@ export default function KioskDetailPage({ params }: { params: Promise<{ id: stri
       {/* Command history */}
       <div className="rounded-2xl p-5" style={glass}>
         <div className="flex justify-between items-center mb-4">
-          <p className="text-sm font-semibold" style={dimText(0.60)}>Command Log</p>
-          <button onClick={refresh} style={{ fontSize: 11, ...dimText(0.38) }}>⟳ Refresh</button>
+          <p className="text-sm font-semibold" style={dimText(0.6)}>
+            Command Log
+          </p>
+          <button
+            type="button"
+            onClick={refresh}
+            style={{ fontSize: 11, ...dimText(0.38) }}
+          >
+            ⟳ Refresh
+          </button>
         </div>
         {commands.length === 0 ? (
-          <p className="text-xs text-center py-4" style={dimText(0.25)}>No commands sent yet</p>
+          <p className="text-xs text-center py-4" style={dimText(0.25)}>
+            No commands sent yet
+          </p>
         ) : (
           <div className="space-y-2 max-h-72 overflow-y-auto">
             {commands.map((cmd) => (
-              <div key={cmd.id} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div
+                key={cmd.id}
+                className="flex items-center justify-between gap-3 rounded-xl px-3 py-2"
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold" style={dimText(0.75)}>{cmd.command_type}</p>
+                  <p className="text-xs font-semibold" style={dimText(0.75)}>
+                    {cmd.command_type}
+                  </p>
                   {Object.keys(cmd.payload ?? {}).length > 0 && (
-                    <p className="text-[10px] truncate mt-0.5" style={dimText(0.35)}>
+                    <p
+                      className="text-[10px] truncate mt-0.5"
+                      style={dimText(0.35)}
+                    >
                       {JSON.stringify(cmd.payload)}
                     </p>
                   )}
@@ -416,10 +598,14 @@ export default function KioskDetailPage({ params }: { params: Promise<{ id: stri
                   <span
                     className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                     style={{
-                      background: cmd.status === "ACKED"
-                        ? "rgba(20,184,166,0.15)" : "rgba(245,158,11,0.15)",
-                      color: cmd.status === "ACKED"
-                        ? "rgba(20,184,166,0.85)" : "rgba(245,158,11,0.85)",
+                      background:
+                        cmd.status === "ACKED"
+                          ? "rgba(20,184,166,0.15)"
+                          : "rgba(245,158,11,0.15)",
+                      color:
+                        cmd.status === "ACKED"
+                          ? "rgba(20,184,166,0.85)"
+                          : "rgba(245,158,11,0.85)",
                     }}
                   >
                     {cmd.status}

@@ -25,9 +25,12 @@ export default function KiosksPage() {
   const [newApiKey, setNewApiKey] = useState<string | null>(null);
 
   useEffect(() => {
-    admin.kiosks().then(setKiosks).catch(() =>
-      addToast({ title: "Failed to load kiosks", color: "danger" }),
-    );
+    admin
+      .kiosks()
+      .then(setKiosks)
+      .catch(() =>
+        addToast({ title: "Failed to load kiosks", color: "danger" }),
+      );
   }, []);
 
   const createKiosk = async () => {
@@ -50,7 +53,10 @@ export default function KiosksPage() {
     <div className="p-6 md:p-8 space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight" style={dimText(0.92)}>
+          <h1
+            className="text-2xl font-extrabold tracking-tight"
+            style={dimText(0.92)}
+          >
             Kiosks
           </h1>
           <p className="text-sm mt-0.5" style={dimText(0.38)}>
@@ -58,7 +64,10 @@ export default function KiosksPage() {
           </p>
         </div>
         <button
-          onClick={() => { setCreating(true); setNewApiKey(null); }}
+          onClick={() => {
+            setCreating(true);
+            setNewApiKey(null);
+          }}
           className="rounded-xl px-4 py-2 text-sm font-semibold"
           style={{
             background: "rgba(20,184,166,0.18)",
@@ -73,23 +82,36 @@ export default function KiosksPage() {
       {/* Create form */}
       {creating && (
         <div className="rounded-2xl p-5 space-y-3" style={glass}>
-          <p className="text-sm font-semibold" style={dimText(0.70)}>Create New Kiosk</p>
+          <p className="text-sm font-semibold" style={dimText(0.7)}>
+            Create New Kiosk
+          </p>
           {newApiKey ? (
             <div className="space-y-3">
               <p className="text-xs" style={dimText(0.65)}>
                 Kiosk created! Copy this API key and flash it as{" "}
-                <code style={{ color: "#14b8a6" }}>DEVICE_API_KEY</code> in the ESP firmware.
-                It will not be shown again.
+                <code style={{ color: "#14b8a6" }}>DEVICE_API_KEY</code> in the
+                ESP firmware. It will not be shown again.
               </p>
-              <p className="text-xs font-mono break-all rounded-xl px-3 py-2"
-                style={{ background: "rgba(20,184,166,0.08)", color: "rgba(20,184,166,0.90)" }}>
+              <p
+                className="text-xs font-mono break-all rounded-xl px-3 py-2"
+                style={{
+                  background: "rgba(20,184,166,0.08)",
+                  color: "rgba(20,184,166,0.90)",
+                }}
+              >
                 {newApiKey}
               </p>
               <button
-                onClick={() => { setCreating(false); setNewApiKey(null); }}
+                onClick={() => {
+                  setCreating(false);
+                  setNewApiKey(null);
+                }}
                 className="rounded-xl px-4 py-2 text-xs font-semibold"
-                style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)",
-                  color: "rgba(255,255,255,0.65)" }}
+                style={{
+                  background: "rgba(255,255,255,0.07)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  color: "rgba(255,255,255,0.65)",
+                }}
               >
                 Done
               </button>
@@ -101,10 +123,13 @@ export default function KiosksPage() {
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="Kiosk name (e.g. Kiosk-002)"
                 style={{
-                  width: "100%", background: "rgba(255,255,255,0.06)",
+                  width: "100%",
+                  background: "rgba(255,255,255,0.06)",
                   border: "1px solid rgba(255,255,255,0.12)",
-                  color: "rgba(255,255,255,0.85)", borderRadius: 10,
-                  padding: "8px 12px", fontSize: 13,
+                  color: "rgba(255,255,255,0.85)",
+                  borderRadius: 10,
+                  padding: "8px 12px",
+                  fontSize: 13,
                 }}
               />
               <input
@@ -112,21 +137,36 @@ export default function KiosksPage() {
                 onChange={(e) => setNewLocation(e.target.value)}
                 placeholder="Location (e.g. Building B Lobby)"
                 style={{
-                  width: "100%", background: "rgba(255,255,255,0.06)",
+                  width: "100%",
+                  background: "rgba(255,255,255,0.06)",
                   border: "1px solid rgba(255,255,255,0.12)",
-                  color: "rgba(255,255,255,0.85)", borderRadius: 10,
-                  padding: "8px 12px", fontSize: 13,
+                  color: "rgba(255,255,255,0.85)",
+                  borderRadius: 10,
+                  padding: "8px 12px",
+                  fontSize: 13,
                 }}
               />
               <div className="flex gap-2">
-                <button onClick={createKiosk} className="rounded-xl px-4 py-2 text-xs font-semibold"
-                  style={{ background: "rgba(20,184,166,0.18)", border: "1px solid rgba(20,184,166,0.45)",
-                    color: "rgba(255,255,255,0.85)" }}>
+                <button
+                  onClick={createKiosk}
+                  className="rounded-xl px-4 py-2 text-xs font-semibold"
+                  style={{
+                    background: "rgba(20,184,166,0.18)",
+                    border: "1px solid rgba(20,184,166,0.45)",
+                    color: "rgba(255,255,255,0.85)",
+                  }}
+                >
                   Create
                 </button>
-                <button onClick={() => setCreating(false)} className="rounded-xl px-4 py-2 text-xs font-semibold"
-                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)",
-                    color: "rgba(255,255,255,0.50)" }}>
+                <button
+                  onClick={() => setCreating(false)}
+                  className="rounded-xl px-4 py-2 text-xs font-semibold"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.10)",
+                    color: "rgba(255,255,255,0.50)",
+                  }}
+                >
                   Cancel
                 </button>
               </div>
@@ -138,38 +178,53 @@ export default function KiosksPage() {
       {/* Kiosk list */}
       <div className="grid gap-4">
         {kiosks.length === 0 && (
-          <div className="rounded-2xl p-8 text-center text-sm"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)",
-              color: "rgba(255,255,255,0.25)" }}>
+          <div
+            className="rounded-2xl p-8 text-center text-sm"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.07)",
+              color: "rgba(255,255,255,0.25)",
+            }}
+          >
             No kiosks found. Create one above.
           </div>
         )}
         {kiosks.map((k) => (
-          <div
+          <button
             key={k.id}
-            className="rounded-2xl p-5 cursor-pointer hover:border-teal-400/40 transition-all"
+            type="button"
+            className="rounded-2xl p-5 w-full text-left cursor-pointer hover:border-teal-400/40 transition-all"
             style={glass}
             onClick={() => router.push(`/dashboard/kiosks/${k.id}`)}
           >
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="font-bold text-base" style={dimText(0.90)}>{k.name}</h3>
-                <p className="text-xs mt-0.5" style={dimText(0.42)}>📍 {k.location}</p>
+                <h3 className="font-bold text-base" style={dimText(0.9)}>
+                  {k.name}
+                </h3>
+                <p className="text-xs mt-0.5" style={dimText(0.42)}>
+                  {"📍 "}
+                  {k.location}
+                </p>
                 <p className="text-[10px] mt-1" style={dimText(0.28)}>
-                  Last seen: {k.last_seen_at
-                    ? new Date(k.last_seen_at).toLocaleString() : "Never"}
+                  Last seen:{" "}
+                  {k.last_seen_at
+                    ? new Date(k.last_seen_at).toLocaleString()
+                    : "Never"}
                 </p>
               </div>
               <div className="flex items-center gap-3">
                 <StatusBadge status={k.status} />
-                <span className="text-xs" style={dimText(0.35)}>→</span>
+                <span className="text-xs" style={dimText(0.35)}>
+                  →
+                </span>
               </div>
             </div>
             <BinGauge level={0} />
             <p className="text-[10px] mt-2 text-right" style={dimText(0.28)}>
               Click to manage →
             </p>
-          </div>
+          </button>
         ))}
       </div>
     </div>
