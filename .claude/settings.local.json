@@ -72,11 +72,17 @@
       "Bash(py -0)",
       "Bash(py -3.12 -m venv .venv)",
       "Bash(.venv/Scripts/pip install *)",
-      "Bash(.venv/Scripts/python -c ' *)"
+      "Bash(.venv/Scripts/python -c ' *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(xargs wc *)",
+      "Bash(git stash *)"
     ],
     "additionalDirectories": [
       "C:\\Projects\\Thesis\\2026\\EcoCharge",
-      "D:\\Projects-Shem\\Thesis\\2026\\EcoCharge"
+      "D:\\Projects-Shem\\Thesis\\2026\\EcoCharge",
+      "D:\\Projects-Shem\\Thesis\\2026\\EcoCharge\\client\\web_console\\app\\dashboard\\kiosks"
     ]
   }
 }
