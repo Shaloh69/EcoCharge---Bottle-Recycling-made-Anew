@@ -85,6 +85,29 @@ export const admin = {
       body: JSON.stringify(body),
     }),
   analytics: () => req<Analytics>("/api/admin/analytics"),
+
+  // ── kiosk CRUD ──────────────────────────────────────────────────────────────
+  createKiosk: (name: string, location: string) =>
+    req<Kiosk & { api_key: string }>("/api/admin/kiosks", {
+      method: "POST",
+      body: JSON.stringify({ name, location }),
+    }),
+  updateKiosk: (id: number, data: { name?: string; location?: string }) =>
+    req<Kiosk>(`/api/admin/kiosks/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  deleteKiosk: (id: number) =>
+    req<{ deleted: boolean }>(`/api/admin/kiosks/${id}`, { method: "DELETE" }),
+
+  // ── kiosk commands ───────────────────────────────────────────────────────────
+  sendCommand: (kioskId: number, command_type: string, payload?: object) =>
+    req<{ command_id: number; command_type: string; queued: boolean }>(
+      `/api/admin/kiosks/${kioskId}/command`,
+      { method: "POST", body: JSON.stringify({ command_type, payload }) },
+    ),
+  commandHistory: (kioskId: number, limit = 50) =>
+    req<KioskCommand[]>(`/api/admin/kiosks/${kioskId}/commands?limit=${limit}`),
 };
 
 // ── types ────────────────────────────────────────────────────────────────────
@@ -183,6 +206,14 @@ export interface TelemetryPort {
   current_a: number;
   voltage_v: number;
   relay_on: boolean;
+}
+export interface KioskCommand {
+  id: number;
+  command_type: string;
+  payload: Record<string, unknown>;
+  status: "PENDING" | "ACKED";
+  created_at: string;
+  acked_at?: string;
 }
 export interface SseEvent {
   type: "telemetry" | "overview";

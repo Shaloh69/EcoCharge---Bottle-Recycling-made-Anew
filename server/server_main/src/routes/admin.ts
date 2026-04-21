@@ -1,9 +1,11 @@
+import crypto from 'crypto'
 import { Router, Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import prisma from '../prisma'
 import { requireAdmin } from '../middleware/auth'
 import { addAdminClient, sseHeaders, broadcastToAdmin } from '../services/sseService'
 import { getSettings, n, invalidateSettingsCache, SETTING_DEFAULTS } from '../services/settingsService'
+import { queueCommand } from '../services/commandService'
 import { log } from '../logger'
 import { AuthRequest } from '../types'
 
@@ -426,6 +428,93 @@ router.get('/analytics', async (req: Request, res: Response, next: NextFunction)
   } catch (err) {
     next(err)
   }
+})
+
+// POST /kiosks — create
+router.post('/kiosks', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { name, location } = z.object({
+      name: z.string().min(1),
+      location: z.string().min(1),
+    }).parse(req.body)
+
+    const apiKey = crypto.randomBytes(24).toString('hex')
+    const kiosk = await prisma.kiosk.create({ data: { name, location, apiKey } })
+    log.admin(`Kiosk created — #${kiosk.id} "${kiosk.name}"`)
+    res.json({ id: kiosk.id, name: kiosk.name, location: kiosk.location, api_key: kiosk.apiKey, status: kiosk.status })
+  } catch (err) { next(err) }
+})
+
+// PUT /kiosks/:id — update name/location
+router.put('/kiosks/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id)
+    const body = z.object({
+      name: z.string().min(1).optional(),
+      location: z.string().min(1).optional(),
+    }).parse(req.body)
+
+    const kiosk = await prisma.kiosk.update({ where: { id }, data: body })
+    log.admin(`Kiosk #${id} updated — name="${kiosk.name}" location="${kiosk.location}"`)
+    res.json({ id: kiosk.id, name: kiosk.name, location: kiosk.location, status: kiosk.status })
+  } catch (err) { next(err) }
+})
+
+// DELETE /kiosks/:id
+router.delete('/kiosks/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id)
+    await prisma.kiosk.delete({ where: { id } })
+    log.admin(`Kiosk #${id} deleted`)
+    res.json({ deleted: true })
+  } catch (err) { next(err) }
+})
+
+// POST /kiosks/:id/command — queue any command from admin
+const commandSchema = z.object({
+  command_type: z.enum([
+    'activate_port', 'deactivate_port',
+    'open_conveyor', 'close_conveyor', 'reverse_conveyor',
+    'approve_bottle', 'reject_bottle', 'ping',
+  ]),
+  payload: z.record(z.unknown()).optional(),
+})
+
+router.post('/kiosks/:id/command', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id)
+    const { command_type, payload } = commandSchema.parse(req.body)
+
+    const kiosk = await prisma.kiosk.findUnique({ where: { id } })
+    if (!kiosk) { res.status(404).json({ error: 'kiosk not found' }); return }
+
+    const cmd = await queueCommand(id, command_type, payload)
+    log.admin(`Command queued — kiosk #${id} type=${command_type} payload=${JSON.stringify(payload ?? {})}`)
+    res.json({ command_id: cmd.id, command_type, queued: true })
+  } catch (err) { next(err) }
+})
+
+// GET /kiosks/:id/commands — command audit log
+router.get('/kiosks/:id/commands', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id)
+    const limit = Math.min(parseInt(req.query.limit as string || '50'), 200)
+
+    const commands = await prisma.deviceCommand.findMany({
+      where: { kioskId: id },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    })
+
+    res.json(commands.map(c => ({
+      id: c.id,
+      command_type: c.commandType,
+      payload: c.payload ? (() => { try { return JSON.parse(c.payload!) } catch { return {} } })() : {},
+      status: c.status,
+      created_at: c.createdAt,
+      acked_at: c.ackedAt,
+    })))
+  } catch (err) { next(err) }
 })
 
 // GET /sse
