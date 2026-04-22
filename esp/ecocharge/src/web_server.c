@@ -933,25 +933,76 @@ static const httpd_uri_t s_uris[] = {
 #define NUM_URIS  (sizeof(s_uris) / sizeof(s_uris[0]))
 
 // ===========================================================================
+// Captive-portal handlers
+//
+// When a phone connects to EcoCharge_Config it probes a known URL to detect
+// whether it's behind a captive portal:
+//   Android : GET /generate_204       → expects 204, gets 302 → shows popup
+//   iOS/Mac : GET /hotspot-detect.html → expects "Success", gets 302 → popup
+//   Windows : GET /ncsi.txt           → expects "Microsoft NCSI", gets 302
+//
+// The wildcard handler (/*) catches everything else and redirects to /provision.
+// All handlers must redirect to an http:// URL — https:// won't work because
+// the ESP has no TLS cert; browsers will refuse it.
+//
+// Implementation note: explicit registered handlers are tried before the
+// wildcard; the server uses httpd_uri_match_wildcard so /* fires last.
+// ===========================================================================
+
+static esp_err_t _captive_redirect(httpd_req_t *req)
+{
+    httpd_resp_set_status(req, "302 Found");
+    httpd_resp_set_hdr(req, "Location", "http://" AP_IP_ADDR "/provision");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+    httpd_resp_send(req, NULL, 0);
+    return ESP_OK;
+}
+
+// Android /generate_204 — any non-204 response triggers the captive portal popup
+static esp_err_t _gen204_handler(httpd_req_t *req)    { return _captive_redirect(req); }
+// iOS /hotspot-detect.html — any non-"Success" body triggers the popup
+static esp_err_t _hotspot_handler(httpd_req_t *req)   { return _captive_redirect(req); }
+// Windows /ncsi.txt
+static esp_err_t _ncsi_handler(httpd_req_t *req)      { return _captive_redirect(req); }
+// Everything else not matched by a specific route
+static esp_err_t _wildcard_handler(httpd_req_t *req)  { return _captive_redirect(req); }
+
+static const httpd_uri_t s_captive_uris[] = {
+    { .uri = "/generate_204",         .method = HTTP_GET, .handler = _gen204_handler  },
+    { .uri = "/hotspot-detect.html",  .method = HTTP_GET, .handler = _hotspot_handler },
+    { .uri = "/ncsi.txt",             .method = HTTP_GET, .handler = _ncsi_handler    },
+    // Wildcard must be LAST — matched only after all specific routes fail
+    { .uri = "/*",                    .method = HTTP_GET, .handler = _wildcard_handler },
+};
+#define NUM_CAPTIVE_URIS  (sizeof(s_captive_uris) / sizeof(s_captive_uris[0]))
+
+// ===========================================================================
 // Public API
 // ===========================================================================
 esp_err_t web_server_start(void)
 {
     httpd_config_t cfg      = HTTPD_DEFAULT_CONFIG();
     cfg.server_port         = WEB_SERVER_PORT;
-    cfg.max_uri_handlers    = NUM_URIS + 2;
+    cfg.max_uri_handlers    = NUM_URIS + NUM_CAPTIVE_URIS + 2;
     cfg.stack_size          = 8192;
     cfg.recv_wait_timeout   = 5;
-    cfg.send_wait_timeout   = 60;   // SSE needs a long send timeout
+    cfg.send_wait_timeout   = 60;      // SSE needs a long send timeout
     cfg.lru_purge_enable    = true;
+    // Enable wildcard matching so "/*" catches all unmatched GET requests
+    cfg.uri_match_fn        = httpd_uri_match_wildcard;
 
     if (httpd_start(&s_server, &cfg) != ESP_OK) {
         ESP_LOGE(LOG_TAG, "Failed to start web server");
         return ESP_FAIL;
     }
 
+    // Register app routes first — wildcard tries these before falling through
     for (int i = 0; i < (int)NUM_URIS; i++) {
         httpd_register_uri_handler(s_server, &s_uris[i]);
+    }
+    // Register captive-portal routes last (wildcard /* must be absolute last)
+    for (int i = 0; i < (int)NUM_CAPTIVE_URIS; i++) {
+        httpd_register_uri_handler(s_server, &s_captive_uris[i]);
     }
 
     ESP_LOGI(LOG_TAG, "Web server started — http://%s/", AP_IP_ADDR);

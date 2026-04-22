@@ -20,7 +20,9 @@ static const adc_channel_t VOLTAGE_CH[2] = {
 };
 
 static adc_oneshot_unit_handle_t s_adc1;
-static adc_oneshot_unit_handle_t s_adc2; // GPIO 12 — SW4 current (ADC2_CH5)
+// ADC2 is shared with the WiFi RF switch on ESP32 — reading it while WiFi is
+// active corrupts the receive path and causes random disconnects.  SW4 current
+// is not measured; it always reports 0.  SW4 voltage still comes via Pico UART.
 static port_sensor_data_t s_data[NUM_CHARGING_PORTS] = {0};
 static uint32_t s_overcurrent_ms[NUM_CHARGING_PORTS] = {0};
 
@@ -74,22 +76,7 @@ esp_err_t sensor_init(void)
         s_data[i].port = i + 1;
     }
 
-    // --- ADC2 init (SW4 current — GPIO 12) ---
-    // ⚠ ADC2 is shared with WiFi. Readings will be 0 when WiFi is active.
-    //   A 10 kΩ pull-down on GPIO12 is required (boot strapping pin).
-    adc_oneshot_unit_init_cfg_t init_cfg2 = { .unit_id = ADC_UNIT_2 };
-    ret = adc_oneshot_new_unit(&init_cfg2, &s_adc2);
-    if (ret == ESP_OK) {
-        ret = adc_oneshot_config_channel(s_adc2, CURRENT_PORT4_ADC_CHANNEL, &chan_cfg);
-        if (ret != ESP_OK) {
-            ESP_LOGW(LOG_TAG, "ADC2 SW4 current channel config failed: %s (WiFi active?)",
-                     esp_err_to_name(ret));
-        }
-    } else {
-        ESP_LOGW(LOG_TAG, "ADC2 init failed: %s — SW4 current will read 0", esp_err_to_name(ret));
-    }
-
-    ESP_LOGI(LOG_TAG, "Sensor monitor initialized (ADC1 + ADC2 GPIO12 + Pico UART)");
+    ESP_LOGI(LOG_TAG, "Sensor monitor initialized (ADC1 + Pico UART; SW4 current N/A)");
     return ESP_OK;
 }
 
@@ -168,13 +155,8 @@ void sensor_sample_all(void)
         s_data[3].voltage_volts = _adc_to_voltage(sw4v);
     }
 
-    // SW4 (index 3) current — ESP32 GPIO 12 (ADC2_CH5)
-    // ⚠ ADC2 is unavailable while WiFi is active — will silently read 0.
-    if (s_adc2) {
-        if (adc_oneshot_read(s_adc2, CURRENT_PORT4_ADC_CHANNEL, &raw) == ESP_OK) {
-            s_data[3].current_amps = _adc_to_current(raw);
-        }
-    }
+    // SW4 current is not read — ADC2 is shared with WiFi RF on ESP32.
+    // s_data[3].current_amps stays 0; overcurrent detection inactive for port 4.
 
     // Relay state + overcurrent detection
     for (int i = 0; i < NUM_CHARGING_PORTS; i++) {

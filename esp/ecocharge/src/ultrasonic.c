@@ -36,21 +36,25 @@ static float _measure_cm(int trig_gpio, int echo_gpio)
     gpio_set_level(trig_gpio, 0);
 
     // --- Wait for ECHO to go HIGH (start of return pulse) ---
+    // Sleep-poll in 1 ms ticks so the WiFi stack gets CPU time during the
+    // dead-zone before the echo arrives.  Pure taskYIELD() would spin-loop
+    // 30 000 times with no actual block when nothing higher-priority is ready.
     int64_t start_wait = esp_timer_get_time();
     while (gpio_get_level(echo_gpio) == 0) {
         if ((esp_timer_get_time() - start_wait) > ULTRASONIC_TIMEOUT_US) {
-            return ULTRASONIC_MAX_DISTANCE_CM; // no echo — nothing in range
+            return ULTRASONIC_MAX_DISTANCE_CM;
         }
-        taskYIELD(); // allow other tasks to run during wait
+        vTaskDelay(1);  // yield 1 ms — safe; echo hasn't started yet
     }
 
     // --- Measure ECHO HIGH duration ---
+    // Cannot sleep here: a 10 cm echo pulse is only ~580 µs — shorter than
+    // one FreeRTOS tick.  Tight busy-wait is intentional for accuracy.
     int64_t pulse_start = esp_timer_get_time();
     while (gpio_get_level(echo_gpio) == 1) {
         if ((esp_timer_get_time() - pulse_start) > ULTRASONIC_TIMEOUT_US) {
-            return ULTRASONIC_MAX_DISTANCE_CM; // pulse too long
+            return ULTRASONIC_MAX_DISTANCE_CM;
         }
-        taskYIELD(); // allow other tasks to run during measurement
     }
     int64_t pulse_us = esp_timer_get_time() - pulse_start;
 

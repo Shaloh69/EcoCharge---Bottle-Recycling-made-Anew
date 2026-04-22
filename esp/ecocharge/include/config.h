@@ -101,7 +101,7 @@
 #define WIFI_SSID_DEFAULT    "YourWiFi_SSID"
 #define WIFI_PASS_DEFAULT    "YourWiFi_Password"
 #define WIFI_RECONNECT_MS    5000
-#define WIFI_MAX_RETRIES     10
+#define WIFI_MAX_RETRIES     5
 
 // ----------------------------------------------------------------------------
 // Server identity — set per kiosk unit before flashing

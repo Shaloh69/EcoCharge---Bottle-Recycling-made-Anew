@@ -61,8 +61,9 @@ static void _bottle_fsm_task(void *arg)
 {
     ESP_LOGI(LOG_TAG, "Bottle FSM task started");
 
-    TickType_t scan_last_nudge = 0;
-    TickType_t drop_start_tick = 0;
+    TickType_t scan_last_nudge   = 0;
+    TickType_t drop_start_tick   = 0;
+    TickType_t reject_start_tick = 0;
 
     while (1) {
         switch (s_state) {
@@ -96,6 +97,7 @@ static void _bottle_fsm_task(void *arg)
                 ESP_LOGI(LOG_TAG, "Bottle rejected — reversing out");
                 conveyor_set_speed(CONVEYOR_SPEED_REVERSE);
                 conveyor_reverse();
+                reject_start_tick = xTaskGetTickCount();
                 _set_state(BOTTLE_FSM_REJECTING);
                 break;
             }
@@ -152,9 +154,12 @@ static void _bottle_fsm_task(void *arg)
 
         // ----------------------------------------------------------------
         case BOTTLE_FSM_REJECTING:
-            // Run in reverse until entrance sensor no longer sees the bottle
+            // Run in reverse until entrance clears or 10 s safety timeout
             if (!ultrasonic_bottle_at_entrance()) {
                 ESP_LOGI(LOG_TAG, "Bottle ejected — returning to idle");
+                _enter_idle();
+            } else if (pdTICKS_TO_MS(xTaskGetTickCount() - reject_start_tick) >= 10000) {
+                ESP_LOGW(LOG_TAG, "Reject timeout — forcing idle (sensor stuck?)");
                 _enter_idle();
             }
             break;

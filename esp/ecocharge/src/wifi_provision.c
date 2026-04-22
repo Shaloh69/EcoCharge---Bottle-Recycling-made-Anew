@@ -93,7 +93,7 @@ static void dns_task(void *arg)
         resp[off++] = 0x00; resp[off++] = 0x01;   // TYPE  = A
         resp[off++] = 0x00; resp[off++] = 0x01;   // CLASS = IN
         resp[off++] = 0x00; resp[off++] = 0x00;   // TTL (high)
-        resp[off++] = 0x00; resp[off++] = 0x00;   // TTL (low) — 0 to avoid caching
+        resp[off++] = 0x00; resp[off++] = 0x3C;   // TTL (low) — 60 s
         resp[off++] = 0x00; resp[off++] = 0x04;   // RDLENGTH = 4
         resp[off++] = AP_IP_B0;
         resp[off++] = AP_IP_B1;

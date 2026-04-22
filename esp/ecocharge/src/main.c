@@ -6,6 +6,9 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
+#include "esp_netif.h"
+#include "esp_event.h"
+#include "esp_wifi.h"
 #include "config.h"
 #include "nvs_config.h"
 #include "conveyor_motor.h"
@@ -202,6 +205,18 @@ void app_main(void)
     ESP_ERROR_CHECK(ret);
     nvs_config_init();
 
+    // ── Network stack — init exactly once, before any WiFi module ───────────
+    // Both netifs are created upfront so wifi_sta and wifi_ap can simply
+    // switch modes on the already-initialised driver without deinit/reinit.
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_create_default_wifi_sta();
+    esp_netif_create_default_wifi_ap();
+    {
+        wifi_init_config_t wifi_init_cfg = WIFI_INIT_CONFIG_DEFAULT();
+        ESP_ERROR_CHECK(esp_wifi_init(&wifi_init_cfg));
+    }
+
     // ── Peripherals ──────────────────────────────────────────────────────────
     led_init();
     s_led_mode = LED_MODE_FAST;  // fast blink = booting
@@ -232,9 +247,19 @@ void app_main(void)
         ret = wifi_sta_connect();
 
         if (ret != ESP_OK) {
-            ESP_LOGE(LOG_TAG, "WiFi failed — offline mode (relays disabled)");
-            s_led_mode = LED_MODE_SLOW;   // slow blink = offline
+            ESP_LOGE(LOG_TAG, "WiFi failed — falling back to AP provisioning mode");
+            s_led_mode = LED_MODE_TRIPLE;  // ··· = provisioning AP active
             relay_disable_all();
+
+            // Start AP so the user can reach the portal to reconfigure WiFi
+            ESP_ERROR_CHECK(wifi_ap_init());
+            ESP_ERROR_CHECK(wifi_provision_start());
+            ESP_ERROR_CHECK(web_server_start());
+
+            printf("\nWiFi connection failed — provisioning mode active.\n");
+            printf("  Connect to WiFi:  %s\n", WIFI_AP_SSID);
+            printf("  Password:         %s\n", WIFI_AP_PASSWORD);
+            printf("  Setup page:       http://%s/provision\n\n", AP_IP_ADDR);
         } else {
             ESP_LOGI(LOG_TAG, "WiFi connected — starting API tasks");
             s_led_mode = LED_MODE_DOUBLE;  // ·· = connected + ready
@@ -244,12 +269,12 @@ void app_main(void)
                         NULL, COMMAND_TASK_PRIORITY,   NULL);
             xTaskCreate(telemetry_task,    "telemetry", TELEMETRY_TASK_STACK,
                         NULL, TELEMETRY_TASK_PRIORITY, NULL);
-        }
 
-        web_server_start();
-        printf("\nEcoCharge controller ready.\n");
-        printf("Backend: %s\n", RENDER_BASE_URL);
-        printf("Kiosk ID: %d\n\n", KIOSK_ID);
+            web_server_start();
+            printf("\nEcoCharge controller ready.\n");
+            printf("Backend: %s\n", RENDER_BASE_URL);
+            printf("Kiosk ID: %d\n\n", KIOSK_ID);
+        }
 
     } else {
         // ====================================================================
