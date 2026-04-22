@@ -108,12 +108,12 @@
 // ----------------------------------------------------------------------------
 #define RENDER_BASE_URL     "https://ecocharge-server.onrender.com"
 #define DEVICE_API_KEY      "SET_AT_BUILD_TIME"
-#define KIOSK_ID            1
+#define KIOSK_ID            2
 
 // ----------------------------------------------------------------------------
 // AI Backend Server
 // ----------------------------------------------------------------------------
-#define AI_SERVER_URL       "https://secondary-responsible-facility-accomplished.trycloudflare.com"
+#define AI_SERVER_URL       "https://attorneys-assessment-band-clear.trycloudflare.com"
 #define AI_API_KEY          "SET_AT_BUILD_TIME"
 
 // ----------------------------------------------------------------------------

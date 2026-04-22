@@ -7,4 +7,5 @@ export interface AuthRequest extends Request {
 
 export interface DeviceRequest extends Request {
   kioskId?: number
+  kiosk?: { id: number; name: string; apiKey: string }
 }

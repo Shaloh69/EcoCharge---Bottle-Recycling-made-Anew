@@ -11,18 +11,6 @@ from ..services.command_service import get_pending_commands, ack_command
 devices_bp = Blueprint("devices", __name__)
 
 
-def require_device_key(f):
-    """Decorator: validates the device API key from Authorization header."""
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        auth = request.headers.get("Authorization", "")
-        token = auth.removeprefix("Bearer ").strip()
-        if token != current_app.config["DEVICE_API_KEY"]:
-            return jsonify({"error": "unauthorized"}), 401
-        return f(*args, **kwargs)
-    return decorated
-
-
 def _resolve_kiosk() -> tuple[Kiosk | None, dict | None]:
     """Read kiosk_id from query string or JSON body, return kiosk or error response."""
     kiosk_id = request.args.get("kiosk_id") or (request.get_json(silent=True) or {}).get("kiosk_id")
@@ -34,14 +22,29 @@ def _resolve_kiosk() -> tuple[Kiosk | None, dict | None]:
     return kiosk, None
 
 
+def require_device_key(f):
+    """Decorator: resolves kiosk from kiosk_id and validates bearer token against kiosk.api_key."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.headers.get("Authorization", "")
+        token = auth.removeprefix("Bearer ").strip()
+        if not token:
+            return jsonify({"error": "unauthorized"}), 401
+
+        kiosk, err = _resolve_kiosk()
+        if err:
+            return jsonify(err[0]), err[1]
+        if token != kiosk.api_key:
+            return jsonify({"error": "unauthorized"}), 401
+
+        return f(*args, kiosk=kiosk, **kwargs)
+    return decorated
+
+
 @devices_bp.get("/commands")
 @require_device_key
-def poll_commands():
+def poll_commands(kiosk):
     """ESP32 calls this every 2 seconds to get pending commands."""
-    kiosk, err = _resolve_kiosk()
-    if err:
-        return jsonify(err[0]), err[1]
-
     kiosk.touch()
     db.session.commit()
 
@@ -51,12 +54,8 @@ def poll_commands():
 
 @devices_bp.post("/commands/<int:command_id>/ack")
 @require_device_key
-def ack(command_id):
+def ack(command_id, kiosk):
     """ESP32 calls this after executing a command."""
-    kiosk, err = _resolve_kiosk()
-    if err:
-        return jsonify(err[0]), err[1]
-
     cmd = ack_command(command_id, kiosk.id)
     if not cmd:
         return jsonify({"error": "command not found or already acked"}), 404
@@ -67,17 +66,9 @@ def ack(command_id):
 
 @devices_bp.post("/telemetry")
 @require_device_key
-def receive_telemetry():
+def receive_telemetry(kiosk):
     """ESP32 posts sensor readings every 5 seconds."""
     data = request.get_json(silent=True) or {}
-    kiosk_id = data.get("kiosk_id")
-
-    if not kiosk_id:
-        return jsonify({"error": "kiosk_id is required"}), 400
-
-    kiosk = Kiosk.query.get(int(kiosk_id))
-    if not kiosk:
-        return jsonify({"error": "kiosk not found"}), 404
 
     kiosk.touch()
 
@@ -86,7 +77,6 @@ def receive_telemetry():
     telemetry.bin_level = data.get("bin_level")
     db.session.add(telemetry)
 
-    # Auto-complete charging sessions whose duration has elapsed
     _auto_complete_expired_sessions(kiosk.id)
 
     db.session.commit()

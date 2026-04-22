@@ -19,15 +19,10 @@ async function touchKiosk(kioskId: number) {
   })
 }
 
-const commandsQuerySchema = z.object({
-  kiosk_id: z.coerce.number().int().positive(),
-})
-
 // GET /commands
 router.get('/commands', async (req: DeviceRequest, res: Response, next: NextFunction) => {
   try {
-    const query   = commandsQuerySchema.parse(req.query)
-    const kioskId = query.kiosk_id
+    const kioskId = req.kiosk!.id
 
     await touchKiosk(kioskId)
 
@@ -51,17 +46,13 @@ router.get('/commands', async (req: DeviceRequest, res: Response, next: NextFunc
   }
 })
 
-const ackBodySchema = z.object({
-  kiosk_id: z.number().int().positive(),
-})
-
 // POST /commands/:id/ack
 router.post('/commands/:id/ack', async (req: DeviceRequest, res: Response, next: NextFunction) => {
   try {
     const commandId = parseInt(req.params.id)
-    const body      = ackBodySchema.parse(req.body)
-    log.device(`kiosk #${body.kiosk_id} ACK command #${commandId}`)
-    await ackCommand(commandId, body.kiosk_id)
+    const kioskId   = req.kiosk!.id
+    log.device(`kiosk #${kioskId} ACK command #${commandId}`)
+    await ackCommand(commandId, kioskId)
     res.json({ acked: commandId })
   } catch (err) {
     next(err)
@@ -75,7 +66,7 @@ const ultrasonicSchema = z.object({
 }).optional()
 
 const telemetrySchema = z.object({
-  kiosk_id:           z.number().int().positive(),
+  kiosk_id:           z.number().int().positive().optional(),
   ports:              z.array(z.object({
     voltage:   z.number().optional(),
     current:   z.number().optional(),
@@ -93,7 +84,6 @@ router.post('/telemetry', async (req: DeviceRequest, res: Response, next: NextFu
   try {
     const body = telemetrySchema.parse(req.body)
     const {
-      kiosk_id: kioskId,
       ports     = [],
       bin_level,
       ultrasonic,
@@ -101,6 +91,7 @@ router.post('/telemetry', async (req: DeviceRequest, res: Response, next: NextFu
       bottle_in_bin,
       fsm_state,
     } = body
+    const kioskId = req.kiosk!.id
 
     await touchKiosk(kioskId)
 

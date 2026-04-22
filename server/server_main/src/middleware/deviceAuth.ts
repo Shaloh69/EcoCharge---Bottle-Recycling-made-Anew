@@ -1,19 +1,21 @@
 import { Response, NextFunction } from 'express'
-import crypto from 'crypto'
-import { config } from '../config'
+import prisma from '../prisma'
 import { DeviceRequest } from '../types'
 
-export function requireDeviceKey(req: DeviceRequest, res: Response, next: NextFunction): void {
+export async function requireDeviceKey(req: DeviceRequest, res: Response, next: NextFunction): Promise<void> {
   const token = (req.headers.authorization ?? '').replace('Bearer ', '').trim()
 
-  // Timing-safe comparison prevents brute-force timing attacks
-  const valid =
-    token.length > 0 &&
-    token.length === config.DEVICE_API_KEY.length &&
-    crypto.timingSafeEqual(Buffer.from(token), Buffer.from(config.DEVICE_API_KEY))
-
-  if (!valid) {
+  if (!token) {
     res.status(401).json({ error: 'unauthorized' }); return
   }
+
+  const kiosk = await prisma.kiosk.findUnique({ where: { apiKey: token } })
+
+  if (!kiosk) {
+    res.status(401).json({ error: 'unauthorized' }); return
+  }
+
+  req.kiosk   = kiosk
+  req.kioskId = kiosk.id
   next()
 }

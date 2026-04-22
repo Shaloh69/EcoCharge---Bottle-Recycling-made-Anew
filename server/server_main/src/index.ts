@@ -99,7 +99,6 @@ app.listen(config.PORT, () => {
 })
 
 runMigrations()
-  .then(() => autoSeed())
   .then(() => log.startup('Ready ✔'))
   .catch((err) => {
     log.error('Startup', `Fatal error: ${err}`)

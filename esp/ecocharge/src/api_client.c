@@ -6,6 +6,7 @@
 #include "ultrasonic.h"
 #include "bottle_fsm.h"
 #include "esp_http_client.h"
+#include "esp_crt_bundle.h"
 #include "esp_log.h"
 #include "esp_tls.h"
 #include <string.h>
@@ -107,7 +108,7 @@ static void _ack_command(int id)
         .method             = HTTP_METHOD_POST,
         .event_handler      = _http_event,
         .user_data          = &ctx,
-        .skip_cert_common_name_check = true,
+        .crt_bundle_attach  = esp_crt_bundle_attach,
         .transport_type     = HTTP_TRANSPORT_OVER_SSL,
     };
 
@@ -212,7 +213,7 @@ esp_err_t api_client_poll_commands(void)
         .event_handler      = _http_event,
         .user_data          = &ctx,
         .timeout_ms         = 5000,
-        .skip_cert_common_name_check = true,
+        .crt_bundle_attach  = esp_crt_bundle_attach,
         .transport_type     = HTTP_TRANSPORT_OVER_SSL,
     };
 
@@ -295,7 +296,7 @@ esp_err_t api_client_post_telemetry(void)
         .event_handler      = _http_event,
         .user_data          = &ctx,
         .timeout_ms         = 5000,
-        .skip_cert_common_name_check = true,
+        .crt_bundle_attach  = esp_crt_bundle_attach,
         .transport_type     = HTTP_TRANSPORT_OVER_SSL,
     };
 
