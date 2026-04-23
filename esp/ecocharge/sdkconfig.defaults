@@ -1,2 +1,11 @@
 CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 CONFIG_ESPTOOLPY_FLASHSIZE="4MB"
+
+# ── DNS fixes — resolves getaddrinfo() returns 202 (EAI_NONAME) ────────────────
+CONFIG_LWIP_USE_ESP_GETADDRINFO=y
+CONFIG_ESP_NETIF_SET_DNS_PER_DEFAULT_NETIF=y
+
+# ── TCP SYN retransmissions ────────────────────────────────────────────────────
+# Default SYNMAXRTX=12 means lwIP retries SYN for ~18 s before giving up.
+# Reduce to 4 so a dead server is detected in ~6 s, allowing faster retries.
+CONFIG_LWIP_TCP_SYNMAXRTX=4

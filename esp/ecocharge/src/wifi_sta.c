@@ -76,9 +76,11 @@ static const char *_reason_str(uint8_t r)
 static void _set_dns(void)
 {
     esp_netif_t *sta = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-    if (!sta) return;
+    if (!sta) {
+        ESP_LOGE(LOG_TAG, "_set_dns: WIFI_STA_DEF netif not found — DNS NOT configured");
+        return;
+    }
 
-    // Make STA the default netif so all outbound traffic routes through it.
     esp_netif_set_default_netif(sta);
 
     ip_addr_t dns1 = IPADDR4_INIT_BYTES(8, 8, 8, 8);
@@ -86,7 +88,12 @@ static void _set_dns(void)
     dns_setserver(0, &dns1);
     dns_setserver(1, &dns2);
 
-    ESP_LOGI(LOG_TAG, "STA promoted to default netif — DNS: 8.8.8.8 / 1.1.1.1");
+    // Verify what actually got set so we can confirm in serial logs
+    const ip_addr_t *s0 = dns_getserver(0);
+    const ip_addr_t *s1 = dns_getserver(1);
+    ESP_LOGI(LOG_TAG, "DNS configured — slot0=" IPSTR "  slot1=" IPSTR,
+             IP2STR(&s0->u_addr.ip4), IP2STR(&s1->u_addr.ip4));
+    ESP_LOGI(LOG_TAG, "STA promoted to default netif");
 }
 
 static EventGroupHandle_t  s_evt_group       = NULL;

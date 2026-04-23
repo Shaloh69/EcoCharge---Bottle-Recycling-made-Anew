@@ -23,12 +23,12 @@
 #define MOTOR_LEDC_MODE      LEDC_LOW_SPEED_MODE
 #define MOTOR_LEDC_BITS      LEDC_TIMER_8_BIT
 #define MOTOR_PWM_FREQ_HZ    1000
-#define MOTOR_DEFAULT_SPEED  75
+#define MOTOR_DEFAULT_SPEED  100
 
 // Conveyor speed presets (0–100 %)
-#define CONVEYOR_SPEED_SCAN     40   // slow — bottle moves while camera scans
-#define CONVEYOR_SPEED_FAST     85   // fast — drop approved bottle into bin
-#define CONVEYOR_SPEED_REVERSE  60   // reverse — eject rejected bottle
+#define CONVEYOR_SPEED_SCAN    100   // full power
+#define CONVEYOR_SPEED_FAST    100   // full power
+#define CONVEYOR_SPEED_REVERSE 100   // full power
 
 // ----------------------------------------------------------------------------
 // Charging Port Pin Assignments
@@ -106,7 +106,7 @@
 // ----------------------------------------------------------------------------
 // Server identity — set per kiosk unit before flashing
 // ----------------------------------------------------------------------------
-#define RENDER_BASE_URL     "https://ecocharge-server.onrender.com"
+#define RENDER_BASE_URL     "https://ecocharge-server-j7u7.onrender.com"
 #define DEVICE_API_KEY      "SET_AT_BUILD_TIME"
 #define KIOSK_ID            1
 
@@ -122,6 +122,7 @@
 #define COMMAND_POLL_MS      2000
 #define TELEMETRY_POST_MS    5000
 #define SENSOR_SAMPLE_MS     500
+#define HEALTH_PING_MS       240000  // ping /health every 4 min to keep Render awake
 
 // ----------------------------------------------------------------------------
 // WiFi AP — provisioning captive portal

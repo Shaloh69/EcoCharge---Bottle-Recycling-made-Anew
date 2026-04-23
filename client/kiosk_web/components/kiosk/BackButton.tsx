@@ -13,7 +13,7 @@ export function BackButton({
 
   return (
     <button
-      className="w-full py-4 rounded-2xl font-medium text-sm tracking-wide transition-all active:scale-95"
+      className="w-full py-5 rounded-2xl font-medium text-base tracking-wide transition-all active:scale-95"
       style={{
         color: "rgba(255,255,255,0.55)",
         background: "rgba(255,255,255,0.07)",

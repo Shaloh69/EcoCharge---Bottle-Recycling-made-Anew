@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
 import { BackButton } from "@/components/kiosk/BackButton";
 import { KioskHeader } from "@/components/kiosk/KioskHeader";
@@ -13,6 +14,11 @@ const PORT_TYPES: Record<number, string> = {
   2: "USB-C",
   3: "USB-A",
   4: "USB-C",
+};
+
+const item = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0 },
 };
 
 export default function ChargingPage() {
@@ -42,7 +48,9 @@ export default function ChargingPage() {
       (event) => {
         setLive(true);
         if (event.ports != null) {
-          const occupied = event.ports.filter((p) => !p.available).map((p) => p.port);
+          const occupied = event.ports
+            .filter((p) => !p.available)
+            .map((p) => p.port);
           setActivePorts(occupied);
           setSelected((prev) =>
             prev != null && occupied.includes(prev) ? null : prev,
@@ -80,37 +88,47 @@ export default function ChargingPage() {
   };
 
   return (
-    <div className="flex flex-col flex-1 page-enter">
+    <div className="flex flex-col flex-1">
       <KioskHeader showAccount />
 
-      <div className="flex-1 flex flex-col items-center px-6 pt-6 gap-6">
+      <motion.div
+        className="flex-1 flex flex-col items-center px-8 pt-7 gap-6"
+        initial="initial"
+        animate="animate"
+        transition={{ staggerChildren: 0.09 }}
+      >
         {/* Deposit summary card */}
-        <div
-          className="glass-white rounded-3xl p-6 w-full max-w-sm shadow-xl text-center page-scale"
-          style={{ animationDelay: "0.1s" }}
+        <motion.div
+          className="glass-white rounded-3xl p-7 w-full shadow-xl text-center"
+          variants={item}
+          transition={{ duration: 0.4, type: "spring", bounce: 0.25 }}
         >
           <p className="text-gray-400 text-sm mb-1">Bottle Detected</p>
           <p className="text-gray-800 text-2xl font-extrabold">
             {deposit.brand ?? "Bottle"} · {deposit.volume_ml ?? "?"}ml
           </p>
-          <p className="text-gray-400 text-sm mt-2">Credits Earned</p>
-          <p className="text-3xl font-extrabold" style={{ color: "#16A34A" }}>
+          <p className="text-gray-400 text-sm mt-3">Credits Earned</p>
+          <p
+            className="text-4xl font-extrabold mt-1"
+            style={{ color: "#16A34A" }}
+          >
             {deposit.credits_awarded ?? 1} credit
             {(deposit.credits_awarded ?? 1) !== 1 ? "s" : ""}
           </p>
-        </div>
+        </motion.div>
 
         {/* Port selection header */}
-        <div
-          className="flex items-center gap-3 page-fade"
-          style={{ animationDelay: "0.18s" }}
+        <motion.div
+          className="flex items-center gap-3 self-start"
+          variants={item}
+          transition={{ duration: 0.3 }}
         >
-          <h3 className="text-white text-xl font-bold">
+          <h3 className="text-white text-2xl font-bold">
             Select Charging Outlet
           </h3>
           {live && (
             <span
-              className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full"
+              className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-full"
               style={{
                 color: "#4ADE80",
                 background: "rgba(74,222,128,0.12)",
@@ -118,7 +136,7 @@ export default function ChargingPage() {
               }}
             >
               <span
-                className="w-1.5 h-1.5 rounded-full"
+                className="w-2 h-2 rounded-full"
                 style={{
                   background: "#4ADE80",
                   animation: "ripple 1.5s ease-out infinite",
@@ -127,17 +145,18 @@ export default function ChargingPage() {
               LIVE
             </span>
           )}
-        </div>
+        </motion.div>
 
         {/* Port grid */}
-        <div
-          className="grid grid-cols-2 gap-3 w-full max-w-sm page-scale"
-          style={{ animationDelay: "0.22s" }}
+        <motion.div
+          className="grid grid-cols-2 gap-4 w-full"
+          variants={item}
+          transition={{ duration: 0.35, type: "spring", bounce: 0.2 }}
         >
           {ports.map((port) => (
             <button
               key={port.id}
-              className="rounded-2xl p-5 flex flex-col items-center gap-2 transition-all active:scale-95"
+              className="rounded-2xl p-6 flex flex-col items-center gap-3 transition-all active:scale-95"
               disabled={port.inUse}
               style={
                 port.inUse
@@ -151,7 +170,7 @@ export default function ChargingPage() {
                         background:
                           "linear-gradient(135deg, rgba(76,175,80,0.3), rgba(22,163,74,0.2))",
                         border: "2px solid rgba(76,175,80,0.6)",
-                        boxShadow: "0 0 24px rgba(76,175,80,0.2)",
+                        boxShadow: "0 0 28px rgba(76,175,80,0.2)",
                       }
                     : {
                         background: "rgba(255,255,255,0.08)",
@@ -160,13 +179,15 @@ export default function ChargingPage() {
               }
               onClick={() => setSelected(port.id)}
             >
-              <span className="text-3xl">
+              <span className="text-4xl">
                 {port.type === "USB-C" ? "🔌" : "🔋"}
               </span>
-              <span className="font-bold text-white">Station {port.id}</span>
-              <span className="text-xs text-white/50">{port.type}</span>
+              <span className="font-bold text-white text-lg">
+                Station {port.id}
+              </span>
+              <span className="text-sm text-white/50">{port.type}</span>
               <span
-                className="text-xs px-2 py-0.5 rounded-full font-medium"
+                className="text-sm px-3 py-1 rounded-full font-medium"
                 style={
                   port.inUse
                     ? { background: "rgba(220,38,38,0.2)", color: "#FCA5A5" }
@@ -177,22 +198,31 @@ export default function ChargingPage() {
               </span>
             </button>
           ))}
-        </div>
+        </motion.div>
 
-        {error && <p className="text-red-300 text-sm text-center">{error}</p>}
+        {error && (
+          <motion.p
+            className="text-red-300 text-base text-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            {error}
+          </motion.p>
+        )}
 
         {/* Confirm */}
-        <button
-          className="glass-btn-primary w-full max-w-sm py-5 rounded-2xl text-xl font-extrabold transition-all active:scale-95 disabled:opacity-30 page-fade"
+        <motion.button
+          className="glass-btn-primary w-full py-6 rounded-2xl text-2xl font-extrabold transition-all active:scale-95 disabled:opacity-30"
           disabled={!selected || loading}
-          style={{ animationDelay: "0.3s" }}
+          variants={item}
+          transition={{ duration: 0.3 }}
           onClick={handleConfirm}
         >
           {loading ? "Starting…" : "Confirm →"}
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
-      <div className="px-6 pb-8">
+      <div className="px-8 pb-8 pt-4">
         <BackButton href="/session/result" />
       </div>
     </div>

@@ -1,10 +1,16 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
 import { BackButton } from "@/components/kiosk/BackButton";
 import { KioskHeader } from "@/components/kiosk/KioskHeader";
 import { MascotFull } from "@/components/kiosk/MascotDisplay";
+
+const item = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0 },
+};
 
 export default function LinkingPage() {
   const router = useRouter();
@@ -21,45 +27,58 @@ export default function LinkingPage() {
   }, [router]);
 
   return (
-    <div className="flex flex-col flex-1 page-enter">
+    <div className="flex flex-col flex-1">
       <KioskHeader />
 
-      <div className="flex-1 flex flex-col items-center justify-center px-6 gap-8">
-        <MascotFull mood="scanning" />
+      <motion.div
+        className="flex-1 flex flex-col items-center justify-center px-8 gap-8"
+        initial="initial"
+        animate="animate"
+        transition={{ staggerChildren: 0.12 }}
+      >
+        <motion.div
+          variants={item}
+          transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
+        >
+          <MascotFull mood="scanning" />
+        </motion.div>
 
-        <div
-          className="glass-white rounded-3xl p-8 flex flex-col items-center gap-5 w-full max-w-sm shadow-2xl page-scale"
-          style={{ animationDelay: "0.15s" }}
+        <motion.div
+          className="glass-white rounded-3xl p-9 flex flex-col items-center gap-6 w-full shadow-2xl"
+          variants={item}
+          transition={{ duration: 0.35 }}
         >
           <h2 className="text-gray-800 text-2xl font-bold text-center">
             Waiting for your phone{".".repeat(dots)}
           </h2>
-          <div className="flex gap-3 mt-1">
+          <div className="flex gap-4 mt-1">
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="w-4 h-4 rounded-full transition-all duration-300"
+                className="w-5 h-5 rounded-full transition-all duration-300"
                 style={{
                   backgroundColor: dots > i ? "#16A34A" : "#D1D5DB",
-                  transform: dots > i ? "scale(1.25)" : "scale(1)",
+                  transform: dots > i ? "scale(1.3)" : "scale(1)",
                 }}
               />
             ))}
           </div>
-          <p className="text-gray-400 text-sm text-center">
+          <p className="text-gray-400 text-base text-center">
             Keep your phone screen on and near the kiosk.
           </p>
-        </div>
+        </motion.div>
 
-        <button
-          className="glass-btn-secondary w-full max-w-sm py-4 rounded-2xl text-lg font-semibold transition-all active:scale-95"
+        <motion.button
+          className="glass-btn-secondary w-full py-5 rounded-2xl text-xl font-semibold transition-all active:scale-95"
+          variants={item}
+          transition={{ duration: 0.3 }}
           onClick={() => router.push("/auth")}
         >
           Cancel
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
-      <div className="px-6 pb-8">
+      <div className="px-8 pb-8">
         <BackButton href="/auth" />
       </div>
     </div>

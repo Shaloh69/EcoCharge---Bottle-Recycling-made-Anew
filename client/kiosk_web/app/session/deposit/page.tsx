@@ -265,13 +265,13 @@ function DepositContent() {
   const isActive = phase === "scanning" || phase === "approved";
 
   return (
-    <div className="flex flex-col flex-1 page-enter">
+    <div className="flex flex-col flex-1">
       <KioskHeader showAccount />
       <canvas ref={canvasRef} className="hidden" />
 
-      <div className="flex-1 flex flex-col items-center px-6 pt-8 gap-6">
+      <div className="flex-1 flex flex-col items-center px-8 pt-8 gap-6">
         {/* Camera preview — must be visible so browser decodes frames */}
-        <div className="relative w-full max-w-sm rounded-3xl overflow-hidden shadow-xl bg-black aspect-video page-scale" style={{ animationDelay: "0s" }}>
+        <div className="relative w-full rounded-3xl overflow-hidden shadow-xl bg-black aspect-video">
           <video
             ref={videoRef}
             autoPlay
@@ -306,8 +306,7 @@ function DepositContent() {
 
         {/* Status card */}
         <div
-          className="glass-white rounded-3xl p-7 w-full max-w-sm shadow-xl flex flex-col items-center gap-5 page-scale"
-          style={{ animationDelay: "0.1s" }}
+          className="glass-white rounded-3xl p-7 w-full shadow-xl flex flex-col items-center gap-5"
         >
           <div className="text-center">
             <p className="text-gray-800 text-xl font-bold">
@@ -325,8 +324,7 @@ function DepositContent() {
 
         {/* Mode badge */}
         <div
-          className={`px-4 py-2 rounded-full text-sm font-semibold page-fade ${mode === "charge" ? "glass-amber" : "glass-green"}`}
-          style={{ animationDelay: "0.2s" }}
+          className={`px-4 py-2 rounded-full text-sm font-semibold ${mode === "charge" ? "glass-amber" : "glass-green"}`}
         >
           {mode === "charge" ? "⚡ Charge mode" : "💳 Credit mode"}
         </div>
@@ -334,8 +332,7 @@ function DepositContent() {
         {/* Manual scan button — only shown while waiting (fallback if SSE missed) */}
         {phase === "waiting" && (
           <button
-            className="glass-btn-primary w-full max-w-sm py-5 rounded-3xl text-lg font-extrabold transition-all active:scale-95 page-fade"
-            style={{ animationDelay: "0.25s" }}
+            className="glass-btn-primary w-full py-6 rounded-3xl text-xl font-extrabold transition-all active:scale-95"
             onClick={() => {
               setPhase("scanning");
               setStatusMsg("Starting scan…");
@@ -347,7 +344,7 @@ function DepositContent() {
         )}
       </div>
 
-      <div className="px-6 pb-8">
+      <div className="px-8 pb-8 pt-4">
         <BackButton href="/session" />
       </div>
     </div>

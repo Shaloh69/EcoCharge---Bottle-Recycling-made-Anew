@@ -1,10 +1,16 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
 import { BackButton } from "@/components/kiosk/BackButton";
 import { KioskHeader } from "@/components/kiosk/KioskHeader";
 import { userStore } from "@/lib/api";
+
+const item = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0 },
+};
 
 export default function LinkedPage() {
   const router = useRouter();
@@ -17,10 +23,8 @@ export default function LinkedPage() {
         if (c <= 1) {
           clearInterval(timer);
           router.push("/session");
-
           return 0;
         }
-
         return c - 1;
       });
     }, 1000);
@@ -31,20 +35,26 @@ export default function LinkedPage() {
   const firstName = linkedUser?.name?.split(" ")[0] ?? "Guest";
 
   return (
-    <div className="flex flex-col flex-1 page-enter">
+    <div className="flex flex-col flex-1">
       <KioskHeader showAccount />
 
-      <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6 py-8">
+      <motion.div
+        className="flex-1 flex flex-col items-center justify-center px-8 gap-7 py-10"
+        initial="initial"
+        animate="animate"
+        transition={{ staggerChildren: 0.1 }}
+      >
         {/* Welcome card */}
-        <div
-          className="glass-white rounded-3xl p-8 w-full max-w-sm shadow-2xl flex flex-col items-center gap-4 bounce-in"
-          style={{ animationDelay: "0.1s" }}
+        <motion.div
+          className="glass-white rounded-3xl p-9 w-full shadow-2xl flex flex-col items-center gap-5"
+          variants={item}
+          transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
         >
           <div
-            className="w-20 h-20 rounded-full flex items-center justify-center text-4xl"
+            className="w-24 h-24 rounded-full flex items-center justify-center text-5xl"
             style={{
               background: "linear-gradient(135deg, #4ADE80, #16A34A)",
-              boxShadow: "0 0 24px rgba(76,175,80,0.4)",
+              boxShadow: "0 0 28px rgba(76,175,80,0.4)",
             }}
           >
             👤
@@ -52,7 +62,7 @@ export default function LinkedPage() {
 
           <div className="text-center">
             <p className="text-gray-400 text-sm">Signed in as</p>
-            <p className="text-gray-800 text-2xl font-extrabold">
+            <p className="text-gray-800 text-3xl font-extrabold">
               {linkedUser?.name ?? "Guest"}
             </p>
           </div>
@@ -60,42 +70,46 @@ export default function LinkedPage() {
           {linkedUser?.phone && (
             <div className="w-full border-t border-gray-100 pt-3 text-center">
               <p className="text-gray-400 text-xs">Phone</p>
-              <p className="text-gray-700 font-medium">{linkedUser.phone}</p>
+              <p className="text-gray-700 font-medium text-lg">
+                {linkedUser.phone}
+              </p>
             </div>
           )}
 
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-xl">🌿</span>
-            <span className="text-green-700 font-bold">EcoCharge</span>
+            <span className="text-2xl">🌿</span>
+            <span className="text-green-700 font-bold text-lg">EcoCharge</span>
           </div>
-        </div>
+        </motion.div>
 
         {/* Welcome message */}
-        <div
-          className="text-center page-fade"
-          style={{ animationDelay: "0.25s" }}
+        <motion.div
+          className="text-center"
+          variants={item}
+          transition={{ duration: 0.3 }}
         >
-          <h2 className="text-white text-4xl font-extrabold tracking-tight">
+          <h2 className="text-white text-5xl font-extrabold tracking-tight">
             Welcome back,
             <br />
             <span style={{ color: "#4ADE80" }}>{firstName}!</span>
           </h2>
-          <p className="text-white/40 text-sm mt-2">
+          <p className="text-white/40 text-base mt-3">
             Auto-continues in {countdown}s…
           </p>
-        </div>
+        </motion.div>
 
         {/* CTA */}
-        <button
-          className="glass-btn-primary w-full max-w-sm py-5 rounded-2xl text-xl font-bold transition-all active:scale-95 page-fade"
-          style={{ animationDelay: "0.35s" }}
+        <motion.button
+          className="glass-btn-primary w-full py-6 rounded-2xl text-2xl font-bold transition-all active:scale-95"
+          variants={item}
+          transition={{ duration: 0.3 }}
           onClick={() => router.push("/session")}
         >
           Let&apos;s Go →
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
-      <div className="px-6 pb-8">
+      <div className="px-8 pb-8">
         <BackButton href="/auth" />
       </div>
     </div>

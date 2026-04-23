@@ -34,7 +34,8 @@
 //
 //  a) Credentials present  → sensor_task + bottle_fsm started immediately
 //                            STA WiFi connect → command_poll + telemetry tasks
-//                            LED: FAST (connecting) → DOUBLE (ready)
+//                            LED: FAST (connecting) → SINGLE (WiFi only)
+//                                                  → SERVER (WiFi + server OK)
 //                                              or SLOW (WiFi failed)
 //
 //  b) No credentials       → self-test runs first (LED SOLID while testing)
@@ -44,12 +45,13 @@
 //                            LED TRIPLE (provisioning mode)
 //
 // LED blink patterns (safety_task, 100 ms frame clock):
-//   FAST   ·· ·· ··          200 ms cycle — booting / WiFi connecting
-//   SLOW   ─────·····        1000 ms cycle — WiFi failed / offline
-//   DOUBLE ·· ────────       1000 ms cycle — WiFi connected, ready ✓
-//   TRIPLE ··· ─────────     1200 ms cycle — provisioning AP mode active
-//   FIVE   ····· ─────────── 2000 ms cycle — self-test critical failure
-//   SOLID  ──────────────    always on — self-test in progress
+//   FAST   · ·             200 ms cycle  — booting / WiFi connecting
+//   SLOW   █████·····      1000 ms cycle — WiFi failed / offline
+//   SINGLE ·─────────      1000 ms cycle — WiFi connected, server unreachable
+//   TRIPLE ··· ─────────   1200 ms cycle — provisioning AP mode active
+//   FIVE   ····· ───────── 2000 ms cycle — self-test critical failure
+//   SOLID  ─────────────── always on     — self-test in progress
+//   SERVER ···─────────    1000 ms cycle — WiFi + server connected ✓
 // ============================================================================
 
 // ============================================================================
@@ -59,23 +61,24 @@
 typedef enum {
     LED_MODE_OFF    = 0,  // always off
     LED_MODE_SOLID  = 1,  // always on (self-test in progress)
-    LED_MODE_FAST   = 2,  // ·· ·· ——  200 ms cycle: booting / WiFi connecting
-    LED_MODE_SLOW   = 3,  // ─────····  1000 ms cycle: WiFi failed / server unreachable
-    LED_MODE_DOUBLE = 4,  // ·· ──────  1000 ms cycle: WiFi connected, waiting server
+    LED_MODE_FAST   = 2,  // · ·        200 ms cycle: booting / WiFi connecting
+    LED_MODE_SLOW   = 3,  // █████····  1000 ms cycle: WiFi failed / server unreachable
+    LED_MODE_DOUBLE = 4,  // · ────────  1000 ms cycle: WiFi connected, no server yet
     LED_MODE_TRIPLE = 5,  // ··· ─────  1200 ms cycle: provisioning AP mode
     LED_MODE_FIVE   = 6,  // ····· ────  2000 ms cycle: self-test critical failure
-    LED_MODE_SERVER = 7,  // ··· ──────  1800 ms cycle: server connected + heartbeat OK
+    LED_MODE_SERVER = 7,  // ··· ─────   1000 ms cycle: WiFi + server connected ✓
 } led_mode_t;
 
 // Frame pattern arrays — each element = 100 ms, 1=ON, 0=OFF
 static const uint8_t PAT_FAST[]   = {1, 0};
 static const uint8_t PAT_SLOW[]   = {1, 1, 1, 1, 1, 0, 0, 0, 0, 0};
-static const uint8_t PAT_DOUBLE[] = {1, 0, 1, 0, 0, 0, 0, 0, 0, 0};
+// WiFi connected, server not yet reachable — 1 blink per second
+static const uint8_t PAT_DOUBLE[] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static const uint8_t PAT_TRIPLE[] = {1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0};
 static const uint8_t PAT_FIVE[]   = {1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
                                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-// SERVER: 3 quick blinks then a long 1.2 s pause — calm and stable
-static const uint8_t PAT_SERVER[] = {1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+// WiFi + server connected — 3 quick blinks per second
+static const uint8_t PAT_SERVER[] = {1, 0, 1, 0, 1, 0, 0, 0, 0, 0};
 
 typedef struct { const uint8_t *frames; int len; } led_pat_t;
 
@@ -85,7 +88,7 @@ static const led_pat_t s_patterns[] = {
     [LED_MODE_DOUBLE] = { PAT_DOUBLE, 10 },
     [LED_MODE_TRIPLE] = { PAT_TRIPLE, 12 },
     [LED_MODE_FIVE]   = { PAT_FIVE,   20 },
-    [LED_MODE_SERVER] = { PAT_SERVER, 18 },
+    [LED_MODE_SERVER] = { PAT_SERVER, 10 },
 };
 
 static volatile led_mode_t s_led_mode = LED_MODE_FAST;
@@ -157,40 +160,76 @@ static void sensor_task(void *arg)
     }
 }
 
+// Shared flag: 1 = server reachable, 0 = server down. Written by poll task,
+// read by telemetry task so it skips requests while server is unreachable
+// (avoids two tasks both hammering failed connections → socket exhaustion).
+static volatile int s_server_ok = 0;
+
 // ---------------------------------------------------------------------------
 // Command polling task — also acts as server heartbeat.
-// On 200 OK  → LED_MODE_SERVER (3 blinks, long pause) = server alive
-// On failure → LED_MODE_SLOW   (slow blink)           = server unreachable
-// WiFi lost  → LED_MODE_FAST   (fast blink)           = reconnecting
+// On 200 OK  → LED_MODE_SERVER (3 blinks/s) = server alive
+// On failure → LED_MODE_SLOW   (slow blink)  = server unreachable
+// WiFi lost  → LED_MODE_FAST   (fast blink)  = reconnecting
+//
+// Uses exponential backoff on consecutive failures (2 s → 4 → 8 → … → 30 s)
+// to prevent socket exhaustion. Resets to normal poll rate on success.
+// Also pings /health every HEALTH_PING_MS to keep Render's free tier awake.
 // ---------------------------------------------------------------------------
 static void command_poll_task(void *arg)
 {
     ESP_LOGI(LOG_TAG, "Command poll task started");
+
+    TickType_t last_health_ping = xTaskGetTickCount();
+    uint32_t   backoff_ms       = COMMAND_POLL_MS;
+    int        fail_streak      = 0;
+
     while (1) {
         if (wifi_sta_is_connected()) {
+            // Periodic /health ping every 4 minutes to keep Render awake
+            TickType_t now = xTaskGetTickCount();
+            if ((now - last_health_ping) >= pdMS_TO_TICKS(HEALTH_PING_MS)) {
+                ESP_LOGI(LOG_TAG, "Health ping — keeping Render awake");
+                api_client_wake_server();
+                last_health_ping = xTaskGetTickCount();
+            }
+
             esp_err_t ret = api_client_poll_commands();
             if (ret == ESP_OK) {
-                s_led_mode = LED_MODE_SERVER;
+                s_server_ok  = 1;
+                s_led_mode   = LED_MODE_SERVER;
+                backoff_ms   = COMMAND_POLL_MS;  // reset backoff on success
+                fail_streak  = 0;
             } else {
-                ESP_LOGW(LOG_TAG, "Server unreachable (%s) — retrying in %d ms",
-                         esp_err_to_name(ret), COMMAND_POLL_MS);
-                s_led_mode = LED_MODE_SLOW;
+                s_server_ok = 0;
+                s_led_mode  = LED_MODE_SLOW;
+                fail_streak++;
+                // Exponential backoff: 2 s → 4 → 8 → 16 → 30 s max
+                if (fail_streak > 1) {
+                    backoff_ms = backoff_ms * 2;
+                    if (backoff_ms > 30000) backoff_ms = 30000;
+                }
+                ESP_LOGW(LOG_TAG, "Server unreachable (streak=%d) — retry in %lu ms",
+                         fail_streak, (unsigned long)backoff_ms);
             }
         } else {
-            s_led_mode = LED_MODE_FAST;
+            s_server_ok = 0;
+            s_led_mode  = LED_MODE_FAST;
+            backoff_ms  = COMMAND_POLL_MS;
+            fail_streak = 0;
         }
-        vTaskDelay(pdMS_TO_TICKS(COMMAND_POLL_MS));
+        vTaskDelay(pdMS_TO_TICKS(backoff_ms));
     }
 }
 
 // ---------------------------------------------------------------------------
-// Telemetry post task (normal mode only)
+// Telemetry post task — skips when server is known unreachable to avoid
+// parallel socket exhaustion alongside command_poll_task failures.
 // ---------------------------------------------------------------------------
 static void telemetry_task(void *arg)
 {
     ESP_LOGI(LOG_TAG, "Telemetry task started");
     while (1) {
-        if (wifi_sta_is_connected()) {
+        if (wifi_sta_is_connected() && s_server_ok) {
             api_client_post_telemetry();
         }
         vTaskDelay(pdMS_TO_TICKS(TELEMETRY_POST_MS));
@@ -277,10 +316,13 @@ void app_main(void)
             printf("  Password:         %s\n", WIFI_AP_PASSWORD);
             printf("  Setup page:       http://%s/provision\n\n", AP_IP_ADDR);
         } else {
-            ESP_LOGI(LOG_TAG, "WiFi connected — starting API tasks");
-            // LED stays FAST until command_poll_task confirms server on first heartbeat
+            ESP_LOGI(LOG_TAG, "WiFi connected — waking server then starting API tasks");
 
             api_client_init();
+            // Block here until Render responds to /health (handles cold start).
+            // LED stays FAST (connecting) while waiting.
+            api_client_wake_server();
+
             xTaskCreate(command_poll_task, "cmd_poll",  COMMAND_TASK_STACK,
                         NULL, COMMAND_TASK_PRIORITY,   NULL);
             xTaskCreate(telemetry_task,    "telemetry", TELEMETRY_TASK_STACK,

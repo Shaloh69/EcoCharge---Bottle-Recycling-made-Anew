@@ -11,12 +11,17 @@
 #include <string.h>
 #include <stdio.h>
 
-#define JSON_BUF_SIZE   1024
-#define RESP_BUF_SIZE   2048
+#define JSON_BUF_SIZE       1024
+#define RESP_BUF_SIZE       2048
+#define WAKE_TIMEOUT_MS     15000   // 15 s app timeout (lwIP SYN gives up in ~6 s now)
+#define WAKE_MAX_ATTEMPTS   20      // keep retrying for ~5 min total before giving up
+#define WAKE_RETRY_MS       2000    // pause between wake attempts
+#define POLL_TIMEOUT_MS     10000   // 10 s for normal polls — fail fast on drops
+#define TELEM_TIMEOUT_MS    10000   // 10 s for telemetry
 
 // Split RENDER_BASE_URL into host + port so we never pass a full https:// URL
 // through esp_http_client's URL parser (it miscuts the hostname).
-#define RENDER_HOST  "ecocharge-server.onrender.com"
+#define RENDER_HOST  "ecocharge-server-j7u7.onrender.com"
 #define RENDER_PORT  443
 
 // ---------------------------------------------------------------------------
@@ -64,6 +69,16 @@ static esp_http_client_config_t _base_cfg(const char *path, resp_ctx_t *ctx,
         .timeout_ms        = timeout_ms,
     };
     return cfg;
+}
+
+// ---------------------------------------------------------------------------
+// Always close the connection before cleanup to avoid "Software caused
+// connection abort" on the next attempt (leftover socket in bad state).
+// ---------------------------------------------------------------------------
+static void _client_destroy(esp_http_client_handle_t client)
+{
+    esp_http_client_close(client);
+    esp_http_client_cleanup(client);
 }
 
 // ---------------------------------------------------------------------------
@@ -122,7 +137,7 @@ static void _ack_command(int id)
     char resp_buf[256] = {0};
     resp_ctx_t ctx = { .buf = resp_buf, .len = 0, .cap = sizeof(resp_buf) };
 
-    esp_http_client_config_t cfg = _base_cfg(path, &ctx, 10000);
+    esp_http_client_config_t cfg = _base_cfg(path, &ctx, POLL_TIMEOUT_MS);
     cfg.method = HTTP_METHOD_POST;
 
     esp_http_client_handle_t client = esp_http_client_init(&cfg);
@@ -131,7 +146,7 @@ static void _ack_command(int id)
 
     esp_err_t ret    = esp_http_client_perform(client);
     int        status = esp_http_client_get_status_code(client);
-    esp_http_client_cleanup(client);
+    _client_destroy(client);
 
     if (ret != ESP_OK) {
         ESP_LOGW(LOG_TAG, "Ack cmd %d failed: %s", id, esp_err_to_name(ret));
@@ -189,8 +204,16 @@ static void _parse_and_execute_commands(const char *json)
         }
 
         if (id > 0 && cmd_type[0]) {
-            _execute_command(id, cmd_type, payload_json);
+            // Ack first while WiFi is still stable, THEN trigger hardware.
+            // Executing hardware (relay/motor) before acking causes a power spike
+            // that drops WiFi, making the ack request fail on a dead connection.
             _ack_command(id);
+            // Brief settle before hardware to let TLS teardown complete cleanly.
+            vTaskDelay(pdMS_TO_TICKS(150));
+            _execute_command(id, cmd_type, payload_json);
+            // Let the power rail settle after relay/motor activation before
+            // the next HTTP request goes out.
+            vTaskDelay(pdMS_TO_TICKS(500));
         }
 
         const char *obj_end = strchr(obj_start, '}');
@@ -208,6 +231,42 @@ esp_err_t api_client_init(void)
     return ESP_OK;
 }
 
+// ---------------------------------------------------------------------------
+// Wake the Render server by hitting /health.
+// Blocks until the server responds 200 or WAKE_MAX_ATTEMPTS is reached.
+// Call once after WiFi connects, before starting poll/telemetry tasks.
+// ---------------------------------------------------------------------------
+esp_err_t api_client_wake_server(void)
+{
+    ESP_LOGI(LOG_TAG, "Waking server — pinging /health (Render cold start may take ~60 s)");
+
+    for (int attempt = 1; attempt <= WAKE_MAX_ATTEMPTS; attempt++) {
+        char resp_buf[64] = {0};
+        resp_ctx_t ctx = { .buf = resp_buf, .len = 0, .cap = sizeof(resp_buf) };
+
+        esp_http_client_config_t cfg = _base_cfg("/health", &ctx, WAKE_TIMEOUT_MS);
+        cfg.method = HTTP_METHOD_GET;
+
+        esp_http_client_handle_t client = esp_http_client_init(&cfg);
+        esp_err_t ret    = esp_http_client_perform(client);
+        int        status = esp_http_client_get_status_code(client);
+        _client_destroy(client);
+
+        if (ret == ESP_OK && status == 200) {
+            ESP_LOGI(LOG_TAG, "Server awake — /health returned 200 (attempt %d)", attempt);
+            return ESP_OK;
+        }
+
+        ESP_LOGW(LOG_TAG, "Wake attempt %d/%d failed (%s HTTP %d) — retrying in %d ms",
+                 attempt, WAKE_MAX_ATTEMPTS, esp_err_to_name(ret), status, WAKE_RETRY_MS);
+        vTaskDelay(pdMS_TO_TICKS(WAKE_RETRY_MS));
+    }
+
+    ESP_LOGE(LOG_TAG, "Server did not respond after %d wake attempts — continuing anyway",
+             WAKE_MAX_ATTEMPTS);
+    return ESP_FAIL;
+}
+
 esp_err_t api_client_poll_commands(void)
 {
     char path[128];
@@ -216,7 +275,7 @@ esp_err_t api_client_poll_commands(void)
     char resp_buf[RESP_BUF_SIZE] = {0};
     resp_ctx_t ctx = { .buf = resp_buf, .len = 0, .cap = RESP_BUF_SIZE };
 
-    esp_http_client_config_t cfg = _base_cfg(path, &ctx, 5000);
+    esp_http_client_config_t cfg = _base_cfg(path, &ctx, POLL_TIMEOUT_MS);
     cfg.method = HTTP_METHOD_GET;
 
     esp_http_client_handle_t client = esp_http_client_init(&cfg);
@@ -224,16 +283,15 @@ esp_err_t api_client_poll_commands(void)
 
     esp_err_t ret    = esp_http_client_perform(client);
     int        status = esp_http_client_get_status_code(client);
-    esp_http_client_cleanup(client);
+    _client_destroy(client);
 
     if (ret != ESP_OK) {
         ESP_LOGW(LOG_TAG, "Poll commands failed: %s", esp_err_to_name(ret));
         return ret;
     }
     if (status != 200) {
-        ESP_LOGW(LOG_TAG, "Poll commands: HTTP %d — %s", status,
-                 status == 401 ? "unauthorized (check DEVICE_API_KEY)" :
-                 status == 404 ? "kiosk not found" : "server error");
+        ESP_LOGW(LOG_TAG, "Poll commands: HTTP %d body=%s", status,
+                 ctx.len > 0 ? resp_buf : "(empty)");
         return ESP_FAIL;
     }
     if (ctx.len > 0) {
@@ -287,7 +345,7 @@ esp_err_t api_client_post_telemetry(void)
     char resp_buf[256] = {0};
     resp_ctx_t ctx = { .buf = resp_buf, .len = 0, .cap = sizeof(resp_buf) };
 
-    esp_http_client_config_t cfg = _base_cfg("/api/devices/telemetry", &ctx, 5000);
+    esp_http_client_config_t cfg = _base_cfg("/api/devices/telemetry", &ctx, TELEM_TIMEOUT_MS);
     cfg.method = HTTP_METHOD_POST;
 
     esp_http_client_handle_t client = esp_http_client_init(&cfg);
@@ -297,14 +355,15 @@ esp_err_t api_client_post_telemetry(void)
 
     esp_err_t ret    = esp_http_client_perform(client);
     int        status = esp_http_client_get_status_code(client);
-    esp_http_client_cleanup(client);
+    _client_destroy(client);
 
     if (ret != ESP_OK) {
         ESP_LOGW(LOG_TAG, "Telemetry post failed: %s", esp_err_to_name(ret));
         return ret;
     }
     if (status != 200) {
-        ESP_LOGW(LOG_TAG, "Telemetry: HTTP %d", status);
+        ESP_LOGW(LOG_TAG, "Telemetry: HTTP %d body=%s", status,
+                 ctx.len > 0 ? resp_buf : "(empty)");
         return ESP_FAIL;
     }
     return ESP_OK;

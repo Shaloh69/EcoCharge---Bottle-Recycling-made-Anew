@@ -1,9 +1,15 @@
 "use client";
 import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { motion } from "framer-motion";
 
 import { KioskHeader } from "@/components/kiosk/KioskHeader";
 import { MascotAvatar } from "@/components/kiosk/MascotDisplay";
+
+const item = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0 },
+};
 
 function ChargeReceiptContent() {
   const router = useRouter();
@@ -24,75 +30,88 @@ function ChargeReceiptContent() {
   };
 
   return (
-    <div className="flex flex-col flex-1 page-enter text-black">
+    <div className="flex flex-col flex-1 text-black">
       <KioskHeader showAccount />
 
-      <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
+      <motion.div
+        className="flex-1 flex flex-col items-center justify-center px-8 gap-7"
+        initial="initial"
+        animate="animate"
+        transition={{ staggerChildren: 0.1 }}
+      >
         {/* Receipt card */}
-        <div
-          className="glass-white rounded-3xl p-8 w-full max-w-sm shadow-2xl flex flex-col items-center gap-4 bounce-in"
-          style={{ animationDelay: "0.05s" }}
+        <motion.div
+          className="glass-white rounded-3xl p-9 w-full shadow-2xl flex flex-col items-center gap-5"
+          variants={item}
+          transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
         >
           {/* Success icon */}
           <div
-            className="w-20 h-20 rounded-full flex items-center justify-center text-4xl"
+            className="w-24 h-24 rounded-full flex items-center justify-center text-5xl"
             style={{
               background: "linear-gradient(135deg, #4ADE80, #16A34A)",
-              boxShadow: "0 0 32px rgba(76,175,80,0.4)",
+              boxShadow: "0 0 36px rgba(76,175,80,0.4)",
             }}
           >
             ✅
           </div>
 
-          <h2 className="text-green-700 text-2xl font-extrabold">
+          <h2 className="text-green-700 text-3xl font-extrabold">
             Charging Started!
           </h2>
 
-          <div className="w-full border-t border-gray-100 pt-4 space-y-3 text-center">
+          <div className="w-full border-t border-gray-100 pt-5 space-y-4 text-center">
             <p className="text-gray-400 text-sm">Charging at</p>
-            <p className="text-gray-800 text-2xl font-extrabold">
+            <p className="text-gray-800 text-3xl font-extrabold">
               Station {station}
             </p>
 
             <div
-              className="rounded-2xl px-4 py-3"
+              className="rounded-2xl px-5 py-4"
               style={{
                 background: "rgba(76,175,80,0.08)",
                 border: "1px solid rgba(76,175,80,0.2)",
               }}
             >
-              <p className="text-gray-400 text-xs uppercase tracking-widest mb-1">
+              <p className="text-gray-400 text-xs uppercase tracking-widest mb-2">
                 Time Allocated
               </p>
-              <p className="text-green-700 text-3xl font-extrabold">
+              <p className="text-green-700 text-4xl font-extrabold">
                 {minutes} min
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-xl">🌿</span>
-            <span className="text-green-700 font-bold">EcoCharge</span>
+            <span className="text-2xl">🌿</span>
+            <span className="text-green-700 font-bold text-lg">EcoCharge</span>
           </div>
-        </div>
+        </motion.div>
 
-        <MascotAvatar mood="happy" />
+        <motion.div
+          variants={item}
+          transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
+        >
+          <MascotAvatar mood="happy" />
+        </motion.div>
 
-        <p
-          className="text-white/50 text-sm text-center max-w-xs page-fade"
-          style={{ animationDelay: "0.2s" }}
+        <motion.p
+          className="text-white/50 text-base text-center max-w-xs leading-relaxed"
+          variants={item}
+          transition={{ duration: 0.3 }}
         >
           Your device is now charging. Remove it when done or when time expires.
-        </p>
+        </motion.p>
 
-        <button
-          className="glass-btn-primary w-full max-w-sm py-5 rounded-2xl text-xl font-extrabold transition-all active:scale-95 page-fade"
-          style={{ animationDelay: "0.3s" }}
+        <motion.button
+          className="glass-btn-primary w-full py-6 rounded-2xl text-2xl font-extrabold transition-all active:scale-95"
+          variants={item}
+          transition={{ duration: 0.3 }}
           onClick={handleDone}
         >
           Thank You 🎉
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
     </div>
   );
 }

@@ -1,43 +1,55 @@
 "use client";
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+
+const item = {
+  initial: { opacity: 0, y: 18 },
+  animate: { opacity: 1, y: 0 },
+};
 
 export default function SplashPage() {
   const router = useRouter();
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 80);
-    return () => clearTimeout(t);
-  }, []);
 
   return (
-    <div
-      className={`flex flex-col flex-1 px-6 py-10 ${visible ? "page-enter" : "opacity-0"}`}
+    <motion.div
+      className="flex flex-col flex-1 px-8 py-12"
+      initial="initial"
+      animate="animate"
+      transition={{ staggerChildren: 0.1 }}
     >
       {/* Logo */}
-      <div className="flex items-center gap-3">
-        <span className="text-3xl">🌿</span>
+      <motion.div
+        className="flex items-center gap-3"
+        variants={item}
+        transition={{ duration: 0.3 }}
+      >
+        <span className="text-4xl">🌿</span>
         <div>
-          <p className="text-white text-xl font-extrabold tracking-tight leading-none">
+          <p className="text-white text-2xl font-extrabold tracking-tight leading-none">
             EcoCharge
           </p>
-          <p className="text-white/40 text-[10px] tracking-widest uppercase mt-0.5">
+          <p className="text-white/40 text-[11px] tracking-widest uppercase mt-1">
             Kiosk Station
           </p>
         </div>
-      </div>
+      </motion.div>
 
       {/* Center content */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-8 text-center">
+      <div className="flex-1 flex flex-col items-center justify-center gap-9 text-center">
         {/* Mascot orb */}
-        <div className="relative bounce-in" style={{ animationDelay: "0.1s" }}>
+        <motion.div
+          className="relative"
+          variants={item}
+          transition={{ duration: 0.4, type: "spring", bounce: 0.4 }}
+        >
           <div
-            className="w-44 h-44 rounded-full flex items-center justify-center text-7xl pulse-glow"
+            className="w-52 h-52 rounded-full flex items-center justify-center text-8xl pulse-glow"
             style={{
-              background: "radial-gradient(circle at 35% 35%, #2E7D32, #051A08)",
+              background:
+                "radial-gradient(circle at 35% 35%, #2E7D32, #051A08)",
               border: "4px solid rgba(76,175,80,0.30)",
-              boxShadow: "0 0 60px rgba(76,175,80,0.25), inset 0 0 40px rgba(0,0,0,0.4)",
+              boxShadow:
+                "0 0 70px rgba(76,175,80,0.28), inset 0 0 50px rgba(0,0,0,0.4)",
             }}
           >
             🍶
@@ -49,26 +61,27 @@ export default function SplashPage() {
               animation: "ripple 3s ease-out infinite",
             }}
           />
-        </div>
+        </motion.div>
 
         {/* Headline */}
-        <div className="page-fade" style={{ animationDelay: "0.2s" }}>
-          <h1 className="text-white text-4xl font-extrabold tracking-tight leading-tight">
+        <motion.div variants={item} transition={{ duration: 0.3 }}>
+          <h1 className="text-white text-5xl font-extrabold tracking-tight leading-tight">
             Recycle.
             <br />
             <span style={{ color: "#4ADE80" }}>Charge.</span>
           </h1>
-          <p className="text-white/50 text-sm mt-3 leading-relaxed max-w-[260px] mx-auto">
+          <p className="text-white/50 text-base mt-4 leading-relaxed max-w-xs mx-auto">
             Drop your plastic bottles. Earn credits.
             <br />
             Charge your phone — completely free.
           </p>
-        </div>
+        </motion.div>
 
         {/* Stats */}
-        <div
-          className="flex gap-2.5 w-full page-fade"
-          style={{ animationDelay: "0.32s" }}
+        <motion.div
+          className="flex gap-3 w-full"
+          variants={item}
+          transition={{ duration: 0.3 }}
         >
           {[
             { icon: "🍶", label: "Accepted", value: "PET · HDPE" },
@@ -77,35 +90,41 @@ export default function SplashPage() {
           ].map((stat) => (
             <div
               key={stat.label}
-              className="flex-1 glass rounded-2xl px-3 py-3 text-center"
+              className="flex-1 glass rounded-2xl px-3 py-4 text-center"
             >
-              <span className="text-lg">{stat.icon}</span>
-              <p className="text-white font-bold text-xs mt-1">{stat.value}</p>
-              <p className="text-white/35 text-[10px]">{stat.label}</p>
+              <span className="text-2xl">{stat.icon}</span>
+              <p className="text-white font-bold text-sm mt-1.5">
+                {stat.value}
+              </p>
+              <p className="text-white/35 text-xs mt-0.5">{stat.label}</p>
             </div>
           ))}
-        </div>
+        </motion.div>
       </div>
 
       {/* CTA */}
-      <div className="page-fade pb-2" style={{ animationDelay: "0.44s" }}>
+      <motion.div
+        className="pb-2 flex flex-col gap-3"
+        variants={item}
+        transition={{ duration: 0.3 }}
+      >
         <button
-          className="glass-btn-primary w-full py-5 rounded-3xl font-extrabold text-xl tracking-tight transition-all active:scale-95"
+          className="glass-btn-primary w-full py-6 rounded-3xl font-extrabold text-2xl tracking-tight transition-all active:scale-95"
           onClick={() => router.push("/auth")}
         >
           Touch to Start →
         </button>
-        <p className="text-center text-white/25 text-[10px] mt-2.5 tracking-widest uppercase">
+        <p className="text-center text-white/25 text-xs tracking-widest uppercase">
           Scan · Deposit · Charge
         </p>
         <button
-          className="mt-4 w-full py-2.5 rounded-2xl text-white/25 text-[11px] tracking-widest uppercase transition-all active:text-white/50"
+          className="w-full py-3 rounded-2xl text-white/25 text-xs tracking-widest uppercase transition-all active:text-white/50"
           style={{ border: "1px solid rgba(255,255,255,0.07)" }}
           onClick={() => router.push("/diag")}
         >
           System Check
         </button>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
