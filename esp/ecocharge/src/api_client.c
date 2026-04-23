@@ -68,10 +68,13 @@ static void _execute_command(int id, const char *cmd_type, const char *payload_j
         }
 
     } else if (strcmp(cmd_type, "open_conveyor") == 0) {
-        conveyor_forward();   // start belt to accept bottle
+        conveyor_forward();
 
     } else if (strcmp(cmd_type, "close_conveyor") == 0) {
-        conveyor_stop();      // stop belt
+        conveyor_stop();
+
+    } else if (strcmp(cmd_type, "reverse_conveyor") == 0) {
+        conveyor_reverse();
 
     } else if (strcmp(cmd_type, "approve_bottle") == 0) {
         // AI approved — FSM will ramp speed and drop into bin
@@ -229,7 +232,14 @@ esp_err_t api_client_poll_commands(void)
         return ret;
     }
 
-    if (status == 200 && ctx.len > 0) {
+    if (status != 200) {
+        ESP_LOGW(LOG_TAG, "Poll commands: HTTP %d — %s", status,
+                 status == 401 ? "unauthorized (check DEVICE_API_KEY)" :
+                 status == 404 ? "kiosk not found (check KIOSK_ID)" : "server error");
+        return ESP_FAIL;
+    }
+
+    if (ctx.len > 0) {
         _parse_and_execute_commands(resp_buf);
     }
 
@@ -306,10 +316,16 @@ esp_err_t api_client_post_telemetry(void)
     esp_http_client_set_post_field(client, body, n);
 
     esp_err_t ret = esp_http_client_perform(client);
-    if (ret != ESP_OK) {
-        ESP_LOGW(LOG_TAG, "Telemetry post failed: %s", esp_err_to_name(ret));
-    }
+    int status    = esp_http_client_get_status_code(client);
     esp_http_client_cleanup(client);
 
-    return ret;
+    if (ret != ESP_OK) {
+        ESP_LOGW(LOG_TAG, "Telemetry post failed: %s", esp_err_to_name(ret));
+        return ret;
+    }
+    if (status != 200) {
+        ESP_LOGW(LOG_TAG, "Telemetry: HTTP %d", status);
+        return ESP_FAIL;
+    }
+    return ESP_OK;
 }

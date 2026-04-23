@@ -59,11 +59,12 @@
 typedef enum {
     LED_MODE_OFF    = 0,  // always off
     LED_MODE_SOLID  = 1,  // always on (self-test in progress)
-    LED_MODE_FAST   = 2,  // ·· ·· —  fast blink: booting / WiFi connecting
-    LED_MODE_SLOW   = 3,  // ─────····  slow blink: WiFi failed / offline
-    LED_MODE_DOUBLE = 4,  // ·· ──────  double-blink: WiFi connected + ready
-    LED_MODE_TRIPLE = 5,  // ··· ─────  triple-blink: provisioning AP mode
-    LED_MODE_FIVE   = 6,  // ····· ──── 5-blink: self-test critical failure
+    LED_MODE_FAST   = 2,  // ·· ·· ——  200 ms cycle: booting / WiFi connecting
+    LED_MODE_SLOW   = 3,  // ─────····  1000 ms cycle: WiFi failed / server unreachable
+    LED_MODE_DOUBLE = 4,  // ·· ──────  1000 ms cycle: WiFi connected, waiting server
+    LED_MODE_TRIPLE = 5,  // ··· ─────  1200 ms cycle: provisioning AP mode
+    LED_MODE_FIVE   = 6,  // ····· ────  2000 ms cycle: self-test critical failure
+    LED_MODE_SERVER = 7,  // ··· ──────  1800 ms cycle: server connected + heartbeat OK
 } led_mode_t;
 
 // Frame pattern arrays — each element = 100 ms, 1=ON, 0=OFF
@@ -73,6 +74,8 @@ static const uint8_t PAT_DOUBLE[] = {1, 0, 1, 0, 0, 0, 0, 0, 0, 0};
 static const uint8_t PAT_TRIPLE[] = {1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0};
 static const uint8_t PAT_FIVE[]   = {1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
                                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+// SERVER: 3 quick blinks then a long 1.2 s pause — calm and stable
+static const uint8_t PAT_SERVER[] = {1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 typedef struct { const uint8_t *frames; int len; } led_pat_t;
 
@@ -82,6 +85,7 @@ static const led_pat_t s_patterns[] = {
     [LED_MODE_DOUBLE] = { PAT_DOUBLE, 10 },
     [LED_MODE_TRIPLE] = { PAT_TRIPLE, 12 },
     [LED_MODE_FIVE]   = { PAT_FIVE,   20 },
+    [LED_MODE_SERVER] = { PAT_SERVER, 18 },
 };
 
 static volatile led_mode_t s_led_mode = LED_MODE_FAST;
@@ -154,7 +158,10 @@ static void sensor_task(void *arg)
 }
 
 // ---------------------------------------------------------------------------
-// Command polling task (normal mode only)
+// Command polling task — also acts as server heartbeat.
+// On 200 OK  → LED_MODE_SERVER (3 blinks, long pause) = server alive
+// On failure → LED_MODE_SLOW   (slow blink)           = server unreachable
+// WiFi lost  → LED_MODE_FAST   (fast blink)           = reconnecting
 // ---------------------------------------------------------------------------
 static void command_poll_task(void *arg)
 {
@@ -162,9 +169,15 @@ static void command_poll_task(void *arg)
     while (1) {
         if (wifi_sta_is_connected()) {
             esp_err_t ret = api_client_poll_commands();
-            if (ret != ESP_OK) {
-                ESP_LOGW(LOG_TAG, "Poll failed: %s", esp_err_to_name(ret));
+            if (ret == ESP_OK) {
+                s_led_mode = LED_MODE_SERVER;
+            } else {
+                ESP_LOGW(LOG_TAG, "Server unreachable (%s) — retrying in %d ms",
+                         esp_err_to_name(ret), COMMAND_POLL_MS);
+                s_led_mode = LED_MODE_SLOW;
             }
+        } else {
+            s_led_mode = LED_MODE_FAST;
         }
         vTaskDelay(pdMS_TO_TICKS(COMMAND_POLL_MS));
     }
@@ -262,7 +275,7 @@ void app_main(void)
             printf("  Setup page:       http://%s/provision\n\n", AP_IP_ADDR);
         } else {
             ESP_LOGI(LOG_TAG, "WiFi connected — starting API tasks");
-            s_led_mode = LED_MODE_DOUBLE;  // ·· = connected + ready
+            // LED stays FAST until command_poll_task confirms server on first heartbeat
 
             api_client_init();
             xTaskCreate(command_poll_task, "cmd_poll",  COMMAND_TASK_STACK,
