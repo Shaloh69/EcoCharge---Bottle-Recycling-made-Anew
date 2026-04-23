@@ -1,5 +1,6 @@
 #include "wifi_ap.h"
 #include "config.h"
+#include "esp_netif.h"
 #include "esp_wifi.h"
 #include "esp_event.h"
 #include "esp_log.h"
@@ -11,21 +12,20 @@
 //   esp_netif_init()
 //   esp_event_loop_create_default()
 //   esp_netif_create_default_wifi_sta()
-//   esp_netif_create_default_wifi_ap()   ← AP netif already created + configured
 //   esp_wifi_init(&WIFI_INIT_CONFIG_DEFAULT())
 //
-// esp_netif_create_default_wifi_ap() already sets IP = 192.168.4.1,
-// GW = 192.168.4.1, mask = 255.255.255.0, and enables the DHCP server.
-// No additional IP/DHCP configuration is needed.
+// The AP netif is created lazily on first call to wifi_ap_init() rather than
+// at boot.  Creating it upfront leaves a dormant netif with IP 192.168.4.1
+// that lwIP treats as a live route, routing DNS queries through the AP
+// interface (no internet) instead of STA → EAI_NONAME / getaddrinfo 202.
 //
-// This module only sets the AP credentials, switches the WiFi mode to AP,
-// and starts the radio.  If wifi_sta_connect() was called first and stopped
-// WiFi on failure (without deinit), this module just switches modes on the
-// already-initialised driver.
+// esp_netif_create_default_wifi_ap() sets IP = 192.168.4.1,
+// GW = 192.168.4.1, mask = 255.255.255.0, and enables the DHCP server.
 // ============================================================================
 
-static bool    ap_active        = false;
-static uint8_t connected_clients = 0;
+static bool         ap_active         = false;
+static uint8_t      connected_clients = 0;
+static esp_netif_t *s_ap_netif        = NULL;
 
 static void _ap_event_handler(void *arg, esp_event_base_t base,
                                int32_t id, void *data)
@@ -49,6 +49,11 @@ static void _ap_event_handler(void *arg, esp_event_base_t base,
 esp_err_t wifi_ap_init(void)
 {
     ESP_LOGI(LOG_TAG, "Starting WiFi AP...");
+
+    // Create the AP netif the first time we actually enter provisioning mode.
+    if (s_ap_netif == NULL) {
+        s_ap_netif = esp_netif_create_default_wifi_ap();
+    }
 
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID,
                                                &_ap_event_handler, NULL));

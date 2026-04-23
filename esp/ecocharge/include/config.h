@@ -108,7 +108,7 @@
 // ----------------------------------------------------------------------------
 #define RENDER_BASE_URL     "https://ecocharge-server.onrender.com"
 #define DEVICE_API_KEY      "SET_AT_BUILD_TIME"
-#define KIOSK_ID            2
+#define KIOSK_ID            1
 
 // ----------------------------------------------------------------------------
 // AI Backend Server

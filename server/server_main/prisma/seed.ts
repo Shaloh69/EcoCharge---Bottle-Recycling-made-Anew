@@ -33,7 +33,12 @@ async function main() {
   await prisma.kiosk.deleteMany();
   await prisma.user.deleteMany();
   await prisma.systemSetting.deleteMany();
-  console.log("  ✔  All tables cleared\n");
+
+  // Reset AUTO_INCREMENT so IDs are always predictable (kiosk=1, user=1).
+  // MySQL AUTO_INCREMENT does NOT reset on DELETE — only on TRUNCATE or ALTER TABLE.
+  await prisma.$executeRawUnsafe("ALTER TABLE `kiosks` AUTO_INCREMENT = 1");
+  await prisma.$executeRawUnsafe("ALTER TABLE `users` AUTO_INCREMENT = 1");
+  console.log("  ✔  All tables cleared + AUTO_INCREMENT reset\n");
 
   // ── 2. Admin user ───────────────────────────────────────────────────────────
   const email = process.env.ADMIN_EMAIL ?? "admin@ecocharge.ph";

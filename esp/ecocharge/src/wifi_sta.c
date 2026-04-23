@@ -63,17 +63,30 @@ static const char *_reason_str(uint8_t r)
 }
 
 // ---------------------------------------------------------------------------
-// Force DNS at the lwIP stack level — bypasses all netif routing so queries
-// always reach real DNS servers regardless of which netif is active.
+// After STA gets an IP:
+//   1. Promote STA to the lwIP default netif — this is the root cause of DNS
+//      failures when both STA and AP netifs exist.  The AP netif (192.168.4.1)
+//      is created at boot and stays "up" at the software level even when the AP
+//      radio is off.  Without this call lwIP routes DNS queries through the AP
+//      netif which has no internet uplink → EAI_NONAME (202).
+//   2. Force 8.8.8.8 / 1.1.1.1 via dns_setserver so queries never depend on
+//      whatever DNS the DHCP server happened to hand out.
 // Called after every IP_EVENT_STA_GOT_IP (initial connect and reconnects).
 // ---------------------------------------------------------------------------
 static void _set_dns(void)
 {
+    esp_netif_t *sta = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+    if (!sta) return;
+
+    // Make STA the default netif so all outbound traffic routes through it.
+    esp_netif_set_default_netif(sta);
+
     ip_addr_t dns1 = IPADDR4_INIT_BYTES(8, 8, 8, 8);
     ip_addr_t dns2 = IPADDR4_INIT_BYTES(1, 1, 1, 1);
     dns_setserver(0, &dns1);
     dns_setserver(1, &dns2);
-    ESP_LOGI(LOG_TAG, "DNS forced: 8.8.8.8 (slot 0)  1.1.1.1 (slot 1)");
+
+    ESP_LOGI(LOG_TAG, "STA promoted to default netif — DNS: 8.8.8.8 / 1.1.1.1");
 }
 
 static EventGroupHandle_t  s_evt_group       = NULL;
