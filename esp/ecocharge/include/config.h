@@ -113,7 +113,7 @@
 // ----------------------------------------------------------------------------
 // AI Backend Server
 // ----------------------------------------------------------------------------
-#define AI_SERVER_URL       "https://attorneys-assessment-band-clear.trycloudflare.com"
+#define AI_SERVER_URL       "https://broke-kills-clear-hostels.trycloudflare.com"
 #define AI_API_KEY          "SET_AT_BUILD_TIME"
 
 // ----------------------------------------------------------------------------
