@@ -162,6 +162,7 @@ enum CommandStatus {
   PENDING
   ACKED
   FAILED
+  EXPIRED
 }
 
 model DeviceTelemetry {

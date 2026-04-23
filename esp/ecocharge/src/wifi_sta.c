@@ -9,6 +9,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
+#include "lwip/ip4_addr.h"
+#include "lwip/dns.h"
 #include <string.h>
 
 // ============================================================================
@@ -60,6 +62,20 @@ static const char *_reason_str(uint8_t r)
     }
 }
 
+// ---------------------------------------------------------------------------
+// Force DNS at the lwIP stack level — bypasses all netif routing so queries
+// always reach real DNS servers regardless of which netif is active.
+// Called after every IP_EVENT_STA_GOT_IP (initial connect and reconnects).
+// ---------------------------------------------------------------------------
+static void _set_dns(void)
+{
+    ip_addr_t dns1 = IPADDR4_INIT_BYTES(8, 8, 8, 8);
+    ip_addr_t dns2 = IPADDR4_INIT_BYTES(1, 1, 1, 1);
+    dns_setserver(0, &dns1);
+    dns_setserver(1, &dns2);
+    ESP_LOGI(LOG_TAG, "DNS forced: 8.8.8.8 (slot 0)  1.1.1.1 (slot 1)");
+}
+
 static EventGroupHandle_t  s_evt_group       = NULL;
 static volatile int        s_connected       = 0;
 static volatile int        s_retry_count     = 0;
@@ -94,6 +110,7 @@ static void _reconnect_handler(void *arg, esp_event_base_t base,
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *ev = (ip_event_got_ip_t *)data;
         ESP_LOGI(LOG_TAG, "WiFi reconnected — IP: " IPSTR, IP2STR(&ev->ip_info.ip));
+        _set_dns();
         s_connected = 1;
     }
 }
@@ -125,6 +142,7 @@ static void _connect_handler(void *arg, esp_event_base_t base,
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *ev = (ip_event_got_ip_t *)data;
         ESP_LOGI(LOG_TAG, "Connected — IP: " IPSTR, IP2STR(&ev->ip_info.ip));
+        _set_dns();
         s_retry_count = 0;
         s_connected   = 1;
         xEventGroupSetBits(s_evt_group, WIFI_CONNECTED_BIT);
