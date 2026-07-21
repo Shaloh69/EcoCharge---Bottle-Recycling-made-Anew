@@ -1,270 +1,328 @@
 # EcoCharge — System Analysis
 
-**Last Updated:** 2026-04-10
-**Branch:** main
+**Last verified against code:** 2026-07-22 (branch `main`)
+
+Every claim in this document was checked against the actual source. Stale documentation from earlier revisions has been removed.
 
 ---
 
-## Executive Summary
+## 1. What Is EcoCharge?
 
-EcoCharge is an IoT-integrated smart kiosk system that incentivizes plastic bottle recycling by awarding phone-charging credits. Users scan a QR code to authenticate, deposit PET/HDPE bottles through an AI vision pipeline, earn credits, and spend them to charge their devices at one of four AC ports.
+**EcoCharge** is an IoT-integrated reverse-vending kiosk system (2026 thesis project). It incentivizes plastic bottle recycling by rewarding users with **phone-charging credits**:
 
-**Current State (April 2026):** System is functionally implemented and deployed to Render. Backend API, Kiosk Web, and Admin Console are live. ESP32 firmware is hardware-ready. AI server runs locally via Cloudflare Tunnel. End-to-end integration is in progress.
+1. A user walks up to the kiosk and authenticates on the touchscreen — either by scanning a QR code with the EcoCharge mobile app, or by tapping **Continue as Guest**.
+2. They place a PET bottle on the conveyor entrance. An ultrasonic sensor detects it, the conveyor nudges it under a camera, and an AI vision pipeline (YOLO detector + CNN classifier) identifies the bottle's brand, volume, and condition.
+3. If accepted, the conveyor drops the bottle into the bin; bin sensors confirm the drop and the server awards credits (1–3 per bottle, by volume tier).
+4. The user spends credits to charge their phone at one of **4 AC charging ports**, each switched by a relay and monitored for voltage/current.
 
----
-
-## Architecture
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                            CLIENTS                               │
-│                                                                  │
-│  Flutter App (mobile)   Kiosk Web (Next.js)   Admin Console     │
-│  - QR / credits         - Touch kiosk UI       (Next.js)        │
-│  - Auth / history       - Bottle deposit FSM   - Live dashboard  │
-│                         - Charging flow        - Analytics       │
-└────────────┬──────────────────────┬─────────────────────────────┘
-             │ REST + SSE           │ REST + SSE
-             ▼                      ▼
-┌──────────────────────────────────────────────────────────────────┐
-│               Node.js API Server (Express + Prisma)              │
-│  /api/auth  /api/users  /api/kiosk  /api/charging                │
-│  /api/devices  /api/admin                                        │
-│                     MySQL (Aiven, TLS)                           │
-└────────┬────────────────────────────────────┬────────────────────┘
-         │ HTTPS (Cloudflare Tunnel)          │ HTTPS poll
-         ▼                                    ▼
-   AI Server (FastAPI)                  ESP32 Kiosk
-   YOLOv8 + CNN                         FreeRTOS
-   /health, /scan                       Conveyor, Relays
-   Local PC                             INA219, Ultrasonic
-```
+**Why it exists:** to close the loop between plastic waste collection and a tangible, immediately useful reward (phone charging), in a self-contained kiosk suitable for public deployment in the Philippines.
 
 ---
 
-## Services & Deployment
+## 2. Components (all present and functional in the repo)
 
-| Service | Stack | Hosting | URL |
+| Component | Path | Stack | Role |
 |---|---|---|---|
-| API Server | Node.js 20 + Express + Prisma | Render | `ecocharge-api.onrender.com` |
-| Kiosk Web | Next.js 15 | Render | `ecocharge-vyu6.onrender.com` |
-| Admin Console | Next.js 15 | Render | Render (URL TBD) |
-| Database | MySQL 8 | Aiven | Private (TLS, `sslca=certs/ca.pem`) |
-| AI Server | FastAPI + YOLOv8 | Local PC + Cloudflare Tunnel | Tunnel URL (changes on restart — set named tunnel) |
+| **API Server** | `server/server_main/src/` | Node.js + Express + TypeScript + Prisma | Central backend: auth, sessions, deposits, credits, charging, device commands, SSE, admin |
+| **AI Server** | `server/server_AI/` | Python + FastAPI + PyTorch/Ultralytics | Two-stage bottle detection & classification |
+| **Kiosk Web** | `client/kiosk_web/` | Next.js 15 + HeroUI + Tailwind | Touchscreen UI on the kiosk (camera capture, deposit flow, charging flow) |
+| **Admin Console** | `client/web_console/` | Next.js 15 + HeroUI + Recharts | Admin dashboard: live telemetry, CRUD, analytics, remote control |
+| **Mobile App** | `client/flutter_app/` | Flutter (Dart SDK ^3.9) | Companion app: register/login, QR-link to kiosk, balances, history, stop charging |
+| **Kiosk Firmware** | `esp/ecocharge/` | ESP32, ESP-IDF via PlatformIO, FreeRTOS (v2.0.0) | Conveyor, relays, sensors, bottle FSM, WiFi provisioning portal |
+| **Sensor Bridge** | `esp/pico_sensors/` | Raspberry Pi Pico, Arduino core | Extra ADC channels the ESP32 lacks, streamed over UART |
+| **Training scripts** | `scripts/` | Python (Ultralytics, PyTorch) | `train_yolo.py`, `train_bottle_classifier.py`, dataset tooling; outputs in `runs/` |
+
+> **Legacy code still in the tree (not used at runtime):**
+> - `server/server_main/app/` — an abandoned Python/Flask prototype of the backend. The live server is the TypeScript one in `src/`.
+> - `client/flutter_app/lib/models/mock_data.dart` — early mock data; all screens now call the real API via `ApiService`.
+> - `POST /api/kiosk/deposits` — legacy instant-deposit endpoint, kept for backward compatibility; the kiosk uses the FSM flow (`/bottle/approve` + bin confirmation) instead.
 
 ---
 
-## Security Implementation
+## 3. Architecture
 
-### Authentication
+```
+┌───────────────────────────────────────────────────────────────────┐
+│                           CLIENTS                                 │
+│  Flutter App (mobile)   Kiosk Web (Next.js)    Admin Console      │
+│  - login/register       - idle → auth → session  (Next.js)        │
+│  - scan kiosk QR        - camera → AI detect     - live dashboard │
+│  - credits / history    - deposit FSM UI         - kiosk CRUD +   │
+│  - stop charging        - charging flow            remote control │
+└──────────┬────────────────────┬──────────────────────┬────────────┘
+           │ REST               │ REST + SSE           │ REST + SSE
+           ▼                    ▼                      ▼
+┌───────────────────────────────────────────────────────────────────┐
+│           Node.js API Server (Express + Prisma, on Render)        │
+│  /api/auth /api/users /api/kiosk /api/charging /api/devices       │
+│  /api/admin /health /api/log/ai-error                             │
+│                    MySQL 8 (Aiven, TLS)                           │
+│              Supabase Storage (profile avatars)                   │
+└──────┬─────────────────────────────────────────────┬──────────────┘
+       │ (kiosk web proxies /api/detect)             │ HTTPS poll every 2–5 s
+       ▼                                             ▼
+  AI Server (FastAPI)                          ESP32 Kiosk (FreeRTOS)
+  YOLO26 detector → EfficientNet-B0            conveyor (L298N), 4 relays,
+  multi-head classifier                        3× HC-SR04 ultrasonic,
+  X-Api-Key auth                               analog V/I sensing,
+  local PC + Cloudflare Tunnel,                Pico ADC bridge (UART),
+  or Docker/RunPod                             WiFi provisioning portal
+```
 
-| Layer | Method | Implementation |
+Key design point: the **ESP32 never receives inbound connections** from the cloud. It polls `GET /api/devices/commands` every 2 s and posts telemetry every 5 s, so it works behind NAT with no port forwarding. The kiosk browser talks to the AI server only through the Next.js server-side proxy (`/api/detect`), so the AI key never reaches the client.
+
+---
+
+## 4. Data Model (Prisma / MySQL)
+
+`server/server_main/prisma/schema.prisma`:
+
+- **User** — email/password (bcrypt), unique `qr_code`, `credit_balance`, `is_admin`, optional avatar URL (Supabase).
+- **Kiosk** — name, location, **unique `api_key`** (device auth), `status` (online/offline/error), `last_seen_at`.
+- **KioskSession** — a user's visit at a kiosk (`sessions` table).
+- **BottleDeposit** — brand/volume/condition/confidence from AI, `credits_awarded`, `status`: `pending_bin` → `confirmed` | `rejected`.
+- **CreditTransaction** — EARN/SPEND ledger with `balance_after` and reference (`bottle_deposit` / `charging_session`).
+- **ChargingSession** — port, credits used, computed `duration_seconds`, `watt_snapshot`, `status`: `active` / `completed` / `interrupted` / `error`.
+- **DeviceCommand** — queued commands for the ESP32; `status`: `PENDING` / `ACKED` / `FAILED` / `EXPIRED`.
+- **DeviceTelemetry** — port JSON blob + bin level, timestamped.
+- **SystemSetting** — key/value store for tunable economics (see §8).
+
+Migrations live in `prisma/migrations/` and are **auto-applied at server startup** (`src/startup.ts` runs `prisma migrate deploy` with self-healing for P3009/P3018 failure states). There is no manual migration step on Render.
+
+---
+
+## 5. Authentication & Security (as implemented)
+
+| Actor | Mechanism | Where |
 |---|---|---|
-| User / Admin | JWT (HS256) | Access token + refresh token via `/api/auth/login` and `/api/auth/refresh` |
-| Device (ESP32) | Static API key | Timing-safe compare via `crypto.timingSafeEqual` — prevents timing oracle attacks |
-| SSE (EventSource) | `?token=` query param | `EventSource` API cannot set custom headers; middleware reads both `Authorization` header and `?token=` |
+| User / Admin | JWT HS256 access token (default 4 h) + refresh token (default 30 d) via `/api/auth/login`, `/api/auth/refresh` | `src/routes/auth.ts` |
+| Guest kiosk user | `POST /api/auth/guest` issues a 4 h JWT for a shared `guest@kiosk.local` account and opens a KioskSession — the whole deposit flow works without registration | `src/routes/auth.ts` |
+| ESP32 device | **Per-kiosk API key** stored in the `kiosks` table, sent as Bearer token; `requireDeviceKey` looks it up in the DB | `src/middleware/deviceAuth.ts` |
+| Admin console | JWT in `sessionStorage` + value-less `admin_authed=1` cookie (SameSite=Strict); Next.js edge middleware gates `/dashboard/**` on the cookie; login page rejects non-`is_admin` accounts | `web_console/middleware.ts`, `lib/api.ts` |
 
-**Auth middleware (`src/middleware/auth.ts`):**
-- `requireAuth` — accepts Bearer header OR `?token=` query param
-- `requireAdmin` — extends requireAuth, checks `isAdmin` claim in JWT payload
-- `requireDeviceKey` — timing-safe key comparison, rejects on length mismatch
+- `requireAuth` accepts the token from the `Authorization` header **or** `?token=` query param (needed because `EventSource` cannot set headers).
+- `requireAdmin` = `requireAuth` + `isAdmin` claim check.
+- **CORS**: explicit `ALLOWED_ORIGINS` allowlist parsed from env at startup; rejected origins are logged with a `[CORS]` prefix. (Wildcard origin + credentials is spec-illegal and is not used.)
+- **Transport**: Aiven MySQL over TLS — `DATABASE_URL` must use `sslca=certs/ca.pem` (the hyphenated `ssl-ca` is silently ignored by mysql2). The CA cert is committed at `server/server_main/app/certs/ca.pem`.
+- AI server: `X-Api-Key` header auth (with `Authorization: Bearer` fallback), because Cloudflare tunnels can strip `Authorization` on multipart bodies.
 
-### CORS
+### Known security gaps (verified in code, worth fixing before defense)
 
-- `origin: '*'` combined with `credentials: true` is **rejected by browsers** (CORS spec §3.2) — any credentialed cross-origin request is blocked
-- Fixed: explicit `ALLOWED_ORIGINS` allowlist parsed from env var at startup
-- All deployed frontend URLs must be in `ALLOWED_ORIGINS` on Render
-
-```
-ALLOWED_ORIGINS=https://ecocharge-vyu6.onrender.com,https://your-console.onrender.com
-```
-
-After changing this env var: **manually trigger a redeploy** on the API service in Render.
-
-### Admin Console Auth
-
-- JWT stored in `sessionStorage` (cleared on tab close, not persisted to disk)
-- Companion cookie `admin_authed=1` set on login (value-less, SameSite=Strict) — allows Next.js edge middleware to gate `/dashboard/**` without accessing sessionStorage
-- Login page enforces `is_admin: true` before accepting — regular user accounts are rejected client-side
-- Logout clears both sessionStorage token and the cookie
-
-### Transport
-
-- Aiven MySQL requires TLS — `DATABASE_URL` uses `sslca=certs/ca.pem` (note: `ssl-ca` with hyphen is **ignored** by mysql2; correct param is `sslca`)
-- CA cert at `server/server_main/certs/ca.pem` — committed (removed from `.gitignore`)
+- **Kiosk read endpoints are unauthenticated**: `GET /api/kiosk/list`, `/:id/ports`, `/:id/sse`, and `/qr-status` require no token (the kiosk client sends `?token=` on SSE, but the server route never checks it).
+- **Secrets are committed to git**: the ESP32 `include/config.h` hardcodes the Render URL, device API key, and AI API key; `.env` files with live credentials exist in the tree.
+- Guest deposits accrue credits to a single pooled guest account (by design, but the balance is shared across all guests).
+- Device key comparison is a DB lookup, not a constant-time compare (the old `timingSafeEqual` static-key scheme was replaced by per-kiosk DB keys).
 
 ---
 
-## Data Flow — Bottle Deposit (FSM)
+## 6. The Bottle Deposit Flow (FSM, end to end)
+
+The ESP32 runs a five-state bottle FSM (`esp/ecocharge/src/bottle_fsm.c`):
+`IDLE → SCANNING → DROPPING → CONFIRMING → (IDLE)` with a `REJECTING` branch (conveyor reverses until the entrance clears).
 
 ```
-1.  User taps kiosk screen → opens kiosk web app
-2.  User scans QR from mobile app
-3.  Kiosk web: POST /api/kiosk/qr-link → creates KioskSession, stores token in memory map (5 min TTL)
-4.  Kiosk web: polls GET /api/kiosk/qr-status?token=... → returns JWT + session_id when matched
-5.  User places bottle on entrance sensor
-6.  ESP32 detects via ultrasonic → sends POST /api/devices/telemetry (bottle_at_entrance=true)
-7.  Kiosk web broadcasts image to AI server → POST /scan → {brand, volume_ml, condition, confidence}
-8.  Kiosk web: POST /api/kiosk/bottle/approve → creates BottleDeposit (status: pending_bin)
-    Server queues `approve_bottle` command for ESP32
-9.  ESP32 polls GET /api/devices/commands → receives approve_bottle → runs conveyor forward
-10. Bottle falls into bin → ultrasonic bin sensors confirm
-11. ESP32: POST /api/devices/telemetry (bottle_in_bin=true)
-12. Server: confirms deposit (status: confirmed) → awards credits → broadcasts SSE `bottleInBin`
-13. Kiosk UI shows credits awarded
-
-Timeout path:
-  If bottle_in_bin never fires → ESP32 sends fsm_state=confirming + bottle_in_bin=false
-  Server: marks deposit as rejected, credits=0 → broadcasts SSE confirmed=false
+ 1. Kiosk idle screen → user taps → /auth: shows QR (or "Continue as Guest")
+ 2a. QR path: phone app scans QR {kioskId, sessionToken} → POST /api/kiosk/qr-link
+     Kiosk polls GET /api/kiosk/qr-status?token=… every 2 s → receives JWT +
+     session_id when linked (pending map entry, 5 min TTL, single-use)
+ 2b. Guest path: POST /api/auth/guest → 4 h JWT + fresh session
+ 3. User places bottle → entrance ultrasonic (< 15 cm) → FSM enters SCANNING,
+    conveyor nudges the bottle every 2 s for fresh camera angles
+ 4. Kiosk web captures a camera frame (getUserMedia → canvas → JPEG blob)
+    → POST /api/detect (Next.js proxy) → AI server /api/detect
+    → { detected, confidence, brand, volume_ml, condition, … }
+ 5. Accept: POST /api/kiosk/bottle/approve → BottleDeposit(status=pending_bin),
+    server queues approve_bottle command
+    Reject: POST /api/kiosk/bottle/reject → queues reject_bottle → conveyor reverses
+ 6. ESP32 polls commands → approve_bottle → DROPPING (conveyor fast-forward)
+    → CONFIRMING (waits ≤ 8 s for a bin ultrasonic hit)
+ 7. ESP32 posts telemetry with bottle_in_bin=true
+    → server marks deposit confirmed, awards credits, writes EARN transaction,
+      broadcasts SSE {type:"bottleInBin", confirmed:true, credits_awarded}
+ 8. Timeout path: telemetry arrives with fsm_state=confirming, bottle_in_bin=false
+    → deposit marked rejected, credits zeroed, SSE confirmed:false
+ 9. Kiosk UI (session/bin page) shows the result; receipts at /receipt/credit
 ```
+
+Credits per bottle come from **SystemSettings tiers**: ≤ 350 mL → 1 credit, ≤ 500 mL → 2, larger → 3 (all editable from the admin console).
 
 ---
 
-## Data Flow — Charging Session
+## 7. The Charging Flow
 
 ```
-1. User selects port and credit amount in kiosk web
-2. POST /api/charging/start → checks port availability + credit balance
-   → deducts credits (spendCredits) → creates ChargingSession (status: active)
-   → queues `activate_port` command with duration_seconds
-3. ESP32 polls commands → activates SSR relay on selected port
-4. Auto-expiry: every telemetry POST checks elapsed time vs durationSeconds
-   → on expiry: session marked completed, `deactivate_port` queued
-5. User can stop early: POST /api/charging/stop/:id
-   → marks status: interrupted, queues `deactivate_port`
+1. Kiosk: user picks a port and credit amount → POST /api/charging/start
+2. Server checks: port not already active (409), balance sufficient (400)
+3. Duration = credits × energy_budget_wh_per_credit (5 Wh) ÷ measured port watts
+   (from latest telemetry snapshot); if no live V/I reading, falls back to
+   credits × base_minutes_per_credit (10 min). Hard cap: max_charging_seconds (3600).
+4. Credits deducted (SPEND transaction), ChargingSession(active) created,
+   activate_port command queued with duration_seconds
+5. ESP32 switches the port relay (active-low) — a safety task enforces a
+   3600 s max relay-on watchdog independently of the server
+6. Auto-expiry: on every telemetry POST the server checks elapsed vs duration
+   → marks completed + queues deactivate_port
+7. Early stop: POST /api/charging/stop/:id (from kiosk or phone app)
+   → status interrupted + deactivate_port
 ```
 
 ---
 
-## Real-Time (SSE)
+## 8. API Server — Full Endpoint Inventory
 
-| Endpoint | Consumer | Events |
-|---|---|---|
-| `GET /api/kiosk/:id/sse` | Kiosk web | `ports` (relay state, voltage/current), `bottleInBin` |
-| `GET /api/admin/sse` | Admin console | `telemetry` (all sensor data), `overview` (aggregate stats) |
+All verified in `server/server_main/src/routes/`.
 
-- Both endpoints require authentication via `?token=` query param
-- Telemetry POST from ESP32 triggers both broadcasts on every ping
-- SSE connect/disconnect events logged to console
+**Public / misc**
+- `GET /health` — liveness ping (also used by ESP32 to keep Render awake)
+- `POST /api/log/ai-error` — kiosk web relays AI failures here so they show up in Render logs
 
----
+**Auth** (`/api/auth`): `POST /login`, `POST /register`, `POST /guest`, `POST /refresh`
 
-## Server Logging
+**Users** (`/api/users`, JWT): `GET /me`, `GET /me/credits`, `GET /me/deposits`, `GET /me/transactions`, `POST /me/avatar` (multer → Supabase Storage bucket, returns public URL)
 
-All server endpoints emit structured console logs visible in Render log viewer:
+**Kiosk** (`/api/kiosk`): `POST /sessions`, `DELETE /sessions/:id`, `POST /deposits` (legacy), `POST /bottle/approve`, `POST /bottle/reject`, `POST /qr-link`, `GET /qr-status`, `GET /list`, `GET /:id/ports`, `GET /:id/sse`
 
-| Prefix | Covers |
-|---|---|
-| `[Auth]` | Login attempt/success/fail (with reason), register, refresh |
-| `[Device]` | Telemetry (FSM state, bin%, ports, bottle events), command poll, ACK |
-| `[Kiosk]` | Session create/end, deposit, bottle approve/reject, QR link/status, SSE connect |
-| `[Charging]` | Session start (credits, duration, wattage), stop (interrupted), port commands |
-| `[Admin]` | Overview fetch, settings update, SSE connect/disconnect |
-| `[CORS]` | Blocked origins (shows which URL is missing from allowlist) |
-| `[Error]` | All unhandled errors with HTTP status + stack trace for 500s |
+**Charging** (`/api/charging`, JWT): `POST /start`, `POST /stop/:id`, `GET /active`
 
----
+**Devices** (`/api/devices`, per-kiosk API key; every call marks the kiosk online):
+- `GET /commands` — pending commands, max 5 per poll; PENDING commands older than **5 minutes are auto-expired** so a rebooted ESP is never flooded with stale test commands
+- `POST /commands/:id/ack`
+- `POST /telemetry` — ports V/I/relay, bin %, ultrasonic distances, `bottle_at_entrance`, `bottle_in_bin`, `fsm_state`; drives deposit confirmation, charging auto-expiry, and both SSE broadcasts
 
-## AI Health Monitoring
+**Admin** (`/api/admin`, admin JWT):
+- `GET /overview`, `GET /sse` (live overview + telemetry stream)
+- Kiosks: `GET /kiosks`, `POST /kiosks` (generates the device API key), `PUT /kiosks/:id`, `DELETE /kiosks/:id`, `GET /kiosks/:id/telemetry/latest`
+- Remote control: `POST /kiosks/:id/command` (activate/deactivate_port, open/close/reverse_conveyor, approve/reject_bottle, ping), `GET /kiosks/:id/commands` (audit log), `DELETE /kiosks/:id/commands/pending` (cancel stale)
+- Data: `GET /sessions`, `GET /deposits`, `GET /charging`, `GET /transactions`, `GET /users` (paginated where large)
+- `GET /alerts` — kiosk offline > 2 min, bin ≥ 80 % (critical ≥ 95 %)
+- `GET /ml-review` — deposits with AI confidence below a threshold (default 0.70)
+- `GET /analytics?days=N` — daily kWh consumed, credits issued, cost/gain in PHP (uses `electricity_rate_php_per_kwh`)
+- `GET|PUT /settings` — the SystemSetting key/value store
 
-- Kiosk web polls `GET /api/health-ai` (Next.js proxy route) every **60 seconds**
-- Proxy calls AI server `GET /health` with 5s timeout, no auth
-- Console logs: `[AI Health] Ping sent →`, `[AI Health] Ping responded ← ONLINE/OFFLINE`
-- Monitor starts on mount, stops on unmount
+**Settings defaults** (`settingsService.ts`, 30 s cache): credit tiers (350 mL/1, 500 mL/2, else 3), `energy_budget_wh_per_credit=5`, `base_minutes_per_credit=10`, `max_charging_seconds=3600`, `electricity_rate_php_per_kwh=11.0`.
 
----
+**Real-time (SSE)** — `sseService.ts` keeps in-memory client lists:
+- `GET /api/kiosk/:id/sse` → `ports` events (per-port availability, V/I/W, remaining seconds, FSM state) + `bottleInBin` confirmations
+- `GET /api/admin/sse` → `overview` snapshot on connect, then `telemetry` on every device POST
 
-## Known Issues Resolved
-
-| Issue | Root Cause | Fix Applied |
-|---|---|---|
-| 500 ENOENT routes-manifest.json | Turbopack + Windows junction (`C:\` → `D:\`) creates triple-path string | Removed `--turbopack` from dev scripts; added `outputFileTracingRoot` to `next.config.js` |
-| CORS "Connection not Verified" | `origin: '*'` + `credentials: true` is spec-illegal — browsers reject ALL credentialed requests | Replaced with explicit `ALLOWED_ORIGINS` allowlist from env var |
-| DATABASE_URL SSL broken | `ssl-ca` (hyphen) is ignored by mysql2 URL parser | Changed to `sslca` (no hyphen) |
-| SSE auth broken | `requireAuth` only read `Authorization` header; `EventSource` cannot set headers | Middleware now also reads `?token=` query param |
-| Admin JWT XSS risk | `localStorage` persists tokens — accessible to any XSS script indefinitely | Changed to `sessionStorage` (clears on tab close) |
-| Kiosk animated BG overlapping content | `min-h-screen` inside `minHeight:100vh` parent causes double-stacking | Replaced with `flex:1` height chain; removed animated backgrounds and falling leaves |
-| No admin route protection | No `middleware.ts`; `/dashboard` accessible without login | Added Next.js edge middleware guarding `/dashboard/**` via session cookie |
-| Non-admin users accessing admin | Login page never checked `is_admin` | Added `is_admin` check; non-admins shown "Access denied" |
-| No admin logout | AdminSidebar had no logout button | Added Sign Out button that clears sessionStorage + cookie + redirects to `/login` |
-| Timing attack on device key | `===` string comparison leaks timing info | `crypto.timingSafeEqual` with length pre-check |
+**Structured logging** — every subsystem logs with a prefix (`[Auth]`, `[Device]`, `[Kiosk]`, `[Charging]`, `[Admin]`, `[CORS]`, `[AI]`, `[Migration]`, `[Request]`), designed to be self-contained in the Render log viewer. At startup the server also runs a two-step AI reachability + key check (`pingAIServer`).
 
 ---
 
-## Active Issues
+## 9. Kiosk Web (`client/kiosk_web`)
 
-| Issue | Status |
-|---|---|
-| CORS error on deployed kiosk | `ALLOWED_ORIGINS` set but API service may need **manual redeploy** on Render |
-| Admin console URL missing from `ALLOWED_ORIGINS` | Add console Render URL once deployed |
-| Cloudflare Tunnel quick tunnel URL changes on restart | Set up a **named tunnel** (`cloudflared tunnel create ecocharge`) |
-| `npx prisma migrate deploy` not yet run on Render | Run once after first deploy to apply all migrations |
-| `AI_KEY` in `kiosk_web/.env.local` may be placeholder | Update with actual AI server key |
+Next.js 15 App Router, HeroUI, framer-motion; state kept in `sessionStorage` (token/session/user).
+
+**Pages:** `/` (idle/attract screen) → `/auth` (QR code + guest button, 2 s QR-status polling) → `/auth/linking`, `/auth/linked` → `/session` (menu) → `/session/deposit` (live camera via `getUserMedia`, frame capture to JPEG, AI call, approve/reject) → `/session/bin` (waits for SSE bin confirmation) → `/session/credits`, `/session/charging` (port grid from SSE, start/stop) → `/session/result`, `/receipt/charge`, `/receipt/credit`, plus `/diag` (diagnostics).
+
+**Server-side proxy routes** (secrets stay server-side):
+- `POST /api/detect` — streams the multipart body through to `AI_URL/api/detect` with `X-Api-Key`, 12 s timeout; failures are relayed to the backend's `/api/log/ai-error`
+- `GET /api/health-ai` — AI health poll used by `useAiHealth` (every 60 s)
+- `GET /api/health-backend` — backend health
+
+On any 401 the API helper clears the session and redirects to `/auth`. `next.config.js` sets `outputFileTracingRoot` (Windows junction workaround); dev scripts do **not** use Turbopack.
 
 ---
 
-## Environment Variables
+## 10. Admin Console (`client/web_console`)
 
-### API Server
+Next.js 15, HeroUI, Recharts. Auth flow described in §5.
+
+**Dashboard pages** (all under `/dashboard`, cookie-gated by edge middleware): overview (live SSE stats), **kiosks** (CRUD, shows device API key) and **kiosk detail** (live telemetry, relay/conveyor/bottle remote controls, command audit log, cancel-pending), sessions, deposits, charging, credits (transaction ledger), users, **alerts**, **ml-review** (low-confidence deposits), **analytics** (kWh/credits/cost charts), settings (edit the SystemSetting economics).
+
+---
+
+## 11. ESP32 Firmware (`esp/ecocharge`, v2.0.0)
+
+PlatformIO project, `framework = espidf`, target `esp32dev`, huge_app partition (4 MB flash).
+
+**Hardware map** (`include/config.h`):
+- **Conveyor:** L298N H-bridge — IN1=19, IN2=23, ENA=18 (LEDC PWM 1 kHz)
+- **Relays:** 4 charging ports on GPIO 25/26/16/5, active-low, 3600 s max-on watchdog
+- **Ultrasonic (HC-SR04 ×3):** entrance (13/36), bin-top (14/39), bin-bottom (15/21); entrance threshold 15 cm, bin 20 cm; 5 V→3.3 V dividers on ECHO
+- **Power sensing:** SW1/SW3 current+voltage on ESP32 ADC1 (GPIO 33/35/32/34); SW4 current on ADC2 GPIO12 (unavailable while WiFi is up); **SW2 V/I and SW4 V come from the Pico** over UART2 (RX=17, TX=4, 115200)
+- **Status LED** GPIO27 with distinct blink patterns per state
+
+**FreeRTOS tasks** (priority): safety/watchdog (10), command poll (7), bottle FSM (6), httpd (5), sensors (4), telemetry (3).
+
+**WiFi provisioning:** credentials in NVS; if none (or connect fails) the ESP starts an AP `EcoCharge_Config` with a **captive portal** (`/generate_204` etc. redirects) serving a provisioning page with WiFi scan + signal strength UI. In station mode the same embedded web server (`web_server.c`) exposes a local test dashboard: `/` (status), `/test` (manual controls), `/api/status`, `/api/sse`, conveyor forward/reverse/stop/speed, relay on/off/all-off, `/api/wifi/scan`, `/api/selftest`, `/api/reboot`. A **hardware self-test** (`self_test.c`) exercises the Pico UART, motor, and sensors at boot.
+
+**Cloud loop:** poll commands every 2 s, POST telemetry every 5 s, `/health` ping every 4 min to keep the free Render instance awake.
+
+## Pico Sensor Bridge (`esp/pico_sensors`)
+
+Raspberry Pi Pico (Arduino/earlephilhower core). Reads three 12-bit ADC channels — SW2 voltage (GP26), SW2 current (GP27), SW4 voltage (GP28) — and prints `SW2V,SW2I,SW4V\n` raw values over UART0 to the ESP32 every 500 ms. The ESP32 applies calibration formulas. Exists because the ESP32 runs out of usable ADC pins once WiFi claims ADC2.
+
+---
+
+## 12. AI Server (`server/server_AI`)
+
+FastAPI app (`app/main.py`) with request logging and `X-Api-Key` auth.
+
+- `GET /health` — no auth, used by kiosk health poll and backend startup check
+- `POST /api/detect` — multipart image → JSON
+
+**Two-stage pipeline** (`app/inference.py`):
+1. **YOLO26 detector** (`models/best_detector.pt`, conf threshold 0.40, env-overridable) finds the bottle; highest-confidence box wins.
+2. Crop (+5 px pad) → **`BottleAttributeNet`**: EfficientNet-B0 backbone with three heads — **brand**, **volume_ml**, **condition** (perfect/imperfect) — each with softmax confidence. Label maps ship inside the checkpoint (`models/best_classifier.pt`).
+
+Response: `{detected, confidence, bounding_box, brand, brand_confidence, volume_ml, volume_confidence, condition, condition_confidence}`.
+
+**Hosting:** runs on a local PC (`start.bat`, `.venv`) exposed through a Cloudflare Tunnel, or as a Docker container (Dockerfile targets RunPod). GPU used when available, CPU fallback. Quick tunnels get a new URL on every restart — `AI_URL`/`AI_SERVER_URL` env values must be updated, or a named tunnel set up (`cloudflared tunnel create ecocharge`).
+
+**Training** (`scripts/`, see `SELF_HOSTING.md` for the full guide): Roboflow-annotated dataset in `scripts/dataset/`, `train_yolo.py` and `train_bottle_classifier.py`, outputs in `runs/detect/` and `runs/classifier/`.
+
+---
+
+## 13. Mobile App (`client/flutter_app`)
+
+Flutter app talking to the real API (`ApiService`, base URL via `--dart-define=API_BASE_URL`, default `https://ecocharge-api.onrender.com`). Token persisted with `shared_preferences`.
+
+**Screens:** splash/onboarding → login/register → home (balance, recent activity, kiosk list) → **scan kiosk QR** (`mobile_scanner`; parses the kiosk's QR and calls `POST /api/kiosk/qr-link`) → credit balance + transactions, deposit history, charging (view/stop active session), profile (avatar upload, logout).
+
+---
+
+## 14. Environment Variables
+
+### API Server (`src/config.ts`, zod-validated with defaults)
 
 | Variable | Required | Notes |
 |---|---|---|
-| `DATABASE_URL` | Yes | MySQL + `sslca=certs/ca.pem` |
-| `JWT_SECRET` | Yes | Strong random string |
-| `JWT_EXPIRES_IN` | Yes | e.g. `15m` |
-| `JWT_REFRESH_EXPIRES_IN` | Yes | e.g. `7d` |
-| `DEVICE_API_KEY` | Yes | Must match ESP32 firmware |
-| `ALLOWED_ORIGINS` | Yes | Comma-separated frontend URLs |
-| `PORT` | No | Default 3000 |
+| `DATABASE_URL` | **Yes** (only var with no default) | MySQL URL ending `?sslca=certs/ca.pem` |
+| `JWT_SECRET` | Prod | default `dev-jwt-secret` |
+| `JWT_EXPIRES_IN` / `JWT_REFRESH_EXPIRES_IN` | No | defaults `4h` / `30d` |
+| `ALLOWED_ORIGINS` | Prod | comma-separated frontend URLs; **redeploy API after changing** |
+| `AI_SERVER_URL`, `AI_API_KEY` | No | used only for the startup AI health/auth check |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_BUCKET` | For avatars | avatar upload returns 503 if unset |
+| `PORT` | No | default 3001 |
+
+Note: `DEVICE_API_KEY` still appears in `config.ts` but is **unused** — device auth is the per-kiosk key stored in the `kiosks` table (generated by admin kiosk creation).
 
 ### Kiosk Web
-
-| Variable | Required | Notes |
-|---|---|---|
-| `NEXT_PUBLIC_API_URL` | Yes | API server base URL |
-| `NEXT_PUBLIC_KIOSK_ID` | Yes | Kiosk ID for this device |
-| `AI_URL` | Yes | AI server base URL (server-side only) |
-| `AI_KEY` | Yes | AI server API key (server-side only) |
+`NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_KIOSK_ID`, `AI_URL` (server-side), `AI_KEY` (server-side).
 
 ### Admin Console
+`NEXT_PUBLIC_API_URL`.
 
-| Variable | Required | Notes |
-|---|---|---|
-| `NEXT_PUBLIC_API_URL` | Yes | API server base URL |
-
----
-
-## Deployment Checklist (Render)
-
-- [ ] Set `ALLOWED_ORIGINS` to include ALL deployed frontend URLs
-- [ ] Trigger manual redeploy of API after env var changes
-- [ ] Set `DATABASE_URL` with `sslca=` (not `ssl-ca=`)
-- [ ] Confirm `certs/ca.pem` is committed and not in `.gitignore`
-- [ ] Run `npx prisma migrate deploy` after first deploy
-- [ ] Set `DEVICE_API_KEY` matching ESP32 firmware
-- [ ] Set `JWT_SECRET` to a strong random value
-- [ ] Set up named Cloudflare tunnel (not quick tunnel)
-- [ ] Update `NEXT_PUBLIC_API_URL` in kiosk web and admin console to actual Render API URL
-- [ ] Add admin console Render URL to `ALLOWED_ORIGINS` once deployed
+### ESP32
+No env — `RENDER_BASE_URL`, `DEVICE_API_KEY`, `KIOSK_ID`, `AI_SERVER_URL`, `AI_API_KEY`, WiFi fallbacks are compile-time defines in `include/config.h`; WiFi credentials are set at runtime via the provisioning portal (NVS).
 
 ---
 
-## Directory Structure
+## 15. Deployment Picture & Open Issues
 
-```
-EcoCharge/
-├── client/
-│   ├── flutter_app/       # Flutter mobile companion app
-│   ├── kiosk_web/         # Next.js 15 kiosk touchscreen UI
-│   └── web_console/       # Next.js 15 admin dashboard
-├── esp/
-│   └── ecocharge/         # ESP32 FreeRTOS firmware (ESP-IDF 5.5)
-├── server/
-│   ├── server_main/       # Node.js API (Express + Prisma + MySQL)
-│   └── server_AI/         # FastAPI AI inference (YOLOv8 + CNN)
-├── runs/
-│   ├── classifier/        # Trained CNN checkpoints
-│   └── detect/            # YOLO training outputs
-└── scripts/
-    └── dataset/           # Annotated bottle dataset (Roboflow)
-```
+| Service | Hosting |
+|---|---|
+| API server | Render (Node), auto-migrates on boot |
+| Kiosk web / Admin console | Render (Next.js) |
+| MySQL | Aiven (TLS) |
+| AI server | Local PC + Cloudflare Tunnel (or Docker/RunPod) |
+| Avatar storage | Supabase Storage |
+
+**Currently observable issues (as of 2026-07-22):**
+
+1. **Inconsistent backend URLs across clients** — the firmware points at `ecocharge-server-j7u7.onrender.com`, the kiosk web `.env.local` at `ecocharge-server.onrender.com`, and the Flutter default + console at `ecocharge-api.onrender.com`. At most one of these is the live service; the others will fail. Align all four.
+2. **Quick-tunnel AI URLs** (`*.trycloudflare.com`) rotate on every restart; kiosk `.env.local` and firmware `config.h` each embed one. Use a named Cloudflare tunnel.
+3. **Secrets committed to git** — firmware `config.h` (device + AI keys), `.env` files with live DB credentials. Rotate and move to untracked config before publishing the repo.
+4. **Unauthenticated kiosk read endpoints** (see §5).
+5. **Legacy Flask `server_main/app/` tree** and `dist/` build output are still committed — dead weight, candidates for deletion.

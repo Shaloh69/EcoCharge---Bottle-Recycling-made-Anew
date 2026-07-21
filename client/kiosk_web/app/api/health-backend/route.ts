@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
-// GET /api/health-backend — pings the main Render backend
+// GET /api/health-backend — pings the main backend's public /health endpoint
+// (kiosk/list now requires auth, so it can no longer serve as the probe)
 export async function GET() {
   if (!API_URL) {
     return NextResponse.json(
@@ -12,7 +13,7 @@ export async function GET() {
   }
 
   try {
-    const res = await fetch(`${API_URL}/api/kiosk/list`, {
+    const res = await fetch(`${API_URL}/health`, {
       signal: AbortSignal.timeout(7_000),
       cache: "no-store",
     });

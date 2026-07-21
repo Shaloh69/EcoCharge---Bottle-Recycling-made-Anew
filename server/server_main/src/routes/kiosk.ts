@@ -259,6 +259,20 @@ router.post(
         return;
       }
 
+      // Bin-full cutoff: refuse new deposits once the bin hits the critical
+      // alert threshold, instead of jamming a drop into a full bin.
+      const latestTelemetry = await prisma.deviceTelemetry.findFirst({
+        where: { kioskId: session.kioskId },
+        orderBy: { timestamp: "desc" },
+      });
+      if (latestTelemetry?.binLevel != null && latestTelemetry.binLevel >= 95) {
+        log.kioskWarn(
+          `Bottle approve refused — kiosk #${session.kioskId} bin at ${latestTelemetry.binLevel}%`,
+        );
+        res.status(409).json({ error: "bin_full" });
+        return;
+      }
+
       const creditsAwarded = body.volume_ml
         ? await creditsForVolume(body.volume_ml)
         : 0;
@@ -450,6 +464,7 @@ router.get(
 // GET /list
 router.get(
   "/list",
+  requireAuth,
   async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const kiosks = await prisma.kiosk.findMany({ orderBy: { name: "asc" } });
@@ -472,6 +487,7 @@ router.get(
 // GET /:id/ports
 router.get(
   "/:id/ports",
+  requireAuth,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const kioskId = parseInt(req.params.id);
@@ -487,9 +503,10 @@ router.get(
   },
 );
 
-// GET /:id/sse
+// GET /:id/sse — auth via ?token= (EventSource cannot set headers)
 router.get(
   "/:id/sse",
+  requireAuth,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const kioskId = parseInt(req.params.id);
