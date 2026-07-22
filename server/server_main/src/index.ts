@@ -11,8 +11,13 @@ import chargingRouter from "./routes/charging";
 import devicesRouter from "./routes/devices";
 import adminRouter from "./routes/admin";
 import { runMigrations } from "./startup";
+import { startStaleSessionSweep } from "./services/chargingService";
 
 const app = express();
+
+// Behind Cloudflare Tunnel / Render, the client IP arrives via X-Forwarded-For;
+// required for req.ip to be meaningful in the guest rate limiter.
+app.set("trust proxy", 1);
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 const allowedOrigins = config.ALLOWED_ORIGINS.split(",")
@@ -105,7 +110,10 @@ app.listen(config.PORT, () => {
 });
 
 runMigrations()
-  .then(() => log.startup("Ready ✔"))
+  .then(() => {
+    startStaleSessionSweep();
+    log.startup("Ready ✔");
+  })
   .catch((err) => {
     log.error("Startup", `Fatal error: ${err}`);
     process.exit(1);

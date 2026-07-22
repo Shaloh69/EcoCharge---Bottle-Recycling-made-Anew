@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import prisma from "../prisma";
 import { requireAuth } from "../middleware/auth";
+import { guestActionAllowed } from "../middleware/rateLimit";
 import { config } from "../config";
 import { creditsForVolume, awardCredits } from "../services/creditService";
 import { queueCommand } from "../services/commandService";
@@ -242,6 +243,13 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const body = bottleApproveSchema.parse(req.body);
+
+      if (!(await guestActionAllowed(req.userId!, req.ip ?? "?"))) {
+        log.kioskWarn(`Bottle approve refused — guest rate limit, ip=${req.ip}`);
+        res.status(429).json({ error: "too many requests, try again later" });
+        return;
+      }
+
       log.kiosk(
         `[Stage 4] Bottle APPROVE received — user #${req.userId} session #${body.session_id} ` +
           `brand=${body.brand ?? "?"} vol=${body.volume_ml ?? "?"}mL ` +

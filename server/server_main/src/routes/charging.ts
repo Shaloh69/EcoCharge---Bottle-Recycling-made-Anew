@@ -2,6 +2,7 @@ import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import prisma from "../prisma";
 import { requireAuth } from "../middleware/auth";
+import { guestActionAllowed } from "../middleware/rateLimit";
 import { spendCredits } from "../services/creditService";
 import { queueCommand } from "../services/commandService";
 import { calcDurationSeconds } from "../services/chargingService";
@@ -52,6 +53,12 @@ router.post(
       log.charging(
         `START — user #${req.userId} → kiosk #${body.kiosk_id} port #${body.port_number} credits=${body.credits}`,
       );
+
+      if (!(await guestActionAllowed(req.userId!, req.ip ?? "?"))) {
+        log.chargingWarn(`START refused — guest rate limit, ip=${req.ip}`);
+        res.status(429).json({ error: "too many requests, try again later" });
+        return;
+      }
 
       const activeOnPort = await prisma.chargingSession.findFirst({
         where: {

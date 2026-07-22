@@ -5,6 +5,7 @@ import crypto from "crypto";
 import { z } from "zod";
 import prisma from "../prisma";
 import { config } from "../config";
+import { guestSessionRateLimit } from "../middleware/rateLimit";
 import { log } from "../logger";
 import { User } from "@prisma/client";
 
@@ -136,6 +137,7 @@ const guestSchema = z.object({
 
 router.post(
   "/guest",
+  guestSessionRateLimit,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const body = guestSchema.parse(req.body);

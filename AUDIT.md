@@ -88,6 +88,60 @@ Findings: **2 Critical, 4 High, 6 Medium, 4 Low.** Section 4 inventory (Knip on 
 
 ---
 
+## Firmware fix proposals — exact values, awaiting review before any flash
+
+Grounded in the hardware description from `ECOCHARGE_KIOSK_HARDWARE_CLARIFICATIONS` §2.
+The design principle preserved in both: every stage's claimed outcome is verified by
+its own independent sensor — neither fix trusts a single reading or a prior stage.
+
+### Proposal A — SCANNING timeout (fixes High: "conveyor can nudge forever")
+
+**Change (`config.h` + `bottle_fsm.c` SCANNING case):**
+
+| Define | Value | Justification |
+|---|---|---|
+| `BOTTLE_SCAN_TIMEOUT_MS` | `60000` (60 s) | One kiosk AI attempt is bounded at ~12 s (the `/api/detect` proxy timeout) + capture overhead; 60 s covers ≥4 full worst-case AI attempts plus `COMMAND_POLL_MS` (2 s) command latency. At the 2 s nudge interval that is ≤30 nudges — bounded wear instead of unbounded. |
+
+**Behavior on timeout:** transition to `REJECTING` (conveyor reverses until the
+entrance sensor clears — the existing 10 s `REJECTING` safety cap already bounds
+that state), so an unreadable/foreign object is physically returned rather than
+held. Set a `scan_timed_out` flag reported once via telemetry so the kiosk UI can
+show "we couldn't read your bottle — please take it back and try again" instead
+of a silent reset. This also closes the adjacent hole where a bottle inserted with
+no active session nudges forever.
+
+### Proposal B — CONFIRMING bin-sensor re-check (fixes High: "one missed reading = reject")
+
+**Today:** the 8 s `DROPPING` timeout latches `s_bin_confirmed=false`, and
+`CONFIRMING` never re-samples the sensor during its ~5.5 s wait — a sensor
+timing glitch is indistinguishable from "bottle never dropped."
+
+**Change (`config.h` + `bottle_fsm.c` DROPPING timeout path + CONFIRMING case):**
+
+| Define | Value | Justification |
+|---|---|---|
+| `BOTTLE_BIN_RECHECK_MS` | `4000` (4 s) | Active re-check window inside `CONFIRMING` before the verdict is final. Total worst case stays ~12.5 s (8 s drop + 4 s re-check + telemetry pickup), inside the kiosk bin-wait UX budget. |
+| `BOTTLE_BIN_CONFIRM_SAMPLES` | `3` consecutive positives | The sensor task refreshes readings every `SENSOR_SAMPLE_MS` (500 ms); 3 consecutive positives ≈ 1.5 s of sustained detection — debounces a single spurious echo in *both* directions (won't false-confirm on one stray reading either). |
+
+**Behavior:** (1) on the `DROPPING` timeout, take one immediate fresh
+`ultrasonic_bottle_in_bin()` reading before latching anything; (2) during
+`CONFIRMING`, keep sampling each 100 ms FSM tick for up to
+`BOTTLE_BIN_RECHECK_MS`, flipping `s_bin_confirmed=true` if the
+consecutive-sample threshold is met — a late-arriving bottle is then credited
+normally instead of falsely rejected. If the window expires with no sustained
+detection, report `bottle_in_bin=false` exactly as today (the server-side
+reject path is unchanged).
+
+**Not changed:** relay/charging behavior (untouched by both proposals), the
+server's confirm/reject logic, and the telemetry contract (`fsm_state` string
+values stay the same; only `scan_timed_out` is additive).
+
+**Flash plan once you approve the values:** implement both in `bottle_fsm.c`
+/`config.h`, bench-test with the conveyor unloaded, then combine the flash
+with the pending key-rotation reflash so hardware is only opened once.
+
+---
+
 ## Blocked / needs your review (explicit, per section 8's closing requirement)
 
 1. **Section 1 — entire self-hosting migration:** the target machine `desktop-gklhcri` does not match this machine (`MINNIEDUMPOR`) and is not visible in the tailnet (`minniedumpor`, `formlab3b` only). Also, external steps (dpdns.org registration, Cloudflare zone + tunnel, MySQL install, NSSM services) need to run on the real target. **Which machine is the target?**
