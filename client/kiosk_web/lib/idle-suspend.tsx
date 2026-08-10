@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 /**
  * Lets any page tell KioskRoot "don't idle-timeout right now" — the real
@@ -17,7 +24,11 @@ interface IdleSuspendContextValue {
 
 const IdleSuspendContext = createContext<IdleSuspendContextValue | null>(null);
 
-export function IdleSuspendProvider({ children }: { children: React.ReactNode }) {
+export function IdleSuspendProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   // A Set of active suspend-request IDs, not a single boolean — so two
   // independent callers (e.g. a future second "don't idle" reason) can't
   // clobber each other by both writing the same flag.
@@ -26,14 +37,18 @@ export function IdleSuspendProvider({ children }: { children: React.ReactNode })
   const setSuspended = useCallback((id: string, value: boolean) => {
     setReasons((prev) => {
       const next = new Set(prev);
+
       if (value) next.add(id);
       else next.delete(id);
+
       return next;
     });
   }, []);
 
   return (
-    <IdleSuspendContext.Provider value={{ suspended: reasons.size > 0, setSuspended }}>
+    <IdleSuspendContext.Provider
+      value={{ suspended: reasons.size > 0, setSuspended }}
+    >
       {children}
     </IdleSuspendContext.Provider>
   );
@@ -41,7 +56,12 @@ export function IdleSuspendProvider({ children }: { children: React.ReactNode })
 
 export function useIdleSuspendState() {
   const ctx = useContext(IdleSuspendContext);
-  if (!ctx) throw new Error("useIdleSuspendState must be used within IdleSuspendProvider");
+
+  if (!ctx)
+    throw new Error(
+      "useIdleSuspendState must be used within IdleSuspendProvider",
+    );
+
   return ctx.suspended;
 }
 
@@ -59,6 +79,7 @@ export function useSuspendIdle(active: boolean, id = "default") {
   useEffect(() => {
     if (!ctx) return;
     ctx.setSuspended(idRef.current, active);
+
     return () => ctx.setSuspended(idRef.current, false);
   }, [ctx, active]);
 }

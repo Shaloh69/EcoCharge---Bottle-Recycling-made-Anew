@@ -12,16 +12,16 @@ export default function SplashPage() {
 
   return (
     <motion.div
+      animate="animate"
       className="flex flex-col flex-1 px-8 py-12"
       initial="initial"
-      animate="animate"
       transition={{ staggerChildren: 0.1 }}
     >
       {/* Logo */}
       <motion.div
         className="flex items-center gap-3"
-        variants={item}
         transition={{ duration: 0.3 }}
+        variants={item}
       >
         <span className="text-4xl">🌿</span>
         <div>
@@ -39,8 +39,8 @@ export default function SplashPage() {
         {/* Mascot orb */}
         <motion.div
           className="relative"
-          variants={item}
           transition={{ duration: 0.4, type: "spring", bounce: 0.4 }}
+          variants={item}
         >
           <div
             className="w-52 h-52 rounded-full flex items-center justify-center text-8xl pulse-glow"
@@ -64,7 +64,7 @@ export default function SplashPage() {
         </motion.div>
 
         {/* Headline */}
-        <motion.div variants={item} transition={{ duration: 0.3 }}>
+        <motion.div transition={{ duration: 0.3 }} variants={item}>
           <h1 className="text-white text-5xl font-extrabold tracking-tight leading-tight">
             Recycle.
             <br />
@@ -80,8 +80,8 @@ export default function SplashPage() {
         {/* Stats */}
         <motion.div
           className="flex gap-3 w-full"
-          variants={item}
           transition={{ duration: 0.3 }}
+          variants={item}
         >
           {[
             { icon: "🍶", label: "Accepted", value: "PET · HDPE" },
@@ -105,8 +105,8 @@ export default function SplashPage() {
       {/* CTA */}
       <motion.div
         className="pb-2 flex flex-col gap-3"
-        variants={item}
         transition={{ duration: 0.3 }}
+        variants={item}
       >
         <button
           className="glass-btn-primary w-full py-6 rounded-3xl font-extrabold text-2xl tracking-tight transition-all active:scale-95"

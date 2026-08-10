@@ -67,8 +67,10 @@ export default function AuthPage() {
       setTimeLeft((t) => {
         if (t <= 1) {
           clearInterval(timer);
+
           return 120;
         }
+
         return t - 1;
       });
     }, 1000);
@@ -83,6 +85,7 @@ export default function AuthPage() {
     try {
       const kioskId = parseInt(KIOSK_ID);
       const data = await auth.guest(kioskId);
+
       token.set(data.access_token);
       session.set(String(data.session_id));
       userStore.set(data.user);
@@ -104,19 +107,19 @@ export default function AuthPage() {
       <KioskHeader />
 
       <motion.div
+        animate="animate"
         className="flex-1 flex flex-col items-center px-8 py-8 gap-6"
         initial="initial"
-        animate="animate"
         transition={{ staggerChildren: 0.09 }}
       >
-        <motion.div variants={item} transition={{ duration: 0.3 }}>
+        <motion.div transition={{ duration: 0.3 }} variants={item}>
           <MascotAvatar mood="idle" />
         </motion.div>
 
         <motion.div
           className="text-center"
-          variants={item}
           transition={{ duration: 0.3 }}
+          variants={item}
         >
           <h2 className="text-white text-4xl font-extrabold tracking-tight">
             Link your App
@@ -129,8 +132,8 @@ export default function AuthPage() {
         {/* QR card */}
         <motion.div
           className="glass-white rounded-3xl p-7 flex flex-col items-center gap-4 w-full shadow-2xl"
-          variants={item}
           transition={{ duration: 0.35, type: "spring", bounce: 0.25 }}
+          variants={item}
         >
           <div
             className="rounded-2xl overflow-hidden p-3"
@@ -148,8 +151,8 @@ export default function AuthPage() {
 
         <motion.p
           className="text-white/55 text-center text-sm max-w-xs leading-relaxed"
-          variants={item}
           transition={{ duration: 0.3 }}
+          variants={item}
         >
           Open EcoCharge and tap{" "}
           <span className="text-white font-semibold">
@@ -160,10 +163,10 @@ export default function AuthPage() {
 
         {/* Guest button */}
         <motion.button
-          disabled={guestLoading}
           className={`glass-btn-secondary w-full py-5 rounded-2xl text-xl font-semibold transition-all active:scale-95 ${guestLoading ? "opacity-50" : ""}`}
-          variants={item}
+          disabled={guestLoading}
           transition={{ duration: 0.3 }}
+          variants={item}
           onClick={handleGuest}
         >
           {guestLoading ? "Please wait…" : "Continue as Guest"}

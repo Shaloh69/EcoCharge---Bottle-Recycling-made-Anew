@@ -4,8 +4,8 @@ import { useAiHealth } from "@/hooks/useAiHealth";
 
 const AI_DOT_COLOR: Record<string, string> = {
   checking: "#555555",
-  online:   "#4caf50",
-  offline:  "#f44336",
+  online: "#4caf50",
+  offline: "#f44336",
 };
 
 export function KioskHeader({
@@ -36,10 +36,28 @@ export function KioskHeader({
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <span style={{ fontSize: 22 }}>🌿</span>
         <div>
-          <p style={{ color: "#fff", fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1, margin: 0 }}>
+          <p
+            style={{
+              color: "#fff",
+              fontSize: 17,
+              fontWeight: 800,
+              letterSpacing: "-0.02em",
+              lineHeight: 1,
+              margin: 0,
+            }}
+          >
             EcoCharge
           </p>
-          <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", margin: 0, marginTop: 2 }}>
+          <p
+            style={{
+              color: "rgba(255,255,255,0.35)",
+              fontSize: 9,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              margin: 0,
+              marginTop: 2,
+            }}
+          >
             Kiosk Station
           </p>
         </div>
@@ -56,15 +74,23 @@ export function KioskHeader({
               height: 7,
               borderRadius: "50%",
               background: AI_DOT_COLOR[aiStatus],
-              boxShadow: aiStatus === "online"
-                ? "0 0 5px rgba(76,175,80,0.8)"
-                : aiStatus === "offline"
-                ? "0 0 5px rgba(244,67,54,0.8)"
-                : "none",
+              boxShadow:
+                aiStatus === "online"
+                  ? "0 0 5px rgba(76,175,80,0.8)"
+                  : aiStatus === "offline"
+                    ? "0 0 5px rgba(244,67,54,0.8)"
+                    : "none",
               transition: "background 0.4s, box-shadow 0.4s",
             }}
           />
-          <span style={{ color: "rgba(255,255,255,0.30)", fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+          <span
+            style={{
+              color: "rgba(255,255,255,0.30)",
+              fontSize: 9,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+            }}
+          >
             AI
           </span>
         </div>

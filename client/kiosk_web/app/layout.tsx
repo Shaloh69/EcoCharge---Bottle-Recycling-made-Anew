@@ -4,6 +4,7 @@ import { Metadata, Viewport } from "next";
 import clsx from "clsx";
 
 import { Providers } from "./providers";
+
 import { KioskRoot } from "@/components/kiosk/KioskRoot";
 import { fontDisplay, fontMono, fontSans } from "@/config/fonts";
 

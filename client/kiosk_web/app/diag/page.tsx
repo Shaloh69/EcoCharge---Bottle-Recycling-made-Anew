@@ -33,12 +33,17 @@ export default function DiagPage() {
   const runChecks = useCallback(async () => {
     setRunning(true);
     setResults(
-      CHECKS.map((c) => ({ label: c.label, status: "checking", detail: "Testing…" })),
+      CHECKS.map((c) => ({
+        label: c.label,
+        status: "checking",
+        detail: "Testing…",
+      })),
     );
 
     const next = await Promise.all(
       CHECKS.map(async (c) => {
         const start = Date.now();
+
         try {
           const res = await fetch(c.endpoint, { cache: "no-store" });
           const ms = Date.now() - start;
@@ -52,8 +57,8 @@ export default function DiagPage() {
             };
           }
 
-          const extra =
-            data.model ? ` · model: ${data.model}` : "";
+          const extra = data.model ? ` · model: ${data.model}` : "";
+
           return {
             label: c.label,
             status: "ok" as Status,
@@ -73,36 +78,36 @@ export default function DiagPage() {
     setRunning(false);
   }, []);
 
-  const allOk  = results.every((r) => r.status === "ok");
+  const allOk = results.every((r) => r.status === "ok");
   const anyFail = results.some((r) => r.status === "fail");
   const anyIdle = results.every((r) => r.status === "idle");
 
   const statusIcon: Record<Status, string> = {
-    idle:     "○",
+    idle: "○",
     checking: "◌",
-    ok:       "✓",
-    fail:     "✗",
+    ok: "✓",
+    fail: "✗",
   };
 
   const statusColor: Record<Status, string> = {
-    idle:     "rgba(255,255,255,0.2)",
+    idle: "rgba(255,255,255,0.2)",
     checking: "rgba(250,204,21,0.3)",
-    ok:       "rgba(74,222,128,0.25)",
-    fail:     "rgba(248,113,113,0.25)",
+    ok: "rgba(74,222,128,0.25)",
+    fail: "rgba(248,113,113,0.25)",
   };
 
   const statusBorder: Record<Status, string> = {
-    idle:     "rgba(255,255,255,0.1)",
+    idle: "rgba(255,255,255,0.1)",
     checking: "rgba(250,204,21,0.4)",
-    ok:       "rgba(74,222,128,0.45)",
-    fail:     "rgba(248,113,113,0.45)",
+    ok: "rgba(74,222,128,0.45)",
+    fail: "rgba(248,113,113,0.45)",
   };
 
   const statusText: Record<Status, string> = {
-    idle:     "text-white/40",
+    idle: "text-white/40",
     checking: "text-yellow-300",
-    ok:       "text-green-400",
-    fail:     "text-red-400",
+    ok: "text-green-400",
+    fail: "text-red-400",
   };
 
   return (
@@ -190,10 +195,10 @@ export default function DiagPage() {
       {/* Run button */}
       <div className="pt-6 pb-2 flex flex-col gap-3">
         <button
-          disabled={running}
           className={`glass-btn-primary w-full py-5 rounded-3xl font-extrabold text-lg transition-all active:scale-95 ${
             running ? "opacity-50 cursor-not-allowed" : ""
           }`}
+          disabled={running}
           onClick={runChecks}
         >
           {running ? "Testing…" : anyIdle ? "Run Connection Test" : "Run Again"}

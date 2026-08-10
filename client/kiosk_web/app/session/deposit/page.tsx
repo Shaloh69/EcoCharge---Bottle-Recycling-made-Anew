@@ -105,7 +105,8 @@ function DepositContent() {
 
     return new Promise<Blob>((resolve, reject) =>
       canvas.toBlob(
-        (b) => (b ? resolve(b) : reject(new Error("Canvas toBlob returned null"))),
+        (b) =>
+          b ? resolve(b) : reject(new Error("Canvas toBlob returned null")),
         "image/jpeg",
         0.9,
       ),
@@ -118,23 +119,29 @@ function DepositContent() {
   const sharpnessScore = useCallback((blob: Blob): Promise<number> => {
     return new Promise((resolve) => {
       const img = new Image();
+
       img.onload = () => {
         const w = 160;
         const h = Math.round((img.height / img.width) * w) || 90;
         const c = document.createElement("canvas");
+
         c.width = w;
         c.height = h;
         const ctx = c.getContext("2d")!;
+
         ctx.drawImage(img, 0, 0, w, h);
         const gray = new Float32Array(w * h);
         const { data } = ctx.getImageData(0, 0, w, h);
+
         for (let i = 0; i < w * h; i++) {
           const o = i * 4;
+
           gray[i] = 0.299 * data[o] + 0.587 * data[o + 1] + 0.114 * data[o + 2];
         }
         let sum = 0;
         let sumSq = 0;
         let n = 0;
+
         for (let y = 1; y < h - 1; y++) {
           for (let x = 1; x < w - 1; x++) {
             const i = y * w + x;
@@ -144,12 +151,14 @@ function DepositContent() {
               gray[i + 1] -
               gray[i - w] -
               gray[i + w];
+
             sum += lap;
             sumSq += lap * lap;
             n++;
           }
         }
         const mean = sum / n;
+
         resolve(sumSq / n - mean * mean); // variance
       };
       img.onerror = () => resolve(0);
@@ -166,12 +175,14 @@ function DepositContent() {
   const captureBestFrame = useCallback(
     async (n = 3, spacingMs = 100): Promise<Blob> => {
       const frames: Blob[] = [];
+
       for (let i = 0; i < n; i++) {
         frames.push(await captureFrame());
         if (i < n - 1) await new Promise((r) => setTimeout(r, spacingMs));
       }
       const scores = await Promise.all(frames.map(sharpnessScore));
       let bestIdx = 0;
+
       for (let i = 1; i < scores.length; i++) {
         if (scores[i] > scores[bestIdx]) bestIdx = i;
       }
@@ -212,12 +223,19 @@ function DepositContent() {
 
       try {
         const blob = await captureBestFrame();
-        console.log(`[Stage 1] Frame captured — ${blob.size} bytes, attempt ${i}/${MAX_RETRIES}`);
+
+        console.log(
+          `[Stage 1] Frame captured — ${blob.size} bytes, attempt ${i}/${MAX_RETRIES}`,
+        );
 
         result = await detectBottle(blob, sid);
-        console.log(`[Stage 3→kiosk] Detection result — detected=${result.detected} conf=${result.confidence} brand=${result.brand} vol=${result.volume_ml}mL`);
+        console.log(
+          `[Stage 3→kiosk] Detection result — detected=${result.detected} conf=${result.confidence} brand=${result.brand} vol=${result.volume_ml}mL`,
+        );
       } catch (err) {
-        console.warn(`[Stage 1] Attempt ${i} failed — ${(err as Error).message}`);
+        console.warn(
+          `[Stage 1] Attempt ${i} failed — ${(err as Error).message}`,
+        );
         setStatusMsg(`Attempt ${i} failed — retrying`);
         continue;
       }
@@ -225,7 +243,9 @@ function DepositContent() {
       if (result.detected && result.confidence >= 0.5) {
         // ── AI Approved ──────────────────────────────────────────────────────
         lastResultRef.current = result;
-        console.log(`[Stage 4] Bottle approved — sending to server | brand=${result.brand} vol=${result.volume_ml}mL conf=${result.confidence}`);
+        console.log(
+          `[Stage 4] Bottle approved — sending to server | brand=${result.brand} vol=${result.volume_ml}mL conf=${result.confidence}`,
+        );
         setPhase("approved");
         setBinPending(true);
         setStatusMsg("Bottle approved! Dropping into bin…");
@@ -281,17 +301,21 @@ function DepositContent() {
 
       // bottleInBin — bin sensor confirmation from ESP32
       if (event.type === "bottleInBin") {
-        console.log(`[Stage 6→kiosk] SSE bottleInBin received — confirmed=${event.confirmed} credits=${event.credits_awarded ?? 0}`);
+        console.log(
+          `[Stage 6→kiosk] SSE bottleInBin received — confirmed=${event.confirmed} credits=${event.credits_awarded ?? 0}`,
+        );
         setBinPending(false);
 
         if (event.confirmed) {
           const awarded = event.credits_awarded ?? 0;
+
           setCredits(awarded);
           setPhase("bin_confirmed");
           setStatusMsg(`Bottle received! +${awarded} credits earned.`);
 
           setTimeout(() => {
             const ai = lastResultRef.current;
+
             sessionStorage.setItem(
               "lastDeposit",
               JSON.stringify({
@@ -313,7 +337,6 @@ function DepositContent() {
     });
 
     return unsubscribe;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, router, runScanLoop]);
 
   // ── Bin confirmation timeout — fallback if SSE misses the event ────────────
@@ -373,12 +396,18 @@ function DepositContent() {
           {/* Phase overlay badge */}
           <div
             className="absolute bottom-3 left-3 right-3 rounded-2xl px-4 py-2 flex items-center gap-2"
-            style={{ background: phaseColor[phase], backdropFilter: "blur(8px)" }}
+            style={{
+              background: phaseColor[phase],
+              backdropFilter: "blur(8px)",
+            }}
           >
-            <span className={isActive ? "breathe-anim" : ""}>{phaseIcon[phase]}</span>
+            <span className={isActive ? "breathe-anim" : ""}>
+              {phaseIcon[phase]}
+            </span>
             <p className="text-gray-800 text-sm font-bold truncate">
               {phase === "waiting" && "Insert your plastic bottle"}
-              {phase === "scanning" && `Scanning — attempt ${attempt}/${MAX_RETRIES}`}
+              {phase === "scanning" &&
+                `Scanning — attempt ${attempt}/${MAX_RETRIES}`}
               {phase === "approved" && "Dropping into bin…"}
               {phase === "bin_confirmed" && `+${credits} credits earned!`}
               {phase === "rejected" && "Bottle rejected"}
@@ -396,9 +425,7 @@ function DepositContent() {
         </div>
 
         {/* Status card */}
-        <div
-          className="glass-white rounded-3xl p-7 w-full shadow-xl flex flex-col items-center gap-5"
-        >
+        <div className="glass-white rounded-3xl p-7 w-full shadow-xl flex flex-col items-center gap-5">
           <div className="text-center">
             <p className="text-gray-800 text-xl font-bold">
               {phase === "waiting" && "Insert your plastic bottle"}

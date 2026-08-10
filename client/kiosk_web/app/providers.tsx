@@ -20,14 +20,14 @@ export function Providers({ children, themeProps }: ProvidersProps) {
       forcedTheme="light"
     >
       <Toaster
-        position="bottom-center"
         offset={24}
-        visibleToasts={3}
+        position="bottom-center"
         toastOptions={{
           classNames: {
             toast: "font-sans rounded-lg",
           },
         }}
+        visibleToasts={3}
       />
       {children}
     </NextThemesProvider>

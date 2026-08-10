@@ -23,14 +23,14 @@ function ResultContent() {
       <KioskHeader showAccount />
 
       <motion.div
+        animate="animate"
         className="flex-1 flex flex-col items-center justify-center px-8 gap-7"
         initial="initial"
-        animate="animate"
         transition={{ staggerChildren: 0.1 }}
       >
         <motion.div
-          variants={item}
           transition={{ duration: 0.4, type: "spring", bounce: 0.35 }}
+          variants={item}
         >
           <MascotFull mood={accepted ? "happy" : "sad"} />
         </motion.div>
@@ -38,8 +38,8 @@ function ResultContent() {
         {/* Result card */}
         <motion.div
           className="glass-white rounded-3xl p-9 w-full shadow-2xl text-center"
-          variants={item}
           transition={{ duration: 0.4, type: "spring", bounce: 0.25 }}
+          variants={item}
         >
           <div className="text-7xl mb-4">{accepted ? "✅" : "❌"}</div>
           <h2
@@ -59,8 +59,8 @@ function ResultContent() {
         {accepted ? (
           <motion.button
             className="glass-btn-primary w-full py-6 rounded-2xl text-2xl font-bold transition-all active:scale-95"
-            variants={item}
             transition={{ duration: 0.3 }}
+            variants={item}
             onClick={() =>
               router.push(
                 mode === "charge" ? "/session/charging" : "/session/credits",
@@ -72,13 +72,13 @@ function ResultContent() {
         ) : (
           <motion.button
             className="w-full py-6 rounded-2xl text-2xl font-bold transition-all active:scale-95"
-            variants={item}
-            transition={{ duration: 0.3 }}
             style={{
               background: "linear-gradient(135deg, #DC2626, #991B1B)",
               color: "white",
               boxShadow: "0 8px 32px rgba(220,38,38,0.35)",
             }}
+            transition={{ duration: 0.3 }}
+            variants={item}
             onClick={() => router.push("/session/deposit")}
           >
             Try Again

@@ -44,7 +44,9 @@ async function req<T>(url: string, opts: RequestInit = {}): Promise<T> {
 
     // Token expired — clear session and redirect to auth so user re-links
     if (res.status === 401 && typeof window !== "undefined") {
-      console.warn(`[api] 401 on ${url} — token expired or invalid, redirecting to /auth`);
+      console.warn(
+        `[api] 401 on ${url} — token expired or invalid, redirecting to /auth`,
+      );
       token.clear();
       window.location.href = "/auth";
     }
@@ -159,7 +161,10 @@ export const user = {
 };
 
 // ── AI detect ────────────────────────────────────────────────────────────────
-export async function detectBottle(imageBlob: Blob, sessionId?: string): Promise<DetectionResult> {
+export async function detectBottle(
+  imageBlob: Blob,
+  sessionId?: string,
+): Promise<DetectionResult> {
   const form = new FormData();
 
   form.append("image", imageBlob, "capture.jpg");

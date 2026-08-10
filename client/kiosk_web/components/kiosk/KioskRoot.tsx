@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { IdleScreen } from "./IdleScreen";
+
 import { IdleSuspendProvider, useIdleSuspendState } from "@/lib/idle-suspend";
 
 const HOME_IDLE_MS = 30_000;
@@ -58,6 +59,7 @@ function KioskRootInner({ children }: { children: React.ReactNode }) {
     clearTimer();
     if (suspendedRef.current) return;
     const ms = isHomeRef.current ? HOME_IDLE_MS : AWAY_IDLE_MS;
+
     timerRef.current = setTimeout(() => {
       if (suspendedRef.current) return; // safety net if suspension raced the timeout
       idleRef.current = true;
@@ -92,11 +94,11 @@ function KioskRootInner({ children }: { children: React.ReactNode }) {
       window.addEventListener(e, resetIdle, { passive: true }),
     );
     startTimer();
+
     return () => {
       IDLE_EVENTS.forEach((e) => window.removeEventListener(e, resetIdle));
       clearTimer();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Dismiss idle screen → hide overlay and restart timer for current page.
@@ -136,10 +138,10 @@ function KioskRootInner({ children }: { children: React.ReactNode }) {
         >
           <AnimatePresence initial={false} mode="wait">
             <motion.div
+              key={pathname}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               initial={{ opacity: 0, y: 20 }}
-              key={pathname}
               style={{
                 flex: 1,
                 display: "flex",
@@ -158,10 +160,10 @@ function KioskRootInner({ children }: { children: React.ReactNode }) {
       <AnimatePresence>
         {showIdle && (
           <motion.div
+            key="idle"
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             initial={{ opacity: 0 }}
-            key="idle"
             style={{ position: "fixed", inset: 0, zIndex: 50 }}
             transition={{ duration: 0.3 }}
           >

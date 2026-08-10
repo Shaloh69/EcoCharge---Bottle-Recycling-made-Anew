@@ -41,16 +41,16 @@ export default function SessionPage() {
       <KioskHeader showAccount />
 
       <motion.div
+        animate="animate"
         className="flex-1 flex flex-col items-center justify-center px-8 gap-8 py-10"
         initial="initial"
-        animate="animate"
         transition={{ staggerChildren: 0.1 }}
       >
         {/* heading */}
         <motion.div
           className="text-center"
-          variants={item}
           transition={{ duration: 0.3 }}
+          variants={item}
         >
           <p className="text-white/40 text-xs uppercase tracking-widest mb-2">
             What would you like to do?
@@ -63,8 +63,8 @@ export default function SessionPage() {
         {/* option buttons */}
         <motion.div
           className="w-full space-y-4"
-          variants={item}
           transition={{ duration: 0.35, type: "spring", bounce: 0.2 }}
+          variants={item}
         >
           {OPTIONS.map((opt) => (
             <button
@@ -102,8 +102,8 @@ export default function SessionPage() {
         {/* recycle prompt */}
         <motion.div
           className="w-full glass rounded-3xl p-6 text-center"
-          variants={item}
           transition={{ duration: 0.3 }}
+          variants={item}
         >
           <p className="text-5xl mb-3">🍶</p>
           <p className="text-white font-bold text-xl">Have a bottle?</p>

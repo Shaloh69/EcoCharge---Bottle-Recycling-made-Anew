@@ -23,8 +23,10 @@ export default function LinkedPage() {
         if (c <= 1) {
           clearInterval(timer);
           router.push("/session");
+
           return 0;
         }
+
         return c - 1;
       });
     }, 1000);
@@ -39,16 +41,16 @@ export default function LinkedPage() {
       <KioskHeader showAccount />
 
       <motion.div
+        animate="animate"
         className="flex-1 flex flex-col items-center justify-center px-8 gap-7 py-10"
         initial="initial"
-        animate="animate"
         transition={{ staggerChildren: 0.1 }}
       >
         {/* Welcome card */}
         <motion.div
           className="glass-white rounded-3xl p-9 w-full shadow-2xl flex flex-col items-center gap-5"
-          variants={item}
           transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
+          variants={item}
         >
           <div
             className="w-24 h-24 rounded-full flex items-center justify-center text-5xl"
@@ -85,8 +87,8 @@ export default function LinkedPage() {
         {/* Welcome message */}
         <motion.div
           className="text-center"
-          variants={item}
           transition={{ duration: 0.3 }}
+          variants={item}
         >
           <h2 className="text-white text-5xl font-extrabold tracking-tight">
             Welcome back,
@@ -101,8 +103,8 @@ export default function LinkedPage() {
         {/* CTA */}
         <motion.button
           className="glass-btn-primary w-full py-6 rounded-2xl text-2xl font-bold transition-all active:scale-95"
-          variants={item}
           transition={{ duration: 0.3 }}
+          variants={item}
           onClick={() => router.push("/session")}
         >
           Let&apos;s Go →

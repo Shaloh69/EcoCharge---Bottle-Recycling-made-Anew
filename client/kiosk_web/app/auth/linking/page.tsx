@@ -31,22 +31,22 @@ export default function LinkingPage() {
       <KioskHeader />
 
       <motion.div
+        animate="animate"
         className="flex-1 flex flex-col items-center justify-center px-8 gap-8"
         initial="initial"
-        animate="animate"
         transition={{ staggerChildren: 0.12 }}
       >
         <motion.div
-          variants={item}
           transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
+          variants={item}
         >
           <MascotFull mood="scanning" />
         </motion.div>
 
         <motion.div
           className="glass-white rounded-3xl p-9 flex flex-col items-center gap-6 w-full shadow-2xl"
-          variants={item}
           transition={{ duration: 0.35 }}
+          variants={item}
         >
           <h2 className="text-gray-800 text-2xl font-bold text-center">
             Waiting for your phone{".".repeat(dots)}
@@ -70,8 +70,8 @@ export default function LinkingPage() {
 
         <motion.button
           className="glass-btn-secondary w-full py-5 rounded-2xl text-xl font-semibold transition-all active:scale-95"
-          variants={item}
           transition={{ duration: 0.3 }}
+          variants={item}
           onClick={() => router.push("/auth")}
         >
           Cancel

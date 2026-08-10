@@ -51,6 +51,7 @@ export default function ChargingPage() {
           const occupied = event.ports
             .filter((p) => !p.available)
             .map((p) => p.port);
+
           setActivePorts(occupied);
           setSelected((prev) =>
             prev != null && occupied.includes(prev) ? null : prev,
@@ -92,16 +93,16 @@ export default function ChargingPage() {
       <KioskHeader showAccount />
 
       <motion.div
+        animate="animate"
         className="flex-1 flex flex-col items-center px-8 pt-7 gap-6"
         initial="initial"
-        animate="animate"
         transition={{ staggerChildren: 0.09 }}
       >
         {/* Deposit summary card */}
         <motion.div
           className="glass-white rounded-3xl p-7 w-full shadow-xl text-center"
-          variants={item}
           transition={{ duration: 0.4, type: "spring", bounce: 0.25 }}
+          variants={item}
         >
           <p className="text-gray-400 text-sm mb-1">Bottle Detected</p>
           <p className="text-gray-800 text-2xl font-extrabold">
@@ -120,8 +121,8 @@ export default function ChargingPage() {
         {/* Port selection header */}
         <motion.div
           className="flex items-center gap-3 self-start"
-          variants={item}
           transition={{ duration: 0.3 }}
+          variants={item}
         >
           <h3 className="text-white text-2xl font-bold">
             Select Charging Outlet
@@ -150,8 +151,8 @@ export default function ChargingPage() {
         {/* Port grid */}
         <motion.div
           className="grid grid-cols-2 gap-4 w-full"
-          variants={item}
           transition={{ duration: 0.35, type: "spring", bounce: 0.2 }}
+          variants={item}
         >
           {ports.map((port) => (
             <button
@@ -202,9 +203,9 @@ export default function ChargingPage() {
 
         {error && (
           <motion.p
+            animate={{ opacity: 1 }}
             className="text-red-300 text-base text-center"
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
           >
             {error}
           </motion.p>
@@ -214,8 +215,8 @@ export default function ChargingPage() {
         <motion.button
           className="glass-btn-primary w-full py-6 rounded-2xl text-2xl font-extrabold transition-all active:scale-95 disabled:opacity-30"
           disabled={!selected || loading}
-          variants={item}
           transition={{ duration: 0.3 }}
+          variants={item}
           onClick={handleConfirm}
         >
           {loading ? "Starting…" : "Confirm →"}

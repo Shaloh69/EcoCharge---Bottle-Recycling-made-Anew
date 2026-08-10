@@ -18,16 +18,16 @@ export default function CreditsPage() {
       <KioskHeader showAccount />
 
       <motion.div
+        animate="animate"
         className="flex-1 flex flex-col items-center px-8 pt-9 gap-6"
         initial="initial"
-        animate="animate"
         transition={{ staggerChildren: 0.09 }}
       >
         {/* Balance card */}
         <motion.div
           className="glass-white rounded-3xl p-8 w-full shadow-xl text-center"
-          variants={item}
           transition={{ duration: 0.4, type: "spring", bounce: 0.25 }}
+          variants={item}
         >
           <p className="text-gray-400 text-sm uppercase tracking-widest mb-2">
             Credit Balance
@@ -58,8 +58,8 @@ export default function CreditsPage() {
         {/* Latest deposit */}
         <motion.div
           className="glass rounded-3xl p-6 w-full"
-          variants={item}
           transition={{ duration: 0.3 }}
+          variants={item}
         >
           <p className="text-white/40 text-xs uppercase tracking-widest mb-3">
             Latest Deposit
@@ -76,8 +76,8 @@ export default function CreditsPage() {
         {/* Add credit */}
         <motion.button
           className="glass-btn-secondary w-full py-5 rounded-2xl text-xl font-bold transition-all active:scale-95"
-          variants={item}
           transition={{ duration: 0.3 }}
+          variants={item}
           onClick={() => router.push("/session/deposit?mode=credit")}
         >
           + Add More Credits
@@ -86,8 +86,8 @@ export default function CreditsPage() {
         {/* Use credit */}
         <motion.button
           className="glass-btn-primary w-full py-6 rounded-2xl text-2xl font-extrabold transition-all active:scale-95"
-          variants={item}
           transition={{ duration: 0.3 }}
+          variants={item}
           onClick={() => router.push("/receipt/credit")}
         >
           Use Credits →

@@ -18,16 +18,16 @@ export default function CreditReceiptPage() {
       <KioskHeader showAccount />
 
       <motion.div
+        animate="animate"
         className="flex-1 flex flex-col items-center justify-center px-8 gap-7"
         initial="initial"
-        animate="animate"
         transition={{ staggerChildren: 0.1 }}
       >
         {/* Receipt card */}
         <motion.div
           className="glass-white rounded-3xl p-9 w-full shadow-2xl flex flex-col items-center gap-5"
-          variants={item}
           transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
+          variants={item}
         >
           {/* Success icon */}
           <div
@@ -76,24 +76,24 @@ export default function CreditReceiptPage() {
         </motion.div>
 
         <motion.div
-          variants={item}
           transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
+          variants={item}
         >
           <MascotAvatar mood="happy" />
         </motion.div>
 
         <motion.p
           className="text-white/50 text-base text-center max-w-xs leading-relaxed"
-          variants={item}
           transition={{ duration: 0.3 }}
+          variants={item}
         >
           Credits saved to your account. Use them anytime to charge your phone.
         </motion.p>
 
         <motion.button
           className="glass-btn-primary w-full py-6 rounded-2xl text-2xl font-extrabold transition-all active:scale-95"
-          variants={item}
           transition={{ duration: 0.3 }}
+          variants={item}
           onClick={() => router.push("/")}
         >
           Thank You 🎉

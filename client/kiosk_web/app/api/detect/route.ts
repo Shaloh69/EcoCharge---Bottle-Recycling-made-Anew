@@ -6,16 +6,26 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 function maskKey(k: string) {
   if (!k) return "(not set)";
+
   return `${k.slice(0, 6)}...${k.slice(-4)}`;
 }
 
-async function relayAiError(status: number, detail: string, sessionId?: string) {
+async function relayAiError(
+  status: number,
+  detail: string,
+  sessionId?: string,
+) {
   if (!API_URL) return;
   try {
     await fetch(`${API_URL}/api/log/ai-error`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status, detail, url: AI_URL, session_id: sessionId }),
+      body: JSON.stringify({
+        status,
+        detail,
+        url: AI_URL,
+        session_id: sessionId,
+      }),
       signal: AbortSignal.timeout(3_000),
     });
   } catch {
@@ -26,11 +36,19 @@ async function relayAiError(status: number, detail: string, sessionId?: string) 
 export async function POST(req: NextRequest) {
   if (!AI_URL) {
     console.error("[detect] AI_URL not configured — check Render env vars");
-    return NextResponse.json({ error: "AI_URL not configured" }, { status: 503 });
+
+    return NextResponse.json(
+      { error: "AI_URL not configured" },
+      { status: 503 },
+    );
   }
   if (!AI_KEY) {
     console.error("[detect] AI_KEY not configured — check Render env vars");
-    return NextResponse.json({ error: "AI_KEY not configured" }, { status: 503 });
+
+    return NextResponse.json(
+      { error: "AI_KEY not configured" },
+      { status: 503 },
+    );
   }
 
   // Extract session_id from query param (passed by kiosk so it appears in logs)
@@ -44,6 +62,7 @@ export async function POST(req: NextRequest) {
   );
 
   let res: Response;
+
   try {
     // Pipe the raw body directly — avoids re-encoding FormData and boundary corruption
     res = await fetch(`${AI_URL}/api/detect`, {
@@ -59,18 +78,30 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     const msg = (err as Error).message ?? String(err);
+
     console.error(`[detect] AI server unreachable: ${msg} | url=${AI_URL}`);
     await relayAiError(0, `unreachable: ${msg}`, sessionId);
-    return NextResponse.json({ error: "AI server unreachable" }, { status: 503 });
+
+    return NextResponse.json(
+      { error: "AI server unreachable" },
+      { status: 503 },
+    );
   }
 
   let data: unknown;
+
   try {
     data = await res.json();
   } catch {
-    console.error(`[detect] AI server returned non-JSON — status=${res.status}`);
+    console.error(
+      `[detect] AI server returned non-JSON — status=${res.status}`,
+    );
     await relayAiError(res.status, "non-JSON response", sessionId);
-    return NextResponse.json({ error: `AI error ${res.status}` }, { status: res.status });
+
+    return NextResponse.json(
+      { error: `AI error ${res.status}` },
+      { status: res.status },
+    );
   }
 
   if (!res.ok) {
@@ -85,9 +116,11 @@ export async function POST(req: NextRequest) {
       `[detect] AI error — status=${res.status} detail=${detail} | session=${sessionId ?? "?"}`,
     );
     await relayAiError(res.status, String(detail), sessionId);
+
     return NextResponse.json(data, { status: res.status });
   }
 
   console.log(`[Stage 2→3] AI OK — ${JSON.stringify(data).slice(0, 120)}`);
+
   return NextResponse.json(data, { status: res.status });
 }
