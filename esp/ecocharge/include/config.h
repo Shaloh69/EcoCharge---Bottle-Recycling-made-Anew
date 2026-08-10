@@ -106,7 +106,14 @@
 // ----------------------------------------------------------------------------
 // Server identity — set per kiosk unit before flashing
 // ----------------------------------------------------------------------------
-#define RENDER_BASE_URL     "https://ecocharge-server-j7u7.onrender.com"
+// Self-hosted on desktop-gklhcri via a Cloudflare quick tunnel (free, no
+// domain) — the user has accepted that this URL rotates if the tunnel
+// process ever restarts (desktop-gklhcri is meant to stay on permanently).
+// If it ever needs updating: check D:\EcoCharge\logs\cloudflared\api-err.log
+// on that machine for the current "Your quick Tunnel has been created" URL,
+// or move to a named tunnel (docs/planning/03-revamp-master.md §1.1) for a
+// stable hostname if this needs to survive an actual restart.
+#define RENDER_BASE_URL     "https://lap-trace-reach-forwarding.trycloudflare.com"
 #define DEVICE_API_KEY      "SET_AT_BUILD_TIME"
 #define KIOSK_ID            1
 

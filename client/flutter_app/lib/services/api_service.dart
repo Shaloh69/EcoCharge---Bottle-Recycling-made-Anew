@@ -3,8 +3,11 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+// Self-hosted on desktop-gklhcri via a free Cloudflare quick tunnel — rotates
+// only if the tunnel process restarts (see esp/ecocharge/include/config.h's
+// RENDER_BASE_URL comment for how to find the current URL if it ever does).
 const _base = String.fromEnvironment('API_BASE_URL',
-    defaultValue: 'https://ecocharge-api.onrender.com');
+    defaultValue: 'https://lap-trace-reach-forwarding.trycloudflare.com');
 
 class ApiUser {
   final int id;
