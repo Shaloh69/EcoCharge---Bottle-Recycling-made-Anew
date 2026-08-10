@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+/*
+ * EcoCharge Public Website — "Clean Energy Reward" identity.
+ * Same palette as client/kiosk_web and client/flutter_app, per
+ * docs/planning/02-design-mandate.md SS6.
+ */
+
+@theme {
+  --font-sans: var(--font-plex-sans), "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-baloo), "Baloo 2", ui-sans-serif, system-ui, sans-serif;
+
+  --color-eco-green-50: #f0fdf4;
+  --color-eco-green-100: #dcfce7;
+  --color-eco-green-200: #bbf7d0;
+  --color-eco-green-300: #86efac;
+  --color-eco-green-400: #4ade80;
+  --color-eco-green-500: #16a34a;
+  --color-eco-green-600: #15803d;
+  --color-eco-green-700: #166534;
+  --color-eco-green-800: #14532d;
+
+  --color-volt-amber-400: #fbbf24;
+  --color-volt-amber-500: #f59e0b;
+
+  --color-signal-red-500: #ef4444;
+
+  /* Confirmed 2026-08-10 as a real, deliberate tertiary accent by the real
+     Figma reference (02-design-mandate.md SS4.6) - shared across surfaces. */
+  --color-bloom-violet-500: #8b5cf6;
+
+  --color-bg: #f6fbf7;
+  --color-surface: #ffffff;
+  --color-ink: #14231b;
+  --color-muted: #4b6156;
+  --color-border: #d9ecE0;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3,
+h4,
+.font-display {
+  font-family: var(--font-display);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Aurora background — see components/aurora-background.tsx. Three soft
+   radial blobs drifting on independent, non-repeating-looking timings
+   (23s/31s/19s — deliberately not round numbers, so the three never sync
+   into an obviously looping pattern). */
+.aurora-layer {
+  position: absolute;
+  inset: -20%;
+  border-radius: 9999px;
+  filter: blur(60px);
+  opacity: 0.55;
+  will-change: transform;
+}
+
+.aurora-layer-1 {
+  background: radial-gradient(
+    circle at 30% 30%,
+    var(--color-eco-green-300) 0%,
+    transparent 60%
+  );
+  animation: aurora-drift-1 23s ease-in-out infinite;
+}
+
+.aurora-layer-2 {
+  background: radial-gradient(
+    circle at 70% 40%,
+    var(--color-volt-amber-400) 0%,
+    transparent 55%
+  );
+  opacity: 0.35;
+  animation: aurora-drift-2 31s ease-in-out infinite;
+}
+
+.aurora-layer-3 {
+  background: radial-gradient(
+    circle at 50% 70%,
+    var(--color-eco-green-500) 0%,
+    transparent 65%
+  );
+  opacity: 0.4;
+  animation: aurora-drift-3 19s ease-in-out infinite;
+}
+
+@keyframes aurora-drift-1 {
+  0%, 100% { transform: translate(0%, 0%) scale(1); }
+  50% { transform: translate(5%, 8%) scale(1.1); }
+}
+
+@keyframes aurora-drift-2 {
+  0%, 100% { transform: translate(0%, 0%) scale(1); }
+  50% { transform: translate(-8%, 4%) scale(1.05); }
+}
+
+@keyframes aurora-drift-3 {
+  0%, 100% { transform: translate(0%, 0%) scale(1); }
+  50% { transform: translate(4%, -6%) scale(1.15); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-layer {
+    animation: none !important;
+  }
+}
