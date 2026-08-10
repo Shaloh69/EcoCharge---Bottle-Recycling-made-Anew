@@ -71,6 +71,10 @@ The kiosk firmware polls a public HTTPS URL directly (`RENDER_BASE_URL`, compile
 - Any assumption that `kiosk_web` can reach the ESP32 directly. Per `analyzation.md`, the ESP32 polls the *cloud API* for commands and posts telemetry there — it does not talk to `kiosk_web` directly. Confirm `kiosk_web`'s code doesn't assume otherwise anywhere (a leftover local-network call from an earlier development setup where everything really was on one machine/network would be a real bug, invisible until the API server actually moves).
 - Confirm the kiosk PC's actual local network only needs to reach the ESP32 (whatever genuine local-network interaction actually exists — verify against code, don't assume) and the public internet. It should need nothing from the server machine's local network directly.
 
+### 1.1a The kiosk PC needs Tailscale too — for remote admin, not for its runtime traffic
+
+**Confirmed 2026-08-10: the kiosk PC does not have Tailscale set up yet.** This is a separate task from everything above — it doesn't change the runtime networking decision (the kiosk still reaches the API over the public Cloudflare Tunnel, precisely because §1.1 established it's never on the server's local network). Add it to the tailnet anyway, for the same reason `desktop-gklhcri` and `minniedumpor` are on it: **remote administration** — SSH access, log checks, pushing a `kiosk_web` update, checking on the machine without needing physical presence at the kiosk's field location. Two independent connections to the same machine, serving two different purposes — don't conflate them, and don't skip the Tailscale setup just because the Cloudflare Tunnel already covers the runtime path.
+
 **Use Cloudflare Tunnel with a free domain for the public-facing pieces, not Tailscale Funnel.** The target machine staying on permanently is exactly the condition Cloudflare Tunnel is built for — `cloudflared` holds a persistent outbound-only connection to Cloudflare's edge.
 
 **Getting a free domain to actually use:** Cloudflare Tunnel is free, but a *named* tunnel (the stable, non-rotating kind — required, since rotating `trycloudflare.com` quick-tunnel URLs are literally issue #2 below) needs a domain added to Cloudflare as a zone. **`dpdns.org`** is a current, legitimate free-subdomain registrar built specifically to pair with Cloudflare Tunnel — it allows full nameserver delegation to Cloudflare, which most free DNS providers don't permit.
@@ -241,15 +245,16 @@ npx knip --fix --allow-remove-files   # review the diff before merging, even tho
 
 ---
 
-## 5. Design revamp — all three surfaces
+## 5. Design revamp — all four surfaces
 
 **Full specification lives in `02-design-mandate.md`** — read it in full before generating any UI. Summary only, so this document doesn't duplicate content that drifts out of sync with the mandate:
 
 - **Admin Console** (`client/web_console`): "Operations Console" — dense, dark-mode-first, monitoring-oriented. Status colors (green/amber/red) drive kiosk online/offline, bin level, port state, ML-review flags consistently.
-- **Kiosk Web** (`client/kiosk_web`): "Clean Energy Reward" — two modes (idle attract loop vs. active flow), the real FSM made visible as named steps via `react-step-wizard`, explicit "do not leave yet" messaging during `SCANNING` and bin-confirmation, a from-scratch FSM-aware idle timeout (none exists today).
+- **Kiosk Web** (`client/kiosk_web`): "Clean Energy Reward" — green + white base identity, an animated background (real candidates in `02-design-mandate.md` §4.5), two modes (idle attract loop vs. active flow), the real FSM made visible as named steps via `react-step-wizard`, explicit "do not leave yet" messaging during `SCANNING` and bin-confirmation, a from-scratch FSM-aware idle timeout (none exists today), and a product mascot appearing at key moments. **Two genuinely open blockers before this goes beyond structural work**: the user's premade Figma designs (not yet linked) and the mascot's actual visual design (not yet provided) — see `02-design-mandate.md` §4.5.
 - **Mobile App** (`client/flutter_app`): "Clean Energy Reward" — same palette/meaning as the kiosk, `skeletonizer`/Lottie/Rive/`flutter_animate` animation stack, credit balance as the hero number on Home.
+- **Public Website** (`client/web`, new — no code exists yet): promotional site, real changelog, public docs, an app-download page. Built fresh from the Velora UI template, per `02-design-mandate.md` §6. Doesn't exist as a folder in this repo today — this is new scaffolding work, not a rebuild like the other three.
 
-**Status, verified 2026-08-10: not started on any surface.** Tokens exist, tooling is installed (`design-review` agent, `avoid-ai-design` skill), component inventory is clean — none of the three surfaces have actually been rebuilt against the mandate yet.
+**Status, verified 2026-08-10: not started on any surface**, and the fourth surface doesn't exist yet at all. Tokens exist, tooling is installed (`design-review` agent, `avoid-ai-design` skill), component inventory is clean on the three existing surfaces — none of them have actually been rebuilt against the mandate yet, and `client/web` needs to be scaffolded before it can be "rebuilt" in any sense.
 
 **Continuous design-review workflow, already installed:** run `/design-review` after every meaningful UI change going forward.
 

@@ -1,8 +1,8 @@
 # EcoCharge — Design Mandate (Full Scrap & Remake)
 
-This is a directive, not a menu of suggestions. The existing UI across all three client surfaces — Admin Console, Kiosk Web, Mobile App — is to be **completely scrapped and rebuilt**, not incrementally restyled. This is the specification `DESIGN.md`'s tokens were derived from; `DESIGN.md` (repo root) is the living **deliverable** — the as-built tracker with real tokens and an execution-status checklist — this document is the **mandate** those tokens have to satisfy. When the two disagree, treat that as a signal `DESIGN.md` needs updating to match a decision made here, not the other way around.
+This is a directive, not a menu of suggestions. The existing UI across all three original client surfaces — Admin Console, Kiosk Web, Mobile App — is to be **completely scrapped and rebuilt**, not incrementally restyled. **A fourth surface, the public Website (`client/web`, §6), was added 2026-08-10 — it doesn't exist yet, so it's a from-scratch build, not a rebuild.** This is the specification `DESIGN.md`'s tokens were derived from; `DESIGN.md` (repo root) is the living **deliverable** — the as-built tracker with real tokens and an execution-status checklist — this document is the **mandate** those tokens have to satisfy. When the two disagree, treat that as a signal `DESIGN.md` needs updating to match a decision made here, not the other way around.
 
-**Status as of 2026-08-10, verified against code, not claimed:** tokens are defined, the component-inventory/dead-code pass is done (Knip-clean on both Next.js apps, one canonical nav component per surface, no near-duplicates found), and the verification tooling is installed (`design-review` agent, `avoid-ai-design` skill). **None of the three surfaces have been visually rebuilt yet** — grepped each surface's dependencies this session: no Space Grotesk/Outfit/IBM Plex font wired into either Next.js app, no `react-step-wizard` on the kiosk, none of `skeletonizer`/`lottie`/`rive`/`flutter_animate` in the Flutter app's `pubspec.yaml`. This document and `DESIGN.md` describe a target state, not a completed one.
+**Status as of 2026-08-10, verified against code, not claimed:** tokens are defined, the component-inventory/dead-code pass is done (Knip-clean on both Next.js apps, one canonical nav component per surface, no near-duplicates found), and the verification tooling is installed (`design-review` agent, `avoid-ai-design` skill). **None of the four surfaces have been visually rebuilt yet** — grepped each surface's dependencies this session: no Space Grotesk/Outfit/IBM Plex font wired into either Next.js app, no `react-step-wizard` on the kiosk, none of `skeletonizer`/`lottie`/`rive`/`flutter_animate` in the Flutter app's `pubspec.yaml`, and the Website (§6) has no code at all yet. This document and `DESIGN.md` describe a target state, not a completed one. **Two genuinely open blockers, specific to the Kiosk (§4.5):** the user's premade Figma designs (not yet linked here) and the product's mascot/character (visual design not yet provided) — both should be resolved before the Kiosk's visual rebuild goes beyond structural/functional work.
 
 ---
 
@@ -117,6 +117,30 @@ The server already refuses new deposits at bin ≥ 95% (`409 bin_full`, shipped 
 
 **Guest disclosure — required copy, not yet built.** Guest deposits credit a shared pooled account by design (confirmed, not changing — see `memory.md`). The kiosk flow must state this plainly before or during the guest path: "Guest credits go to a shared community account and can't be transferred to an account you register later." This was flagged as a real UX gap (a first-time guest otherwise has no reason to assume registering later won't retroactively claim their credits) and belongs to this redesign pass, not a separate ticket.
 
+### 4.5 Kiosk-specific clarifications, 2026-08-10 — read before starting the kiosk rebuild
+
+**The kiosk PC is a separate physical machine and does not have Tailscale set up yet.** Confirmed by the user directly — this is a real infra task, tracked in `03-revamp-master.md` §1.1a, not just a design note. It doesn't change the runtime networking decision already made (the kiosk still reaches the API server over the public Cloudflare Tunnel, per §1.1/§1.2 of that document, precisely because it's out in the field on its own network) — Tailscale on the kiosk PC is for **remote admin/dev access** (SSH, log checks, deploys) alongside that public runtime path, not a replacement for it.
+
+**Palette — confirmed, restated plainly: Green + White is the base.** This isn't a new direction, it's the same "Clean Energy Reward" identity already specified in §2/§4 (eco-green primary, white/near-white surfaces) — but stated explicitly here because it's the one thing not to drift from during the rebuild. Volt-amber stays the accent for anything charging/power-related, and **additional supporting colors are allowed** where a screen genuinely needs a third signal (e.g. `signal-red-500` for a rejected/error state, per §2's shared status convention) — but green-on-white is the identity a person should recognize the kiosk by from across a room, not one accent color among several competing for attention.
+
+**Animated background — mandatory, not yet specified with a real component before now.** Static flat backgrounds on the idle/attract screen are a fail condition, same reasoning as the shared foundation in §2. Real, verified-available options (found 2026-08-10, evaluate against the green/white palette before picking one):
+- **[react-bits Aurora](https://reactbits.dev/backgrounds/aurora)** — WebGL (`ogl`), the same technique already reference-checked for kiosk-class idle screens elsewhere; recolor to eco-green rather than its default palette.
+- **[shadcn.io Aurora Background](https://www.shadcn.io/background/aurora)** — pure CSS, no WebGL dependency, "emerald and teal waves" out of the box, genuinely close to this palette already.
+- **[Aceternity UI Aurora Background](https://ui.aceternity.com/components/aurora-background)** — pure CSS, respects `prefers-reduced-motion`, light *and* dark mode support (the kiosk itself is light-only per §4, but the component supporting both doesn't hurt).
+- **[Stianlars1/react-gradient-animation](https://github.com/stianlars1/react-gradient-animation)** (GitHub) — a highly customizable animated gradient background component, real open-source code to vendor rather than an opaque dependency.
+
+Same hard constraints as any animated background used elsewhere in this project: never behind body copy/tabular data at full strength, `prefers-reduced-motion` freezes it to a static first frame, and it must degrade gracefully (a CSS gradient fallback, never a blank rectangle) if WebGL context creation fails — relevant here specifically because kiosk hardware is exactly the kind of constrained environment where that can happen.
+
+**Template references — real, found 2026-08-10, use these as starting structure, not a blank canvas:**
+- **[Reverse Vending Machine](https://www.figma.com/community/file/1358993306195421470/reverse-vending-machine)** (Figma Community) — closest direct domain match, use its flow/screen structure first.
+- **[Self Service Kiosk](https://www.figma.com/community/file/1475972798185896799/self-service-kiosk)** (Figma Community) — general self-service touchscreen patterns, already referenced in §6 below.
+- **[Vending Machine Kiosk](https://www.figma.com/community/file/1400020290371430370/vending-machine-kiosk)** (Figma Community) — rewards-points/coupon flow, structurally close to the credits concept here.
+- **[Recycling App | UI Design](https://www.figma.com/community/file/1165246885611208493/recycling-app-ui-design)** (Figma Community) — for the eco/recycling visual language specifically, cross-pollinate with the Mobile App surface (§5) too, since both share the same identity.
+
+**Pre-made Figma designs exist and take priority over the above once shared.** The user has their own premade Figma designs for this product — **not yet linked in this document, genuinely blocking**: don't build final screens from the template references above without checking against the real Figma file first once it's provided. Treat the templates above as a fallback/starting-structure reference only if the real designs turn out not to cover a given screen.
+
+**The product has its own mascot/character.** Confirmed by the user, **visual design not yet provided — genuinely blocking for anything mascot-specific.** Once available, the mascot's placement needs deciding across at minimum: the idle/attract loop (a natural home for character personality), the bin-full/reject friendly-error screens (§4.4 — a mascot reacting is a stronger "sorry, try later" than a bare icon), and the bin-confirmed/success moment. Don't invent a placeholder character in the meantime — leave the slot specified but unfilled rather than shipping a generic stand-in that then has to be torn out.
+
 ---
 
 ## 5. Surface 3 — Mobile App (`client/flutter_app`): "Clean Energy Reward"
@@ -132,12 +156,35 @@ Same palette/meaning as the kiosk; native rewards-app ergonomics.
 
 ---
 
-## 6. Existing foundation — do not duplicate
+## 6. Surface 4 — Public Website (new, `client/web`) — promotional, changelog, docs, app download
+
+**New, 2026-08-10 — this surface doesn't exist in the repo yet.** No prior version to redesign; this is a from-scratch build, not a rebuild like the other three surfaces. Added at the user's explicit request, modeled on the same pattern already proven on a sibling project: a real promotional site, not a stub.
+
+**What it's for:** the public face of EcoCharge — what the product is, how it works, a real dated changelog, public documentation (distinct from the internal `docs/planning/` audience — this is for a visitor, not a contributor), and a page to download the mobile app.
+
+**Template reference, real link:** **[Velora UI](https://github.com/ColorlibHQ/velora-ui)** (browsable live at [velora.colorlib.com](https://velora.colorlib.com/)) — free, MIT-licensed, Next.js 16 + Tailwind CSS 4 + Motion, ships a complete multi-page site (home, pricing, blog, changelog, auth, 404) built from 32+ animated components, including an aurora hero background installable directly via the shadcn CLI (`npx shadcn@latest add https://velora.colorlib.com/r/aurora-background.json`). Genuinely strong fit for two reasons: it's a real, complete site to adapt rather than build from a blank page, and its aurora hero is the same technique already specified for the Kiosk's idle screen (§4.5) — reusing it here (re-themed to eco-green/white instead of Velora's default) gives the whole product one consistent animated-background language across two surfaces instead of two unrelated ones.
+
+**Tooling note, same exception already established for a comparable surface elsewhere:** Velora UI's shadcn/ui-based stack is a deliberate departure from HeroUI (used by `client/kiosk_web`/`client/web_console`) — acceptable here specifically because this surface shares no components and no user session with the other three; don't try to reconcile the two component systems.
+
+**Pages to build, using Velora UI's real page set as the starting skeleton:**
+- **Home** — hero (aurora background, re-themed), the real EcoCharge lifecycle (bottle → AI grading → credits → charging), a "how it works" walkthrough, footer.
+- **Changelog** — real, dated entries sourced from what actually shipped (git history / `memory.md`'s decision log are the honest source — never invented to make a release look more substantial than it was, same rule as `06-must-have-app-features.md` §4).
+- **Docs** — public-facing product documentation (how the kiosk works, how credits/charging work, FAQ) — **not** a mirror of `docs/planning/`, which is internal/contributor-facing.
+- **Download** — the mobile app. **No evidence this app is published to any app store** (checked: `analyzation.md`/`docs/PROJECT_ANALYSIS.md` never mention one) — build this as a direct APK download page (Velora UI's own `/docs`-adjacent download-flow pattern, or a simple dedicated route) rather than linking a store listing that doesn't exist. If a real store listing ever does get published, repoint this page then — don't build toward an assumed listing now.
+- **About** — thesis/academic context, matching this being a real academic project.
+
+**Palette:** same "Clean Energy Reward" identity as the Kiosk and Mobile App — green + white base, volt-amber accent — **not** the Admin Console's dark "Operations Console" palette, which is a deliberately separate problem (an internal ops tool, not a public-facing surface).
+
+**Hosting:** public, via the Cloudflare Tunnel set up in `03-revamp-master.md` §1.1 — this is exactly the kind of service that tunnel exists for. Route it on its own subdomain (or the bare `ecocharge.dpdns.org` root, with the API/kiosk on their own subdomains) — decide the exact hostname split when the tunnel's Public Hostnames are actually configured, not before.
+
+---
+
+## 7. Existing foundation — do not duplicate
 
 Both web apps already carry a custom green token layer: Tailwind v4 `@theme` vars in `styles/globals.css` and a fully customized HeroUI theme in `hero.ts` (custom palette, radius, layout). The revamp **aligns and extends** that layer rather than replacing it: map its existing `--green-*`/`--color-eco-*` scale onto this document's semantic tokens, keep `hero.ts` as the HeroUI bridge, and delete any decorative colors that violate §1's banned list (the prior audit found `--color-eco-dusk` and a purple `--color-eco-lavender` family — confirm these are actually gone before starting new work, don't assume the earlier deletion note is still accurate without checking).
 
 ---
 
-## 7. Sequencing
+## 8. Sequencing
 
-Component inventory (Knip sweep, nav catalog) is done — confirmed clean, no consolidation needed before starting. Do the visual rebuild in this order: Admin Console first (dense, highest-value telemetry surface, and the one furthest from done), then Kiosk Web (needs the idle-timeout and step-wizard built from scratch, not just restyled), then the Mobile App. Update `DESIGN.md`'s execution-status checklist and `memory.md` as each surface actually ships, with screenshots — not before.
+Component inventory (Knip sweep, nav catalog) is done — confirmed clean, no consolidation needed before starting on the three existing surfaces (it obviously doesn't apply to the new Surface 4, which has no existing components to inventory). Do the visual rebuild in this order: Admin Console first (dense, highest-value telemetry surface, and the one furthest from done), then Kiosk Web (needs the idle-timeout and step-wizard built from scratch, not just restyled — and is blocked on the Figma-designs and mascot questions in §4.5 for anything beyond structural/functional work), then the Mobile App, then the new Public Website (§6) — it's independent of the other three and could in principle move earlier if the Figma/mascot blockers on the Kiosk drag on, but is placed last here since it has no existing user-facing gap the way the other three do. Update `DESIGN.md`'s execution-status checklist and `memory.md` as each surface actually ships, with screenshots — not before.

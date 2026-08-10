@@ -17,6 +17,7 @@
 | 6 — Kiosk UI (`client/kiosk_web`) | **Functional, design pending** — real flows against the live API; visual rebuild per the design mandate not yet started. | `docs/planning/02-design-mandate.md` §4, `docs/planning/04-continue-design-redo.md` |
 | 6 — Admin dashboard (`client/web_console`) | **Functional, design pending** — same as above. | `docs/planning/02-design-mandate.md` §3 |
 | 7 — Mobile app (`client/flutter_app`) | **Delivered, design pending** — real screens, real API integration, no visual redesign yet, no notifications feature. | `docs/planning/02-design-mandate.md` §5 |
+| — Public website (`client/web`) | **Not started — doesn't exist in the repo yet.** New surface added 2026-08-10: promotional site, changelog, public docs, app download. Template: Velora UI. | `docs/planning/02-design-mandate.md` §6 |
 | 8 — Testing, validation, thesis evidence | **Not started** — no automated tests anywhere in the repo (backend, AI server, or Flutter app), no e2e scripts, no thesis evidence pack assembled. The one phase where nothing has changed since the original March 2026 plan. | `docs/planning/05-feature-build-checklist.md` Stages 1 & 3 |
 | — Self-hosting migration | **Target machine + architecture confirmed, execution not started.** Still on Aiven MySQL, Supabase Storage, Render hosting, and a rotating Cloudflare quick-tunnel for the AI server (unchanged). Target machine is `desktop-gklhcri` (confirmed 2026-08-10 via Tailscale); storage moves to Disk D under a structured `D:\EcoCharge\` layout; MySQL and Supabase both run in Docker, with Supabase self-hosted (not replaced). Not a phase in the original plan; the single largest remaining piece of work now. | `docs/planning/03-revamp-master.md` §1 |
 
@@ -29,5 +30,7 @@ These block specific downstream work and shouldn't be guessed at:
 - **`ml-review` gate** — should a low-confidence AI detection hold credits pending human review, or stay the current retrospective audit trail? (`docs/planning/03-revamp-master.md` §3.1)
 - **Firmware fix values** — `BOTTLE_SCAN_TIMEOUT_MS`/`BOTTLE_BIN_RECHECK_MS` proposed in `AUDIT.md`, need explicit approval before any flash.
 - **Backend stack divergence** — update the thesis paper to describe Node/Express, or document the Flask-to-Node divergence explicitly as a design decision (`docs/PROJECT_ANALYSIS.md`).
+- **Kiosk Figma designs** — the user has premade Figma designs for the Kiosk surface, not yet linked in any document. Needed before final (non-structural) visual work on the Kiosk.
+- **Mascot/character visual design** — confirmed to exist, not yet provided. Needed before building any mascot-specific screen moment.
 
 Already decided, don't re-ask: self-hosting target machine (`desktop-gklhcri`, Disk D, Docker MySQL + self-hosted Supabase), guest pooled balance (kept, rate-limited), device-key timing (accepted as-is). Full reasoning in `memory.md`.

@@ -18,6 +18,23 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-08-10 — Fourth client surface added (public website), Kiosk design clarifications, Tailscale on the kiosk PC
+
+**Four separate additions from the same message, recorded together since they landed at once:**
+
+1. **New surface: `client/web`, a public promotional website** — doesn't exist in the repo yet. Modeled explicitly on a sibling project's equivalent surface: home, real dated changelog, public docs (distinct audience from `docs/planning/`), and an app-download page (direct APK download, since there's no evidence this app is published to any app store — don't build toward an assumed store listing). Template: Velora UI (`github.com/ColorlibHQ/velora-ui`), re-themed to the green/white identity. Full spec: `02-design-mandate.md` §6.
+2. **Kiosk PC needs Tailscale added** — confirmed not set up yet. This is for remote admin access only (SSH, deploys, log checks) — it does **not** change the kiosk's public Cloudflare Tunnel runtime path, which stays exactly as already planned in `03-revamp-master.md` §1.1/§1.2. Two separate connections, two separate purposes.
+3. **Kiosk palette restated explicitly: Green + White is the base identity**, not just one option among the existing token table — with room for supporting accents (amber for charging, red for errors) but the product should read as green-on-white at a glance. Not a new decision, a clarified restatement of the existing "Clean Energy Reward" direction.
+4. **Animated background is mandatory on the Kiosk idle screen** — real candidate components found and listed in `02-design-mandate.md` §4.5 (react-bits Aurora, shadcn.io Aurora, Aceternity UI Aurora, a standalone gradient-animation library), all to be re-themed to eco-green.
+
+**Two genuinely open blockers, not resolved yet — don't guess at either:**
+- **The user has premade Figma designs for the Kiosk** that should take priority over any generic template reference once shared — not yet linked in any document. Ask for the file/link before doing final visual work on the Kiosk.
+- **The product has its own mascot/character** — confirmed to exist, no visual design provided yet. Don't invent a placeholder character; leave the slot specified (idle screen, bin-full/reject screens, success moment — per `02-design-mandate.md` §4.5) but visually unfilled until real art exists.
+
+**How to apply:** don't start final (non-structural) visual work on the Kiosk until both blockers are resolved. The Public Website, Admin Console, and Mobile App aren't blocked by either and can proceed independently.
+
+---
+
 ## 2026-08-10 — Self-hosting target machine confirmed: `desktop-gklhcri`, plus a real architecture change
 
 **What happened:** the user confirmed the self-hosting target machine directly, corroborated with a Tailscale admin console screenshot showing two distinct online Windows devices — `minniedumpor` (the day-to-day dev machine, `dumporshemjoshua@gmail.com`) and `desktop-gklhcri` (`ecocharge123@gmail.com`, a dedicated account consistent with this being the intended standing server). This resolves the ambiguity `AUDIT.md` originally flagged as blocking (the prompt said `desktop-gklhcri`, the dev machine identified itself as `MINNIEDUMPOR`, and a later addendum claimed resolution without ever writing down the answer).

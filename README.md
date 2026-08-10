@@ -18,6 +18,7 @@ Full, code-verified system documentation: [`analyzation.md`](analyzation.md).
 | [`client/kiosk_web`](client/kiosk_web) | Next.js 15 + HeroUI | The kiosk touchscreen UI — camera capture, deposit flow, charging flow |
 | [`client/web_console`](client/web_console) | Next.js 15 + HeroUI + Recharts | Admin dashboard — live telemetry, CRUD, analytics, remote kiosk control |
 | [`client/flutter_app`](client/flutter_app) | Flutter | Companion mobile app — register/login, QR-link to a kiosk, balances, history |
+| `client/web` *(planned, not built yet)* | Next.js + shadcn/ui (Velora UI base) | Public promotional website — how it works, changelog, docs, app download |
 | [`server/server_main`](server/server_main) | Node.js + Express + TypeScript + Prisma | Central API — auth, sessions, deposits, credits, charging, device commands, SSE, admin |
 | [`server/server_AI`](server/server_AI) | Python + FastAPI + PyTorch/Ultralytics | Two-stage bottle detection & classification inference service |
 | [`esp/ecocharge`](esp/ecocharge) | ESP32, ESP-IDF (PlatformIO), FreeRTOS | Kiosk hardware controller — conveyor, relays, sensors, bottle FSM, WiFi provisioning |
