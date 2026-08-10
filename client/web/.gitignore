@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# real APK build artifact - too large for git, deployed directly to the server
+public/downloads/*.apk

@@ -23,6 +23,7 @@ Every actionable item across `docs/planning/00-07`, in the order `00-start-here.
 - [x] §1.6 step 4 / §2 item 1: firmware, kiosk web, and the Flutter default now all point at the live tunnel hostname (`https://lap-trace-reach-forwarding.trycloudflare.com`) — consistent by design, not by coincidence: these are the three "off-box" clients that genuinely need a public path. Admin console deliberately points at the tailnet address instead (`http://desktop-gklhcri:30010`), since it never leaves the tailnet — not an inconsistency, a different exposure tier on purpose. `ALLOWED_ORIGINS` still also lists the old `*.onrender.com` origins alongside the new tailnet one — harmless to leave until Render is actually decommissioned (§1.6 step 8), remove then.
 - [ ] Local dev `DATABASE_URL`: the live `.env`'s `DATABASE_URL` now points at `127.0.0.1:13306`, correct only when the Node API runs on `desktop-gklhcri` itself — local laptop dev against this same DB needs either an SSH tunnel or a separate local MySQL; not set up, not blocking anything yet
 - [ ] §1.6 step 8: decommission Render (the two Next.js apps) — **only after they're moved to persistent services and proven under real use.** Aiven needs no decommissioning — already unreachable and abandoned, nothing left pointing at it.
+- [x] **Cloudflare tunnel consistency — done 2026-08-11 (4th session): all four client surfaces now have a real public path, not just API/AI/Admin.** Kiosk Web (`desktop-gklhcri:30013`, `EcoChargeKioskWeb`/`EcoChargeTunnelKiosk`) and the Website (`desktop-gklhcri:30014`, `EcoChargeWeb`/`EcoChargeTunnelWeb`) both deployed as real staging instances with their own quick tunnels, both verified reachable from outside the tailnet via real `curl`. Both were previously "not deployed publicly at all" — this closes that gap for real, not just in planning. Full URLs/detail: `memory.md`.
 
 ## Phase B — `analyzation.md`'s original five issues (`03-revamp-master.md` §2)
 
@@ -83,9 +84,9 @@ Every actionable item across `docs/planning/00-07`, in the order `00-start-here.
 
 ### E4 — Public Website
 - [~] Built from scratch: home, how-it-works, changelog, docs, about, download
-- [ ] **Screenshot-verify — not done**
-- [ ] Run `/design-review` and `avoid-ai-design`
-- [ ] Wire the `/download` page's APK link to a real build once one exists
+- [x] **Deployed as a real staging instance + screenshot-verified, 2026-08-11 (4th session).** `desktop-gklhcri:30014` (`EcoChargeWeb` task) + public quick tunnel (`EcoChargeTunnelWeb`, `https://powered-naval-searched-hurricane.trycloudflare.com`). Homepage, `/download`, `/changelog`, `/update-required` all screenshotted against the live instance — real, specific copy, light green/white palette matching spec, no obvious banned-pattern violations on a first look. **Not done**: a full per-page `/design-review` + `avoid-ai-design` pass on `/how-it-works`/`/docs`/`/about` specifically.
+- [x] **The `/download` page's APK link is wired to a real build — done 2026-08-11, the first real mobile app release this project has ever had.** `flutter build apk --release` actually succeeded (75.3MB, debug-signed, direct-sideload — no Play Store submission planned). Full detail below (Phase E3) and `memory.md`.
+- [ ] Run `/design-review` and `avoid-ai-design` on the remaining pages
 
 ### E5 — Cross-cutting
 - [x] **Playwright MCP — confirmed genuinely working, 2026-08-11 (4th session), via real `ToolSearch` schema fetch (`mcp__playwright__browser_navigate`/`browser_take_screenshot`), not just registry status.** The path-casing fix (`~/.claude.json`'s backslash-vs-forward-slash project-key split, see `memory.md`) held — this is the first session where the tool schemas actually load. All Phase E screenshot-dependent work is now genuinely unblocked.

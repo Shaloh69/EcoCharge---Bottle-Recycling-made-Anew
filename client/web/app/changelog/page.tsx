@@ -1,35 +1,8 @@
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Changelog" };
+import { CHANGELOG_ENTRIES } from "@/lib/changelog-data";
 
-/**
- * Real, dated entries sourced from actual commit history — never invented.
- * Update this by checking `git log`, not by guessing what "should" have
- * shipped. Per docs/planning/02-design-mandate.md SS6.
- */
-const ENTRIES = [
-  {
-    date: "2026-08-10",
-    title: "Component library rebuild, real AI training run, planning overhaul",
-    items: [
-      "Kiosk and Admin Console both moved off HeroUI — Admin Console now runs on Mantine, the Kiosk on shadcn/ui — as a full rebuild, not a re-theme.",
-      "Fixed a banned default-font regression (Inter) on both apps; wired the real typography system instead.",
-      "Kicked off a real model training run against an expanded, corrected training/validation split.",
-      "Full project documentation and planning audit, so the plan actually matches the shipped system.",
-    ],
-  },
-  {
-    date: "2026-07-22",
-    title: "Security hardening and guest-flow protections",
-    items: [
-      "Closed unauthenticated kiosk telemetry endpoints.",
-      "Added a hard server-side cutoff so deposits stop once a bin is full, instead of risking a physical jam.",
-      "Rate-limited guest session, deposit, and charging-start endpoints.",
-      "Added automatic recovery for charging sessions left stranded by an offline kiosk.",
-      "Removed a legacy backend prototype and other dead code.",
-    ],
-  },
-];
+export const metadata: Metadata = { title: "Changelog" };
 
 export default function ChangelogPage() {
   return (
@@ -43,7 +16,7 @@ export default function ChangelogPage() {
       </p>
 
       <ol className="mt-12 space-y-12 border-l border-[var(--color-border)] pl-8">
-        {ENTRIES.map((entry) => (
+        {CHANGELOG_ENTRIES.map((entry) => (
           <li key={entry.date} className="relative">
             <span
               aria-hidden
