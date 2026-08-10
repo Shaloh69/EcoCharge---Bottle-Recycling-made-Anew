@@ -30,10 +30,11 @@
 //   • On reject  → reverses until entrance clears → returns to idle
 // ============================================================================
 
-static volatile bottle_fsm_state_t s_state        = BOTTLE_FSM_IDLE;
-static volatile bool               s_approve_req   = false;
-static volatile bool               s_reject_req    = false;
-static volatile bool               s_bin_confirmed = false;
+static volatile bottle_fsm_state_t s_state          = BOTTLE_FSM_IDLE;
+static volatile bool               s_approve_req     = false;
+static volatile bool               s_reject_req      = false;
+static volatile bool               s_bin_confirmed   = false;
+static volatile bool               s_scan_timed_out  = false;
 
 static SemaphoreHandle_t s_mutex = NULL;
 
@@ -49,8 +50,8 @@ static void _set_state(bottle_fsm_state_t next)
 static void _enter_idle(void)
 {
     conveyor_stop();
-    s_approve_req   = false;
-    s_reject_req    = false;
+    s_approve_req = false;
+    s_reject_req  = false;
     _set_state(BOTTLE_FSM_IDLE);
 }
 
@@ -62,6 +63,7 @@ static void _bottle_fsm_task(void *arg)
     ESP_LOGI(LOG_TAG, "Bottle FSM task started");
 
     TickType_t scan_last_nudge   = 0;
+    TickType_t scan_start_tick   = 0;
     TickType_t drop_start_tick   = 0;
     TickType_t reject_start_tick = 0;
 
@@ -72,16 +74,31 @@ static void _bottle_fsm_task(void *arg)
         case BOTTLE_FSM_IDLE:
             if (ultrasonic_bottle_at_entrance()) {
                 ESP_LOGI(LOG_TAG, "Bottle detected at entrance — starting scan");
-                s_bin_confirmed = false;
+                s_bin_confirmed  = false;
+                s_scan_timed_out = false;
                 conveyor_set_speed(CONVEYOR_SPEED_SCAN);
                 conveyor_forward();
                 scan_last_nudge = xTaskGetTickCount();
+                scan_start_tick = scan_last_nudge;
                 _set_state(BOTTLE_FSM_SCANNING);
             }
             break;
 
         // ----------------------------------------------------------------
         case BOTTLE_FSM_SCANNING:
+            // No approve/reject ever arrived — browser crash, AI down, or
+            // a bottle triggering the entrance sensor with no active
+            // session. Bound conveyor wear instead of nudging forever.
+            if (pdTICKS_TO_MS(xTaskGetTickCount() - scan_start_tick) >= BOTTLE_SCAN_TIMEOUT_MS) {
+                ESP_LOGW(LOG_TAG, "Scan timeout — no approve/reject received, ejecting");
+                s_scan_timed_out = true;
+                conveyor_set_speed(CONVEYOR_SPEED_REVERSE);
+                conveyor_reverse();
+                reject_start_tick = xTaskGetTickCount();
+                _set_state(BOTTLE_FSM_REJECTING);
+                break;
+            }
+
             // Check for backend commands first
             if (s_approve_req) {
                 s_approve_req = false;
@@ -145,6 +162,35 @@ static void _bottle_fsm_task(void *arg)
 
         // ----------------------------------------------------------------
         case BOTTLE_FSM_CONFIRMING:
+            // DROPPING already got a direct sensor hit — no ambiguity to
+            // resolve, just let one telemetry cycle report it.
+            if (!s_bin_confirmed) {
+                // DROPPING timed out without a hit. A single missed
+                // ultrasonic reading is indistinguishable from "bottle
+                // never arrived" — re-sample for up to BOTTLE_BIN_RECHECK_MS,
+                // requiring BOTTLE_BIN_CONFIRM_SAMPLES consecutive positive
+                // reads (debounces a stray echo either direction) before
+                // flipping confirmed.
+                TickType_t recheck_start = xTaskGetTickCount();
+                int consecutive = 0;
+                while (pdTICKS_TO_MS(xTaskGetTickCount() - recheck_start) < BOTTLE_BIN_RECHECK_MS) {
+                    if (ultrasonic_bottle_in_bin()) {
+                        consecutive++;
+                        if (consecutive >= BOTTLE_BIN_CONFIRM_SAMPLES) {
+                            s_bin_confirmed = true;
+                            ESP_LOGI(LOG_TAG, "Bin re-check confirmed bottle after DROPPING timeout");
+                            break;
+                        }
+                    } else {
+                        consecutive = 0;
+                    }
+                    vTaskDelay(pdMS_TO_TICKS(100));
+                }
+                if (!s_bin_confirmed) {
+                    ESP_LOGW(LOG_TAG, "Bin re-check exhausted — no bottle confirmed");
+                }
+            }
+
             // Telemetry task will report bottle_in_bin=s_bin_confirmed.
             // After one telemetry cycle, return to idle.
             // Give telemetry task ~TELEMETRY_POST_MS + margin to pick it up.
@@ -212,4 +258,9 @@ const char *bottle_fsm_state_str(void)
 bool bottle_fsm_bin_confirmed(void)
 {
     return s_bin_confirmed;
+}
+
+bool bottle_fsm_scan_timed_out(void)
+{
+    return s_scan_timed_out;
 }

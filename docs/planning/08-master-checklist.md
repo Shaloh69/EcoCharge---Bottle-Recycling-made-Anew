@@ -37,7 +37,10 @@ Every actionable item across `docs/planning/00-07`, in the order `00-start-here.
 
 ## Phase C — Firmware fixes (`03-revamp-master.md` §3.2/§3.3, `AUDIT.md`)
 
-- [!] **`BOTTLE_SCAN_TIMEOUT_MS=60000` and `BOTTLE_BIN_RECHECK_MS=4000`/3-sample debounce — proposed, not flashed. Explicit sign-off required before any flash; this is a physical hardware change, not something to proceed on "to the letter" without your review.**
+- [~] **Both fixes implemented in source 2026-08-11 — safe to write given hardware is confirmed unreachable (nothing to accidentally flash). Still `[!]` for the actual flash, which needs explicit sign-off + physical access, neither available right now.**
+  - `BOTTLE_SCAN_TIMEOUT_MS=60000`: `esp/ecocharge/src/bottle_fsm.c` — SCANNING now tracks its own entry tick (`scan_start_tick`, separate from the per-nudge timer) and transitions to REJECTING if 60s pass with no approve/reject command, setting a new `s_scan_timed_out` flag first. Flag persists through the IDLE period that follows (cleared on the *next* scan start, matching the existing `s_bin_confirmed` lifecycle convention — not cleared on idle-entry, which would race the telemetry task).
+  - `BOTTLE_BIN_RECHECK_MS=4000` / `BOTTLE_BIN_CONFIRM_SAMPLES=3`: `CONFIRMING` no longer just waits and reports — if it got there via a DROPPING timeout (not a direct sensor hit), it now actively re-samples the bin sensor every 100ms for up to 4s, requiring 3 consecutive positive reads before flipping confirmed. If DROPPING already got a direct hit, this recheck is skipped entirely (no ambiguity to resolve).
+  - **New telemetry field wired through the full stack, not just the firmware**: `scan_timed_out` now flows firmware (`api_client.c`) → `devices.ts`'s telemetry schema/handler → both the admin and kiosk SSE broadcasts. The kiosk-facing UI treatment for it (per AUDIT.md's "so the kiosk UI can show a real reason instead of a silent reset") is **not built** — that's Phase E design work, a different kind of task; the data now exists for a future UI pass to use.
 
 ## Phase D — Product decision (`03-revamp-master.md` §3.1)
 

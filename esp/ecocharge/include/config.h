@@ -95,6 +95,28 @@
 #define BOTTLE_FSM_TASK_STACK      4096
 #define BOTTLE_FSM_TASK_PRIORITY      6
 
+// SCANNING has no natural exit if no approve/reject command ever arrives
+// (browser crash, AI down, or a bottle triggering the entrance sensor with
+// no active kiosk session). 60s covers >=4 full worst-case AI attempts
+// (the /api/detect proxy caps ~12s each) plus command-poll latency, bounding
+// conveyor wear to <=30 nudges instead of unbounded. On timeout, the FSM
+// transitions to REJECTING so an unreadable object is physically returned.
+// Proposed in AUDIT.md, code implemented 2026-08-11 — not yet flashed
+// (explicit hardware sign-off required first, see docs/planning §3.2).
+#define BOTTLE_SCAN_TIMEOUT_MS    60000
+
+// CONFIRMING re-check: if DROPPING times out without a bin-sensor hit, a
+// single missed ultrasonic reading is indistinguishable from "bottle never
+// arrived" — but the bottle may have physically landed with the sensor
+// just missing that one echo. Re-sample every 100ms FSM tick for up to
+// BOTTLE_BIN_RECHECK_MS, requiring BOTTLE_BIN_CONFIRM_SAMPLES consecutive
+// positive reads (debounces a stray echo in either direction) before
+// flipping confirmed. Worst case adds ~4s on top of the existing 8s
+// DROPPING timeout (~12s total), inside the kiosk's bin-wait UX budget.
+// Proposed in AUDIT.md, code implemented 2026-08-11 — not yet flashed.
+#define BOTTLE_BIN_RECHECK_MS      4000
+#define BOTTLE_BIN_CONFIRM_SAMPLES    3
+
 // ----------------------------------------------------------------------------
 // WiFi — Station (credentials saved in NVS; these are compile-time fallbacks)
 // ----------------------------------------------------------------------------

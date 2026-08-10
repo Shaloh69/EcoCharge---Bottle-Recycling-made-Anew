@@ -335,10 +335,12 @@ esp_err_t api_client_post_telemetry(void)
     n += snprintf(body + n, sizeof(body) - n,
                   "\"bottle_at_entrance\":%s,"
                   "\"bottle_in_bin\":%s,"
+                  "\"scan_timed_out\":%s,"
                   "\"fsm_state\":\"%s\","
                   "\"bin_level\":-1}",
                   ultrasonic_bottle_at_entrance() ? "true" : "false",
                   bottle_fsm_bin_confirmed()      ? "true" : "false",
+                  bottle_fsm_scan_timed_out()     ? "true" : "false",
                   bottle_fsm_state_str());
     body[n] = '\0';
 

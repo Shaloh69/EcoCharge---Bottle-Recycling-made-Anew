@@ -58,4 +58,13 @@ const char *bottle_fsm_state_str(void);
  */
 bool bottle_fsm_bin_confirmed(void);
 
+/**
+ * @brief Return true if SCANNING hit BOTTLE_SCAN_TIMEOUT_MS without an
+ *        approve/reject command (browser crash, AI down, no active
+ *        session). Stays true through the IDLE period that follows (so
+ *        telemetry has time to report it) — cleared when the next scan
+ *        actually starts, same convention as bottle_fsm_bin_confirmed().
+ */
+bool bottle_fsm_scan_timed_out(void);
+
 #endif // BOTTLE_FSM_H

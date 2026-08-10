@@ -102,6 +102,7 @@ const telemetrySchema = z.object({
   ultrasonic: ultrasonicSchema,
   bottle_at_entrance: z.boolean().optional(),
   bottle_in_bin: z.boolean().optional(),
+  scan_timed_out: z.boolean().optional(),
   fsm_state: z.string().optional(),
 });
 
@@ -117,6 +118,7 @@ router.post(
         ultrasonic,
         bottle_at_entrance,
         bottle_in_bin,
+        scan_timed_out,
         fsm_state,
       } = body;
       const kioskId = req.kiosk!.id;
@@ -248,6 +250,7 @@ router.post(
         ultrasonic: ultrasonic ?? null,
         bottleAtEntrance: bottle_at_entrance ?? false,
         bottleInBin: bottle_in_bin ?? false,
+        scanTimedOut: scan_timed_out ?? false,
         fsmState: fsm_state ?? "idle",
         timestamp: new Date(),
       });
@@ -258,6 +261,7 @@ router.post(
         type: "ports",
         ports: portStatus,
         bottleAtEntrance: bottle_at_entrance ?? false,
+        scanTimedOut: scan_timed_out ?? false,
         fsmState: fsm_state ?? "idle",
       });
 
