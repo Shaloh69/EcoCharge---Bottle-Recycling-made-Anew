@@ -18,6 +18,21 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-08-10 — Self-hosting migration unblocked: SSH access works, real recon done on `desktop-gklhcri`
+
+**SSH access — the actual working credential, don't re-guess this:** `ssh transfer@desktop-gklhcri`, not `Shaloh@...` (the local Windows account name). The `transfer` account is the one with this machine's key authorized. Verified working 2026-08-10.
+
+**Real state found on `desktop-gklhcri`, checked directly — don't assume `03-revamp-master.md` §1's prerequisites are unmet without checking first:**
+- **Docker is already installed** (29.6.2), with WSL2 + Ubuntu already set up as the backend. The "install Docker Desktop" prerequisite in `03-revamp-master.md` §1 is already satisfied — don't redo it.
+- **Disk space confirms the Disk D decision was right**: C: has only ~17GB free (220GB used) — genuinely tight. D: has ~648GB free. E: also exists (~89GB free, ~843GB used) but wasn't part of the plan; stick with D: per the existing decision.
+- **`D:\EcoCharge\` already exists**, with two things in it pre-dating this session's docs work:
+  - `D:\EcoCharge\EcoCharge\` — a full clone of this repo, same GitHub remote. Was stale (last synced commit `4e74fa4`, 2026-04-23) — **pulled and fast-forwarded to `c8d4a8a` this session**, now current.
+  - `D:\EcoCharge\datasets\magical-nightingale\` — **a second, separate bottle-detection dataset**, hosted on Ultralytics Platform (`platform.ultralytics.com/jobert-vidad/datasets/magical-nightingale`), created 2026-04-20 by a collaborator (`jobert-vidad` — a teammate not otherwise referenced in any doc so far). Single class `plastic bottle` (same taxonomy as the existing `Eco-Charge.v1` set), ~78MB per its own `data.yaml`, real train/val/test split already defined. **The images themselves aren't downloaded locally yet** (0 files under `images/` at recon time) — it's a registered dataset reference, not yet pulled/merged. This is directly relevant to `docs/planning/07-ai-detection-improvements.md` §4 (dataset expansion) — check with the team/this collaborator before hunting external Roboflow sets from scratch; there may already be a plan for this dataset that isn't written down anywhere yet.
+
+**How to apply:** when resuming the self-hosting migration, start from `03-revamp-master.md` §1.0 (folder layout — `D:\EcoCharge\mysql\`, `D:\EcoCharge\supabase\` etc. as siblings to the existing `EcoCharge\` and `datasets\` folders, not nested inside either). Docker Compose files and standing up the MySQL/Supabase containers is the next real step, not yet done as of this entry. Ask about `magical-nightingale` before doing more dataset research — a teammate may already own this.
+
+---
+
 ## 2026-08-10 — Kiosk premade designs reviewed; real mascot copyright problem found
 
 `EcoCharge.pdf` (80 pages, a Figma export at true kiosk resolution — 1080×1920) was dropped at the repo root and reviewed in full. Findings folded into `02-design-mandate.md` §4.6 — real palette (including a genuine, repeated purple tertiary accent this document didn't previously have), real typography (a rounded/friendly display face, not the previously-speculated Outfit), a signature wave/blob divider shape, and a real component catalog (bin-level battery gauge, station-picker grid, on-screen numeric keypad, OTP entry, success/fail halo badge, receipt screen).

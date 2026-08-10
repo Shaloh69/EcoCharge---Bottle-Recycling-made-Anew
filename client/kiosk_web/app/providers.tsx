@@ -29,8 +29,8 @@ export function Providers({ children, themeProps }: ProvidersProps) {
       <NextThemesProvider
         {...themeProps}
         attribute="class"
-        defaultTheme="dark"
-        forcedTheme="dark"
+        defaultTheme="light"
+        forcedTheme="light"
       >
         <ToastProvider
           maxVisibleToasts={3}

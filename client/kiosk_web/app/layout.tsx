@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#07120A",
+  themeColor: "#F6FBF7",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -32,8 +32,8 @@ export default function RootLayout({
         <Providers
           themeProps={{
             attribute: "class",
-            defaultTheme: "dark",
-            forcedTheme: "dark",
+            defaultTheme: "light",
+            forcedTheme: "light",
           }}
         >
           <KioskRoot>{children}</KioskRoot>

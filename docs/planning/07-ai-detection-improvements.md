@@ -64,6 +64,10 @@ Worth restating as its own item: a detection landing between 0.40 and 0.50 confi
 
 The existing dataset (`scripts/dataset/Eco-Charge.v1`, Roboflow project [`hubssoftdev/ecocharge`](https://universe.roboflow.com/hubssoftdev/ecocharge/dataset/1)) is small — 103 train / 30 valid / 15 test images, single class `plastic-bottle`, per `docs/PROJECT_ANALYSIS.md`. That's genuinely thin for a detector expected to generalize across lighting, angle, and motion conditions.
 
+### 4.0 Check this first, before anything below — a second dataset may already exist
+
+Found during infrastructure recon on `desktop-gklhcri` (2026-08-10, see `memory.md`): `D:\EcoCharge\datasets\magical-nightingale\` — a **separate, already-registered** single-class (`plastic bottle`) detection dataset on Ultralytics Platform (`platform.ultralytics.com/jobert-vidad/datasets/magical-nightingale`), created 2026-04-20 by a collaborator (`jobert-vidad`) not otherwise referenced in any project doc. Real train/val/test split defined in its own `data.yaml`, ~78MB. **The images aren't downloaded locally yet** — it's a registered reference, not a merged dataset. Ask the team about this before doing any of the external-source merge work below; it may already be earmarked for exactly this purpose, and duplicating that effort by independently sourcing Roboflow sets would be wasted work if so.
+
 ### 4.1 An important distinction before merging anything: detector data vs. classifier data are different problems
 
 - **The YOLO detector** only needs bounding boxes around a single class (`plastic-bottle`). Any public bottle dataset can contribute here, regardless of what attributes it does or doesn't label — merging is mostly a matter of remapping every dataset's class names down to one `plastic-bottle` class and reconciling image formats/splits.

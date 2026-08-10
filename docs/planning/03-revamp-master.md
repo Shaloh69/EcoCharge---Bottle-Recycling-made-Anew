@@ -31,7 +31,9 @@ Single source of truth for the rework. Give this file, alongside `analyzation.md
 
 **Containerization: MySQL and Supabase both run in Docker, not native installs.** This is a change from the original version of this plan (which called for a native MySQL install and dropping Supabase entirely in favor of hand-built local storage). Reasoning below in §1.3/§1.4 — the short version: Docker gives clean, disk-relocatable, backup-friendly volumes for both, and self-hosting Supabase (rather than replacing it) means the app's existing Supabase-REST-API integration code barely has to change, just repoint at a different URL and a newly-generated key.
 
-**Prerequisite: Docker Desktop on `desktop-gklhcri`.** Windows, so this means Docker Desktop with the WSL2 backend (not Hyper-V-only) — confirm WSL2 is enabled before installing Docker Desktop, since that's the more common source of a broken-looking install on Windows.
+**Prerequisite: Docker Desktop on `desktop-gklhcri`.** Windows, so this means Docker Desktop with the WSL2 backend (not Hyper-V-only) — confirm WSL2 is enabled before installing Docker Desktop, since that's the more common source of a broken-looking install on Windows. **Already satisfied, confirmed 2026-08-10** — Docker 29.6.2 and a WSL2/Ubuntu backend are already present on the machine; don't reinstall.
+
+**SSH access, confirmed working 2026-08-10: `ssh transfer@desktop-gklhcri`** (the `transfer` account, not the local dev machine's own Windows username). `D:\EcoCharge\EcoCharge\` already holds a clone of this repo on that machine — keep it synced (`git pull`) rather than assuming a fresh clone is needed.
 
 ### 1.0 Folder management — the real layout on Disk D
 
