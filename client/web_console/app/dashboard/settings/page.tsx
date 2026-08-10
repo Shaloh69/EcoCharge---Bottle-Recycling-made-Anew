@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { addToast } from "@heroui/toast";
 
+import { addToast } from "@/lib/toast";
 import { admin } from "@/lib/api";
 
 type Settings = {

@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
-import { addToast } from "@heroui/toast";
 
+import { addToast } from "@/lib/toast";
 import {
   admin,
   type Kiosk,
@@ -48,11 +48,10 @@ function Btn({
     amber: "rgba(245,158,11,0.45)",
     gray: "rgba(255,255,255,0.15)",
   };
+
   return (
     <button
-      type="button"
       disabled={disabled}
-      onClick={onClick}
       style={{
         background: disabled ? "rgba(255,255,255,0.04)" : bg[color],
         border: `1px solid ${disabled ? "rgba(255,255,255,0.08)" : border[color]}`,
@@ -65,6 +64,8 @@ function Btn({
         transition: "all 0.15s",
         whiteSpace: "nowrap",
       }}
+      type="button"
+      onClick={onClick}
     >
       {label}
     </button>
@@ -141,8 +142,6 @@ function PortCard({
 
       <div className="flex items-center gap-2">
         <select
-          value={duration}
-          onChange={(e) => setDuration(Number(e.target.value))}
           disabled={on || busy}
           style={{
             background: "rgba(255,255,255,0.06)",
@@ -153,28 +152,30 @@ function PortCard({
             fontSize: 11,
             flex: 1,
           }}
+          value={duration}
+          onChange={(e) => setDuration(Number(e.target.value))}
         >
           {[15, 30, 60, 120, 300, 600, 900, 1800, 3600].map((s) => (
-            <option key={s} value={s} style={{ background: "#1a1a2e" }}>
+            <option key={s} style={{ background: "#1a1a2e" }} value={s}>
               {s < 60 ? `${s}s` : `${s / 60}m`}
             </option>
           ))}
         </select>
         {on ? (
           <Btn
-            label="Stop"
+            small
             color="red"
             disabled={busy}
+            label="Stop"
             onClick={() => onDeactivate(port)}
-            small
           />
         ) : (
           <Btn
-            label="Activate"
+            small
             color="teal"
             disabled={busy}
+            label="Activate"
             onClick={() => onActivate(port, duration)}
-            small
           />
         )}
       </div>
@@ -213,6 +214,7 @@ export default function KioskDetailPage({
         admin.commandHistory(kioskId, 30),
       ]);
       const found = kiosks.find((k) => k.id === kioskId);
+
       if (found) {
         setKiosk(found as Kiosk & { api_key?: string });
         setEditName(found.name);
@@ -236,9 +238,11 @@ export default function KioskDetailPage({
     const es = new EventSource(
       `${API}/api/admin/sse${token ? `?token=${token}` : ""}`,
     );
+
     es.onmessage = (e) => {
       try {
         const ev = JSON.parse(e.data);
+
         if (ev.type === "telemetry" && ev.kioskId === kioskId) {
           if (ev.portData) setPorts(ev.portData);
           if (ev.binLevel !== undefined) setBinLevel(ev.binLevel);
@@ -250,6 +254,7 @@ export default function KioskDetailPage({
         /* ignore */
       }
     };
+
     return () => es.close();
   }, [kioskId]);
 
@@ -310,18 +315,16 @@ export default function KioskDetailPage({
       <div className="flex items-start justify-between gap-4">
         <div>
           <button
-            type="button"
-            onClick={() => router.push("/dashboard/kiosks")}
             className="text-xs mb-2 flex items-center gap-1"
             style={dimText(0.38)}
+            type="button"
+            onClick={() => router.push("/dashboard/kiosks")}
           >
             ← Back to kiosks
           </button>
           {editing ? (
             <div className="space-y-2">
               <input
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
                 placeholder="Kiosk name"
                 style={{
                   background: "rgba(255,255,255,0.06)",
@@ -333,10 +336,10 @@ export default function KioskDetailPage({
                   fontWeight: 700,
                   width: "100%",
                 }}
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
               />
               <input
-                value={editLocation}
-                onChange={(e) => setEditLocation(e.target.value)}
                 placeholder="Location"
                 style={{
                   background: "rgba(255,255,255,0.06)",
@@ -347,12 +350,14 @@ export default function KioskDetailPage({
                   fontSize: 13,
                   width: "100%",
                 }}
+                value={editLocation}
+                onChange={(e) => setEditLocation(e.target.value)}
               />
               <div className="flex gap-2">
-                <Btn label="Save" color="teal" onClick={saveEdit} />
+                <Btn color="teal" label="Save" onClick={saveEdit} />
                 <Btn
-                  label="Cancel"
                   color="gray"
+                  label="Cancel"
                   onClick={() => setEditing(false)}
                 />
               </div>
@@ -376,16 +381,16 @@ export default function KioskDetailPage({
           {!editing && (
             <>
               <Btn
-                label="Edit"
-                color="gray"
-                onClick={() => setEditing(true)}
                 small
+                color="gray"
+                label="Edit"
+                onClick={() => setEditing(true)}
               />
               <Btn
-                label="Delete"
-                color="red"
-                onClick={() => setShowDeleteConfirm(true)}
                 small
+                color="red"
+                label="Delete"
+                onClick={() => setShowDeleteConfirm(true)}
               />
             </>
           )}
@@ -405,12 +410,12 @@ export default function KioskDetailPage({
             Delete <strong>{kiosk.name}</strong>? This cannot be undone.
           </p>
           <div className="flex gap-2">
-            <Btn label="Yes, delete" color="red" onClick={deleteKiosk} small />
+            <Btn small color="red" label="Yes, delete" onClick={deleteKiosk} />
             <Btn
-              label="Cancel"
-              color="gray"
-              onClick={() => setShowDeleteConfirm(false)}
               small
+              color="gray"
+              label="Cancel"
+              onClick={() => setShowDeleteConfirm(false)}
             />
           </div>
         </div>
@@ -421,7 +426,10 @@ export default function KioskDetailPage({
         {[
           { label: "Kiosk ID", value: `#${kiosk.id}` },
           { label: "FSM State", value: fsmState },
-          { label: "Bottle at Entrance", value: bottleAtEntrance ? "YES" : "No" },
+          {
+            label: "Bottle at Entrance",
+            value: bottleAtEntrance ? "YES" : "No",
+          },
           {
             label: "Last Seen",
             value: kiosk.last_seen_at
@@ -468,9 +476,9 @@ export default function KioskDetailPage({
           {[1, 2, 3, 4].map((port) => (
             <PortCard
               key={port}
-              port={port}
-              data={ports.find((p) => p.port === port)}
               busy={busy}
+              data={ports.find((p) => p.port === port)}
+              port={port}
               onActivate={(p, dur) =>
                 send("activate_port", { port: p, duration_seconds: dur })
               }
@@ -487,21 +495,21 @@ export default function KioskDetailPage({
         </p>
         <div className="flex flex-wrap gap-2">
           <Btn
-            label="▶ Conveyor Forward"
             color="teal"
             disabled={busy}
+            label="▶ Conveyor Forward"
             onClick={() => send("open_conveyor")}
           />
           <Btn
-            label="■ Conveyor Stop"
             color="amber"
             disabled={busy}
+            label="■ Conveyor Stop"
             onClick={() => send("close_conveyor")}
           />
           <Btn
-            label="◀ Conveyor Reverse"
             color="gray"
             disabled={busy}
+            label="◀ Conveyor Reverse"
             onClick={() => send("reverse_conveyor")}
           />
         </div>
@@ -510,21 +518,21 @@ export default function KioskDetailPage({
           style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
         >
           <Btn
-            label="✓ Approve Bottle"
             color="teal"
             disabled={busy}
+            label="✓ Approve Bottle"
             onClick={() => send("approve_bottle")}
           />
           <Btn
-            label="✕ Reject Bottle"
             color="red"
             disabled={busy}
+            label="✕ Reject Bottle"
             onClick={() => send("reject_bottle")}
           />
           <Btn
-            label="⟳ Ping"
             color="gray"
             disabled={busy}
+            label="⟳ Ping"
             onClick={() => send("ping")}
           />
         </div>
@@ -559,9 +567,9 @@ export default function KioskDetailPage({
             Command Log
           </p>
           <button
+            style={{ fontSize: 11, ...dimText(0.38) }}
             type="button"
             onClick={refresh}
-            style={{ fontSize: 11, ...dimText(0.38) }}
           >
             ⟳ Refresh
           </button>

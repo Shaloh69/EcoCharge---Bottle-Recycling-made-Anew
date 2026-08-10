@@ -1,8 +1,8 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { addToast } from "@heroui/toast";
 
+import { addToast } from "@/lib/toast";
 import { adminAuth, auth } from "@/lib/api";
 
 export default function LoginPage() {

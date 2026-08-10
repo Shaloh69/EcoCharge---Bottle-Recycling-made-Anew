@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { addToast } from "@heroui/toast";
 
+import { addToast } from "@/lib/toast";
 import { admin, type ChargingSession } from "@/lib/api";
 
 const ACCENT = "#F59E0B";

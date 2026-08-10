@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { addToast } from "@heroui/toast";
 
+import { addToast } from "@/lib/toast";
 import { admin, type Kiosk } from "@/lib/api";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { BinGauge } from "@/components/admin/BinGauge";
@@ -36,10 +36,12 @@ export default function KiosksPage() {
   const createKiosk = async () => {
     if (!newName.trim() || !newLocation.trim()) {
       addToast({ title: "Name and location are required", color: "warning" });
+
       return;
     }
     try {
       const k = await admin.createKiosk(newName.trim(), newLocation.trim());
+
       setNewApiKey((k as Kiosk & { api_key: string }).api_key);
       setKiosks((prev) => [...prev, k]);
       setNewName("");
@@ -64,15 +66,15 @@ export default function KiosksPage() {
           </p>
         </div>
         <button
-          onClick={() => {
-            setCreating(true);
-            setNewApiKey(null);
-          }}
           className="rounded-xl px-4 py-2 text-sm font-semibold"
           style={{
             background: "rgba(20,184,166,0.18)",
             border: "1px solid rgba(20,184,166,0.45)",
             color: "rgba(255,255,255,0.85)",
+          }}
+          onClick={() => {
+            setCreating(true);
+            setNewApiKey(null);
           }}
         >
           + New Kiosk
@@ -102,15 +104,15 @@ export default function KiosksPage() {
                 {newApiKey}
               </p>
               <button
-                onClick={() => {
-                  setCreating(false);
-                  setNewApiKey(null);
-                }}
                 className="rounded-xl px-4 py-2 text-xs font-semibold"
                 style={{
                   background: "rgba(255,255,255,0.07)",
                   border: "1px solid rgba(255,255,255,0.12)",
                   color: "rgba(255,255,255,0.65)",
+                }}
+                onClick={() => {
+                  setCreating(false);
+                  setNewApiKey(null);
                 }}
               >
                 Done
@@ -119,8 +121,6 @@ export default function KiosksPage() {
           ) : (
             <>
               <input
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
                 placeholder="Kiosk name (e.g. Kiosk-002)"
                 style={{
                   width: "100%",
@@ -131,10 +131,10 @@ export default function KiosksPage() {
                   padding: "8px 12px",
                   fontSize: 13,
                 }}
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
               />
               <input
-                value={newLocation}
-                onChange={(e) => setNewLocation(e.target.value)}
                 placeholder="Location (e.g. Building B Lobby)"
                 style={{
                   width: "100%",
@@ -145,27 +145,29 @@ export default function KiosksPage() {
                   padding: "8px 12px",
                   fontSize: 13,
                 }}
+                value={newLocation}
+                onChange={(e) => setNewLocation(e.target.value)}
               />
               <div className="flex gap-2">
                 <button
-                  onClick={createKiosk}
                   className="rounded-xl px-4 py-2 text-xs font-semibold"
                   style={{
                     background: "rgba(20,184,166,0.18)",
                     border: "1px solid rgba(20,184,166,0.45)",
                     color: "rgba(255,255,255,0.85)",
                   }}
+                  onClick={createKiosk}
                 >
                   Create
                 </button>
                 <button
-                  onClick={() => setCreating(false)}
                   className="rounded-xl px-4 py-2 text-xs font-semibold"
                   style={{
                     background: "rgba(255,255,255,0.06)",
                     border: "1px solid rgba(255,255,255,0.10)",
                     color: "rgba(255,255,255,0.50)",
                   }}
+                  onClick={() => setCreating(false)}
                 >
                   Cancel
                 </button>
@@ -192,9 +194,9 @@ export default function KiosksPage() {
         {kiosks.map((k) => (
           <button
             key={k.id}
-            type="button"
             className="rounded-2xl p-5 w-full text-left cursor-pointer hover:border-teal-400/40 transition-all"
             style={glass}
+            type="button"
             onClick={() => router.push(`/dashboard/kiosks/${k.id}`)}
           >
             <div className="flex items-start justify-between mb-4">

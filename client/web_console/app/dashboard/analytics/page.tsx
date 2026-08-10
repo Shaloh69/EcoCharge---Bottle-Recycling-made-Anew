@@ -12,8 +12,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { addToast } from "@heroui/toast";
 
+import { addToast } from "@/lib/toast";
 import { admin, type Analytics } from "@/lib/api";
 
 const GLASS = {

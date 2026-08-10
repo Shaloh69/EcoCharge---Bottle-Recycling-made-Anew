@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { addToast } from "@heroui/toast";
 
+import { addToast } from "@/lib/toast";
 import { StatsCard } from "@/components/admin/StatsCard";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { BinGauge } from "@/components/admin/BinGauge";

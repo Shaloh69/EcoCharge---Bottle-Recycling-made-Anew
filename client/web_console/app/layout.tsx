@@ -4,7 +4,7 @@ import clsx from "clsx";
 
 import { Providers } from "./providers";
 
-import { fontSans } from "@/config/fonts";
+import { fontHeading, fontMono, fontSans } from "@/config/fonts";
 
 export const metadata: Metadata = {
   title: "EcoCharge Admin Console",
@@ -24,6 +24,8 @@ export default function RootLayout({
         className={clsx(
           "min-h-screen font-sans antialiased",
           fontSans.variable,
+          fontHeading.variable,
+          fontMono.variable,
         )}
         style={{ background: "#051A08" }}
       >
