@@ -1,5 +1,7 @@
 import { exec } from "child_process";
 import { promisify } from "util";
+import fs from "fs";
+import path from "path";
 
 import { log } from "./logger";
 
@@ -39,6 +41,33 @@ export async function runMigrations() {
           );
           continue;
         }
+      }
+
+      // P3005 — schema already exists with no recorded migration history
+      // (e.g. bootstrapped via `prisma db push` instead of `migrate deploy`,
+      // as this repo's own historical migration set requires — see
+      // docs/planning/03-revamp-master.md §1.3). Baseline every migration
+      // as already-applied so future `migrate deploy` calls just no-op
+      // against them instead of crash-looping on every startup.
+      if (combined.includes("P3005")) {
+        const migrationsDir = path.join(
+          __dirname,
+          "..",
+          "prisma",
+          "migrations",
+        );
+        const names = fs
+          .readdirSync(migrationsDir, { withFileTypes: true })
+          .filter((d) => d.isDirectory())
+          .map((d) => d.name);
+        log.migration(
+          `Unbaselined schema (P3005) — marking ${names.length} migration(s) as applied…`,
+        );
+        for (const name of names) {
+          await execAsync(`npx prisma migrate resolve --applied ${name}`);
+        }
+        log.migration(`Baselined — retrying… (attempt ${attempt + 1})`);
+        continue;
       }
 
       // P3018 — column/table already exists from a prior db push.
