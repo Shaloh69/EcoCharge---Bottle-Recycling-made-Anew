@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 
 interface Fact {
   icon: string;
@@ -176,6 +177,37 @@ export function IdleScreen({ onDismiss }: { onDismiss: () => void }) {
           pointerEvents: "none",
         }}
       />
+
+      {/*
+       * Mascot — a welcoming presence on the attract screen, per
+       * docs/planning/02-design-mandate.md SS4.6 ("the idle/attract loop —
+       * a natural home for character personality"). Anchored bottom-right,
+       * partially off-frame, so it reads as a companion peeking in rather
+       * than competing with the rotating fact card for attention. Credit:
+       * public/mascot/CREDITS.md.
+       */}
+      <div
+        aria-hidden
+        className="float-anim"
+        style={{
+          position: "absolute",
+          bottom: -20,
+          right: -30,
+          width: "58vmin",
+          maxWidth: 420,
+          opacity: 0.92,
+          pointerEvents: "none",
+          filter: "drop-shadow(0 12px 28px rgba(0,0,0,0.35))",
+        }}
+      >
+        <Image
+          alt=""
+          height={1000}
+          src="/mascot/attract-hero.png"
+          style={{ width: "100%", height: "auto" }}
+          width={936}
+        />
+      </div>
 
       {/* EcoCharge brand */}
       <div

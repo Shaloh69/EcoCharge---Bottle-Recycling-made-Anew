@@ -611,3 +611,26 @@ body {
 .idle-fade       { animation: idle-fade       0.38s ease both; }
 .idle-zoom       { animation: idle-zoom       0.42s cubic-bezier(0.16,1,0.3,1) both; }
 .idle-flip       { animation: idle-flip       0.42s ease both; }
+
+/* Referenced by IdleScreen's fact icon and the mascot image - was missing
+   entirely (a dead className reference, no-op) until 2026-08-10. */
+@keyframes float-anim {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.float-anim { animation: float-anim 3.4s ease-in-out infinite; }
+
+/* Real requirement, not previously implemented anywhere in this file: every
+   animated-background/idle-transition rule in this project's design mandate
+   is contingent on "prefers-reduced-motion freezes it to a static first
+   frame" - freeze every animation/transition on this surface for anyone who
+   has that OS setting on, rather than each new animated component needing
+   to remember its own guard. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
