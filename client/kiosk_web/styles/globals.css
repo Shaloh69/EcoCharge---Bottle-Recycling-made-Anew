@@ -1,11 +1,14 @@
 @import "tailwindcss";
-@plugin '../hero.ts';
-@source '../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-mono: "Fira Code", monospace;
+  /* Inter is banned (docs/planning/02-design-mandate.md SS1) - real families
+     wired via next/font in app/layout.tsx, exposed as CSS vars here. Baloo 2
+     is the rounded/friendly display face confirmed by the real Figma
+     reference (SS4.6), not the earlier speculative Outfit guidance. */
+  --font-sans: var(--font-plex-sans), "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-baloo), "Baloo 2", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), "IBM Plex Mono", ui-monospace, monospace;
 
   /* ── Brand greens ── */
   --color-eco-forest:      #051A08;

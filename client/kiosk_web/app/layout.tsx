@@ -5,6 +5,7 @@ import clsx from "clsx";
 
 import { Providers } from "./providers";
 import { KioskRoot } from "@/components/kiosk/KioskRoot";
+import { fontDisplay, fontMono, fontSans } from "@/config/fonts";
 
 export const metadata: Metadata = {
   title: "EcoCharge Kiosk",
@@ -28,7 +29,14 @@ export default function RootLayout({
   return (
     <html suppressHydrationWarning lang="en">
       <head />
-      <body className={clsx("font-sans antialiased")}>
+      <body
+        className={clsx(
+          "font-sans antialiased",
+          fontDisplay.variable,
+          fontSans.variable,
+          fontMono.variable,
+        )}
+      >
         <Providers
           themeProps={{
             attribute: "class",
