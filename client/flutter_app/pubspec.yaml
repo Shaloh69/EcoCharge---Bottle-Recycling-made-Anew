@@ -18,6 +18,16 @@ dependencies:
   cupertino_icons: ^1.0.8
   image_picker: ^1.1.2
 
+  # "Clean Energy Reward" animation stack — docs/planning/02-design-mandate.md
+  # SS5. Confirmed absent as of 2026-08-10 (checked pubspec.yaml directly);
+  # this is genuinely new, not a version bump.
+  google_fonts: ^6.2.1       # Baloo 2 (display) + IBM Plex Sans (body) + IBM Plex Mono (numerals) - same families as client/kiosk_web and client/web
+  skeletonizer: ^1.4.2       # loading skeletons - dimensions must match final layout, no layout jump
+  lottie: ^3.1.3             # decorative: splash, empty states, success/failure
+  rive: ^0.13.20             # state-driven: live charging countdown + port-status ring
+  flutter_animate: ^4.5.2    # list/card entrance transitions
+  cached_network_image: ^3.4.1  # avatars, any bottle-photo display
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

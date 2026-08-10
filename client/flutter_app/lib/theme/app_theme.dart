@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 // ============================================================================
 // EcoCharge Flutter Theme — Nature / Forest colour palette
@@ -489,51 +490,101 @@ class AppTheme {
       ),
 
       // ── Typography ────────────────────────────────────────────────────
+      // "Clean Energy Reward" stack (docs/planning/02-design-mandate.md SS5):
+      // Baloo 2 for display/headline/title (the rounded, friendly display
+      // face confirmed by the real Figma reference, same family as
+      // client/kiosk_web and client/web), IBM Plex Sans for body/label -
+      // every color/weight/size choice below is unchanged from before,
+      // google_fonts just layers the real family onto each existing style
+      // rather than falling back to the platform default.
       textTheme: TextTheme(
-        displayLarge: TextStyle(
-          color: isDark ? AppColors.green50 : AppColors.forest900,
-          fontWeight: FontWeight.w800,
+        displayLarge: GoogleFonts.baloo2(
+          textStyle: TextStyle(
+            color: isDark ? AppColors.green50 : AppColors.forest900,
+            fontWeight: FontWeight.w800,
+          ),
         ),
-        displayMedium: TextStyle(
-          color: isDark ? AppColors.green50 : AppColors.forest900,
-          fontWeight: FontWeight.w700,
+        displayMedium: GoogleFonts.baloo2(
+          textStyle: TextStyle(
+            color: isDark ? AppColors.green50 : AppColors.forest900,
+            fontWeight: FontWeight.w700,
+          ),
         ),
-        headlineLarge: TextStyle(
-          color: isDark ? AppColors.green100 : AppColors.forest900,
-          fontWeight: FontWeight.w700,
+        headlineLarge: GoogleFonts.baloo2(
+          textStyle: TextStyle(
+            color: isDark ? AppColors.green100 : AppColors.forest900,
+            fontWeight: FontWeight.w700,
+          ),
         ),
-        headlineMedium: TextStyle(
-          color: isDark ? AppColors.green100 : AppColors.forest800,
-          fontWeight: FontWeight.w700,
+        headlineMedium: GoogleFonts.baloo2(
+          textStyle: TextStyle(
+            color: isDark ? AppColors.green100 : AppColors.forest800,
+            fontWeight: FontWeight.w700,
+          ),
         ),
-        titleLarge: TextStyle(
-          color: isDark ? AppColors.green100 : AppColors.forest800,
-          fontWeight: FontWeight.w700,
-          fontSize: 18,
+        titleLarge: GoogleFonts.baloo2(
+          textStyle: TextStyle(
+            color: isDark ? AppColors.green100 : AppColors.forest800,
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+          ),
         ),
-        titleMedium: TextStyle(
-          color: isDark ? AppColors.green200 : AppColors.forest700,
-          fontWeight: FontWeight.w600,
-          fontSize: 15,
+        titleMedium: GoogleFonts.baloo2(
+          textStyle: TextStyle(
+            color: isDark ? AppColors.green200 : AppColors.forest700,
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+          ),
         ),
-        bodyLarge: TextStyle(
-          color: isDark ? AppColors.green50 : AppColors.forest900,
-          fontSize: 15,
+        bodyLarge: GoogleFonts.ibmPlexSans(
+          textStyle: TextStyle(
+            color: isDark ? AppColors.green50 : AppColors.forest900,
+            fontSize: 15,
+          ),
         ),
-        bodyMedium: TextStyle(
-          color: isDark ? AppColors.green100 : AppColors.forest800,
-          fontSize: 13,
+        bodyMedium: GoogleFonts.ibmPlexSans(
+          textStyle: TextStyle(
+            color: isDark ? AppColors.green100 : AppColors.forest800,
+            fontSize: 13,
+          ),
         ),
-        bodySmall: TextStyle(
-          color: isDark ? AppColors.green200 : AppColors.sage600,
-          fontSize: 12,
+        bodySmall: GoogleFonts.ibmPlexSans(
+          textStyle: TextStyle(
+            color: isDark ? AppColors.green200 : AppColors.sage600,
+            fontSize: 12,
+          ),
         ),
-        labelLarge: TextStyle(
-          color: isDark ? AppColors.green100 : AppColors.forest800,
-          fontWeight: FontWeight.w600,
-          fontSize: 13,
+        labelLarge: GoogleFonts.ibmPlexSans(
+          textStyle: TextStyle(
+            color: isDark ? AppColors.green100 : AppColors.forest800,
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
         ),
       ),
+    );
+  }
+
+  /// IBM Plex Mono, for every monetary amount, credit balance, and
+  /// countdown — docs/planning/02-design-mandate.md SS5: "Credit balance is
+  /// the hero number on Home — mono-tabular numerals." Flutter's TextTheme
+  /// has no dedicated "mono" role, so numeric widgets opt in explicitly with
+  /// `AppTheme.monoStyle(context)` rather than each screen picking its own
+  /// font. `tabularFigures()` keeps digit widths equal so a changing balance
+  /// doesn't visibly reflow character-by-character.
+  static TextStyle monoStyle(
+    BuildContext context, {
+    double? fontSize,
+    FontWeight fontWeight = FontWeight.w600,
+    Color? color,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GoogleFonts.ibmPlexMono(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color ?? (isDark ? AppColors.green50 : AppColors.forest900),
+    ).copyWith(
+      fontFeatures: const [FontFeature.tabularFigures()],
     );
   }
 }
