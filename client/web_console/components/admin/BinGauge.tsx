@@ -1,39 +1,37 @@
 "use client";
 
+import { Progress, Text, Group } from "@mantine/core";
+
+/**
+ * Bin-level gauge — thresholds match the server's real alert logic exactly
+ * (docs/planning/02-design-mandate.md SS3): green < 80%, amber 80-94%,
+ * red >= 95%. Don't invent separate UI thresholds from the ones AUDIT.md
+ * and the /alerts endpoint actually use.
+ */
+function levelColor(level: number): string {
+  if (level >= 95) return "dangerRed";
+  if (level >= 80) return "warningAmber";
+
+  return "successLime";
+}
+
 export function BinGauge({ level }: { level: number }) {
-  const color =
-    level > 90
-      ? "#F87171"
-      : level > 70
-        ? "#FBBF24"
-        : level > 50
-          ? "#FCD34D"
-          : "#4ADE80";
+  const color = levelColor(level);
 
   return (
-    <div className="flex items-center gap-3 w-full">
-      <div
-        className="flex-1 rounded-full h-2.5 overflow-hidden"
-        style={{
-          background: "rgba(255,255,255,0.08)",
-          border: "1px solid rgba(255,255,255,0.10)",
-        }}
-      >
-        <div
-          className="h-full rounded-full transition-all duration-700"
-          style={{
-            width: `${level}%`,
-            background: `linear-gradient(90deg, ${color}99, ${color})`,
-            boxShadow: `0 0 8px ${color}60`,
-          }}
-        />
-      </div>
-      <span
-        className="text-xs font-bold w-10 text-right tabular-nums"
-        style={{ color }}
-      >
+    <Group gap="sm" w="100%" wrap="nowrap">
+      <Progress
+        animated={level >= 95}
+        color={color}
+        flex={1}
+        radius="xl"
+        size="md"
+        striped={level >= 95}
+        value={level}
+      />
+      <Text c={color} ff="monospace" fw={700} size="xs" ta="right" w={40}>
         {level}%
-      </span>
-    </div>
+      </Text>
+    </Group>
   );
 }

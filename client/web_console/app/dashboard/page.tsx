@@ -131,28 +131,28 @@ export default function DashboardPage() {
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
-          accent="#14B8A6"
+          color="ecoGreen"
           icon="🏧"
           subtitle="active now"
           title="Kiosks Online"
           value={overview?.kiosks_online ?? "—"}
         />
         <StatsCard
-          accent="#0EA5E9"
+          color="voltTeal"
           icon="🍶"
           subtitle="all time"
           title="Total Deposits"
           value={overview?.total_deposits ?? "—"}
         />
         <StatsCard
-          accent="#84CC16"
+          color="successLime"
           icon="💳"
           subtitle="minutes earned"
           title="Credits Issued"
           value={overview?.total_credits_earned ?? "—"}
         />
         <StatsCard
-          accent="#F59E0B"
+          color="warningAmber"
           icon="⚡"
           subtitle="charging now"
           title="Active Charging"

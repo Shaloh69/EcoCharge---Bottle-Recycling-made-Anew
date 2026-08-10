@@ -1,90 +1,81 @@
 "use client";
 
+import { Card, Group, Text, Badge, ThemeIcon } from "@mantine/core";
+
 interface StatsCardProps {
   title: string;
   value: string | number;
   subtitle?: string;
-  icon: string;
-  accent?: string; // hex color for glow + icon bg + value
+  icon: React.ReactNode;
+  color?: string;
   trend?: { value: string; up: boolean };
 }
 
+/**
+ * "Operations Console" StatsCard — a real 1px palette-tinted border, no
+ * backdrop blur (docs/planning/02-design-mandate.md SS1's banned-pattern
+ * list: "reflexive glassmorphism (blur panels without a functional
+ * reason)" — a stats tile has no functional reason, the earlier version
+ * used one anyway). Value is set in the mono family since it's the one
+ * number on the card someone actually needs to read precisely.
+ */
 export function StatsCard({
   title,
   value,
   subtitle,
   icon,
-  accent = "#4CAF50",
+  color = "ecoGreen",
   trend,
 }: StatsCardProps) {
   return (
-    <div
-      className="rounded-2xl p-5 flex flex-col gap-4 transition-all duration-300 hover:scale-[1.02]"
-      style={{
-        background: `linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.04))`,
-        border: `1px solid ${accent}28`,
-        backdropFilter: "blur(18px)",
-        WebkitBackdropFilter: "blur(18px)",
-        boxShadow: `0 8px 32px ${accent}14`,
-      }}
+    <Card
+      withBorder
+      p="lg"
+      radius="md"
+      style={{ borderColor: `var(--mantine-color-${color}-6)` }}
     >
-      <div className="flex items-start justify-between">
-        <p
-          className="text-xs font-semibold tracking-wider uppercase"
-          style={{ color: "rgba(255,255,255,0.45)" }}
+      <Group align="flex-start" justify="space-between">
+        <Text
+          c="dimmed"
+          fw={600}
+          size="xs"
+          style={{ letterSpacing: 0.4 }}
+          tt="uppercase"
         >
           {title}
-        </p>
-        <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
-          style={{
-            background: `${accent}22`,
-            border: `1px solid ${accent}35`,
-          }}
-        >
+        </Text>
+        <ThemeIcon color={color} radius="md" size="lg" variant="light">
           {icon}
-        </div>
-      </div>
+        </ThemeIcon>
+      </Group>
 
-      <div>
-        <p
-          className="text-3xl font-extrabold tracking-tight leading-none"
-          style={{ color: accent }}
-        >
-          {value}
-        </p>
-        {subtitle && (
-          <p
-            className="text-xs mt-1.5"
-            style={{ color: "rgba(255,255,255,0.38)" }}
-          >
-            {subtitle}
-          </p>
-        )}
-      </div>
+      <Text
+        c={color}
+        ff="monospace"
+        fw={800}
+        mt="sm"
+        size="2rem"
+        style={{ lineHeight: 1 }}
+      >
+        {value}
+      </Text>
 
-      {trend && (
-        <div className="flex items-center gap-1.5">
-          <span
-            className="text-xs font-medium px-2 py-0.5 rounded-full"
-            style={
-              trend.up
-                ? { background: "rgba(76,175,80,0.15)", color: "#4ADE80" }
-                : { background: "rgba(239,68,68,0.15)", color: "#F87171" }
-            }
-          >
-            {trend.up ? "↑" : "↓"} {trend.value}
-          </span>
-        </div>
+      {subtitle && (
+        <Text c="dimmed" mt={4} size="xs">
+          {subtitle}
+        </Text>
       )}
 
-      {/* Bottom accent bar */}
-      <div
-        className="h-0.5 rounded-full mt-auto"
-        style={{
-          background: `linear-gradient(90deg, ${accent}60, transparent)`,
-        }}
-      />
-    </div>
+      {trend && (
+        <Badge
+          color={trend.up ? "successLime" : "dangerRed"}
+          mt="sm"
+          size="sm"
+          variant="light"
+        >
+          {trend.up ? "↑" : "↓"} {trend.value}
+        </Badge>
+      )}
+    </Card>
   );
 }
