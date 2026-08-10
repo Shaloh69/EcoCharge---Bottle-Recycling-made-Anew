@@ -45,12 +45,34 @@ const GUEST_SESSION_WINDOW_MS = 15 * 60 * 1000;
 const GUEST_SESSION_MAX = 5; // guest sessions per IP per window
 const GUEST_ACTION_WINDOW_MS = 15 * 60 * 1000;
 const GUEST_ACTION_MAX = 30; // deposits/charging-starts per IP per window
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX = 10; // login attempts per IP per window
 
 const allowGuestSession = makeLimiter(
   GUEST_SESSION_WINDOW_MS,
   GUEST_SESSION_MAX,
 );
 const allowGuestAction = makeLimiter(GUEST_ACTION_WINDOW_MS, GUEST_ACTION_MAX);
+const allowLogin = makeLimiter(LOGIN_WINDOW_MS, LOGIN_MAX);
+
+// Express middleware for POST /api/auth/login — the admin console's login
+// endpoint has real write-access behind it (credits, kiosk commands), and
+// once the console sits behind a public Cloudflare tunnel this endpoint is
+// reachable from the whole internet, not just the tailnet. Without this,
+// there was no brute-force mitigation on admin credentials at all.
+export function loginRateLimit(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  const ip = req.ip ?? "?";
+  if (!allowLogin(ip)) {
+    log.authWarn(`Login rate limit hit — ip=${ip}`);
+    res.status(429).json({ error: "too many login attempts, try again later" });
+    return;
+  }
+  next();
+}
 
 // Express middleware for POST /api/auth/guest
 export function guestSessionRateLimit(

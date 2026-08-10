@@ -5,7 +5,7 @@ import crypto from "crypto";
 import { z } from "zod";
 import prisma from "../prisma";
 import { config } from "../config";
-import { guestSessionRateLimit } from "../middleware/rateLimit";
+import { guestSessionRateLimit, loginRateLimit } from "../middleware/rateLimit";
 import { log } from "../logger";
 import { User } from "@prisma/client";
 
@@ -57,6 +57,7 @@ const refreshSchema = z.object({
 // POST /login
 router.post(
   "/login",
+  loginRateLimit,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const body = loginSchema.parse(req.body);
