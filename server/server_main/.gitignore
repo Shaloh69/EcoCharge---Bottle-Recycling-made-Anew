@@ -1,4 +1,5 @@
 .env
+.env.test
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -11,3 +12,4 @@ env/
 instance/
 uploads/
 media/
+media-test/
