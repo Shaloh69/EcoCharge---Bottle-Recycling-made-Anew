@@ -85,6 +85,24 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-08-11 — Aiven found dead by DNS, then the user explicitly scrapped both Aiven and Supabase — architecture pivot, not just an unblock
+
+**First, a real technical finding:** attempted the MySQL data migration (`03-revamp-master.md` §1.3 step 3: dump Aiven → restore into the new Docker instance). `mysqldump` failed immediately; `nslookup` on the hostname in `server/server_main/.env` (`ecocharge-35634afa-ecocharge123-98be.j.aivencloud.com`) returned `Non-existent domain` — a hard DNS failure, not a password/auth issue. The Aiven service itself is very likely gone (deleted, or a trial expired).
+
+**Then, mid-session, explicit user instruction resolved this a different way than expected — not "give me working credentials," but "don't bother":** verbatim, "dont create a new schema and the images to the server pc / you dont need to access aiven or supabase," clarified further when asked to disambiguate scope: **"run the whole MYSQL inside docker and use that for live and save images or media on a folder inside all the server pc and scrap and dump the whole aiven and supabase."** This is a real architecture decision, not just an answer to the DNS blocker:
+1. **Docker MySQL (`desktop-gklhcri`, port 13306) is now the live system of record.** No data migration from Aiven — moot anyway given the DNS finding, but the instruction is broader: don't attempt it even if a working connection string existed. Fresh schema, no historical carry-over, by deliberate decision.
+2. **Media/avatar storage moved to a local folder on the server PC (`D:\EcoCharge\media`), not Supabase.** This reverses the 2026-08-10 decision to self-host Supabase via Docker (see that day's "Self-hosting target machine confirmed" entry) — that stack was actually built and verified 10/10 healthy, then torn down again the next day on this instruction. Vendored compose files left at `D:\EcoCharge\supabase\` in case ever wanted again; nothing running, `docker compose down -v` removed containers+volumes, its auto-start scheduled task deleted.
+3. **Both Aiven and (cloud) Supabase are fully abandoned**, not just the self-hosted Supabase experiment — `@supabase/supabase-js` removed from `server_main`'s dependencies, `SUPABASE_*` env vars removed everywhere, `users.ts`'s avatar route rewritten to plain `fs.writeFile` + `express.static`.
+
+**Real findings from actually executing this, worth keeping for next time:**
+- `prisma migrate deploy` cannot bootstrap this repo's schema from an empty database — `prisma/migrations/` only has incremental ALTER migrations (`add_deposit_status`, `add_bottle_status_column`, `add_expired_command_status`), no baseline `CREATE TABLE` migration, because the original schema was built via `prisma db push` during development. Fails `P3018` on `bottle_deposits doesn't exist`. **Use `prisma db push` for any from-scratch database against this schema.**
+- Ports 3000/3001 on `desktop-gklhcri` were already bound by a sibling project (EngiRent's admin/web Next.js apps) — same shared-machine port-conflict pattern as the earlier MySQL 3306/3307 collision. EcoCharge's Node API now runs on **30010**.
+- The Node API is deployed at `D:\EcoCharge\app\server_main` (needs `dist/` + `prisma/` + **`src/`** — `prisma/seed.ts` runs via `tsx` directly against source, not the compiled output, so `src/` can't be skipped even though `dist/` alone would run the server itself) and persists via the same Task-Scheduler-launcher pattern already proven for the AI training jobs (`run_server.bat` with a crash-restart loop, `EcoChargeAPI` task, `ONSTART` trigger) — NSSM and PM2 are both absent from that machine, checked directly rather than assumed.
+
+**How to apply:** don't re-raise "should we migrate Aiven data" or "should Supabase be self-hosted" as open questions — both are settled, reversed decisions. If a future session finds `SUPABASE_*` references or Aiven connection strings anywhere, that's leftover cruft to clean up, not a sign the migration was never done. Full status: `docs/planning/03-revamp-master.md` §1.3/§1.4, `docs/planning/08-master-checklist.md` Phase A.
+
+---
+
 ## 2026-08-10/11 — Training stalled under resource contention with the Supabase pull; recovered via resume
 
 Real operational incident, not just a note: the YOLO training run (launched via Task Scheduler, `--workers 6`) genuinely stalled at epoch 32, batch 13/30 — confirmed stuck (not just slow) across multiple checks minutes apart, despite the process still accumulating CPU time (a red herring — CPU activity alone doesn't prove forward progress; this looked like a classic Windows/PyTorch `DataLoader` multiprocessing-worker deadlock, a known category of issue, not corruption or a crash).

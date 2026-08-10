@@ -10,3 +10,4 @@ env/
 .pytest_cache/
 instance/
 uploads/
+media/

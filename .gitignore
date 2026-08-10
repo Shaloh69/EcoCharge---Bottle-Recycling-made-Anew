@@ -165,6 +165,7 @@ server/server_main/.cache/
 server/server_main/coverage/
 server/server_main/uploads/
 server/server_main/public/uploads/
+server/server_main/media/
 server/server_main/*.tsbuildinfo
 
 # ============================================

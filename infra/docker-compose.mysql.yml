@@ -1,0 +1,33 @@
+name: ecocharge-mysql
+
+# EcoCharge self-hosted MySQL — docs/planning/03-revamp-master.md SS1.3.
+# Deploy on desktop-gklhcri: `docker compose -f docker-compose.mysql.yml up -d`
+# from D:\EcoCharge\mysql\ (copy this file there, or reference it in place).
+#
+# Host port is 13306, not the standard 3306 — desktop-gklhcri already runs a
+# native MySQL Server 8.0 instance on 3306 (found during infra recon,
+# 2026-08-10; belongs to a different project on this shared machine, left
+# untouched deliberately). 3307 was tried next and also turned out occupied
+# (a WSL-relayed listener, likely another project's container - not our
+# stale attempt, confirmed still bound after removing our own container).
+# Never bind 0.0.0.0 here - see the exposure table in 03-revamp-master.md
+# SS1.2, this must never be reachable off-box.
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: ecocharge-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env, do not hardcode it here}
+      MYSQL_DATABASE: ecocharge
+    ports:
+      - "127.0.0.1:13306:3306"
+    volumes:
+      - D:/EcoCharge/mysql/data:/var/lib/mysql
+      - D:/EcoCharge/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

@@ -1,18 +1,13 @@
 import { Router, Response, NextFunction } from "express";
 import multer from "multer";
 import path from "path";
-import { createClient } from "@supabase/supabase-js";
+import fs from "fs/promises";
 import prisma from "../prisma";
 import { requireAuth } from "../middleware/auth";
 import { config } from "../config";
 import { AuthRequest } from "../types";
 
 const router = Router();
-
-const supabase =
-  config.SUPABASE_URL && config.SUPABASE_SERVICE_KEY
-    ? createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY)
-    : null;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -129,28 +124,14 @@ router.post(
         res.status(400).json({ error: "no file uploaded" });
         return;
       }
-      if (!supabase) {
-        res.status(503).json({ error: "storage not configured" });
-        return;
-      }
 
       const ext = path.extname(req.file.originalname).toLowerCase() || ".jpg";
-      const filePath = `avatars/${req.userId!}${ext}`;
+      const fileName = `${req.userId!}${ext}`;
+      const avatarsDir = path.join(config.MEDIA_STORAGE_PATH, "avatars");
+      await fs.mkdir(avatarsDir, { recursive: true });
+      await fs.writeFile(path.join(avatarsDir, fileName), req.file.buffer);
 
-      const { error: uploadError } = await supabase.storage
-        .from(config.SUPABASE_BUCKET)
-        .upload(filePath, req.file.buffer, {
-          contentType: req.file.mimetype,
-          upsert: true,
-        });
-
-      if (uploadError) throw new Error(uploadError.message);
-
-      const { data: publicUrlData } = supabase.storage
-        .from(config.SUPABASE_BUCKET)
-        .getPublicUrl(filePath);
-
-      const profilePictureUrl = publicUrlData.publicUrl;
+      const profilePictureUrl = `${req.protocol}://${req.get("host")}/media/avatars/${fileName}`;
 
       await prisma.user.update({
         where: { id: req.userId! },
