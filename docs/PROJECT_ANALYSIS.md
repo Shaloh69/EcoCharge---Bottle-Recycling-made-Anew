@@ -1,42 +1,40 @@
-﻿# EcoCharge Project Analysis
+# EcoCharge Project Analysis
+
+**Refreshed 2026-08-10.** The original version of this document (2026-03-15) was written when `server/server_main` and `server/server_AI` were empty scaffolds and both client web apps were unmodified templates. That's no longer true — a real backend, a real AI inference service, and real firmware have existed and been independently verified since (`analyzation.md`, 2026-07-22; `AUDIT.md`, 2026-08-10). This refresh keeps the paper-vs-repo framing that made the original useful, but replaces the "what the repository actually contains" section and the gap table with current, code-verified status. Where the original document is quoted or referenced below, it's marked as historical.
 
 ## Purpose
 
-This document analyzes the EcoCharge project using two sources:
+This document analyzes the EcoCharge project against two sources:
 
 1. The thesis paper `d:\Projects-Shem\Thesis\EcoCharge-Final-2.0.pdf`
-2. The current repository state in `d:\Projects-Shem\Thesis\2026\EcoCharge`
+2. The current repository state — grounded in `analyzation.md` (verified against real code 2026-07-22) and `AUDIT.md` (a later, narrower pass, 2026-08-10), not re-derived from scratch here.
 
-The goal is to show:
-
-- What the paper says EcoCharge should be
-- What is actually implemented in the repository
-- Where the project is strong
-- Where the project is incomplete or inconsistent
-- What must be aligned before the system can become a complete thesis-grade product
+The goal is unchanged from the original: show what the paper says EcoCharge should be, what's actually implemented, where the project is strong, where it's incomplete, and what still needs aligning before it's a complete thesis-grade product.
 
 ## Executive Summary
 
 EcoCharge is described in the paper as a machine-learning-based bottle detection and smart charging kiosk for circular economy adoption at the University of Cebu Lapu-Lapu and Mandaue. The paper presents a full end-to-end system with bottle detection, account flows, credit allocation, charging-port control, trash-bin monitoring, IoT communication, and dashboard interfaces.
 
-The repository only partially matches that vision.
+**As of 2026-08-10, the repository substantially matches that vision at the systems-integration level** — this is a real change from the original March 2026 analysis, which found the backend "effectively missing" and both client apps still template scaffolds. What's now true:
 
-The strongest parts of the repository today are:
+- A real, integrated backend (Node.js/Express/TypeScript/Prisma, not the Flask originally planned) implements auth, kiosk sessions, bottle deposits, credits, charging, device commands, telemetry, and admin operations — all verified against real routes and a real Prisma schema.
+- The ESP32 firmware implements the full hardware role the paper describes: conveyor control, 4-port relay charging, entrance/bin ultrasonic sensing, current/voltage sensing, and a real bottle-deposit finite state machine — not just the motor-control prototype the original analysis found.
+- The AI pipeline (YOLO26 detector → EfficientNet-B0 multi-head classifier) is a real, deployed inference service, not just training scripts.
+- The full bottle-to-credit-to-charge user journey is implemented end-to-end in code, verified step by step in `analyzation.md` §6–§7.
 
-- The machine-learning work in `scripts/`
-- The ESP32 firmware work in `esp/motor/`
-- The presence of a real dataset and trained model outputs in `scripts/dataset/` and `runs/`
+**What's still genuinely incomplete, verified this session, not assumed:**
 
-The weakest or most incomplete parts are:
+- **Hosting**: the system still runs on Render + Aiven MySQL + Supabase Storage + a rotating Cloudflare quick-tunnel for the AI server — the self-hosting migration the team decided on (`docs/planning/03-revamp-master.md` §1) hasn't started.
+- **Design**: both web apps carry a custom color-token layer, but neither has been rebuilt against the actual design mandate (`docs/planning/02-design-mandate.md`) yet — no typography swap, no kiosk step-wizard flow, no animation stack on the Flutter app.
+- **Testing**: no automated tests exist anywhere in the repo — backend, AI server, or Flutter app.
+- **Two firmware fixes and a key rotation** are proposed with exact values (`AUDIT.md`) but deliberately not yet flashed, pending explicit sign-off.
+- **Thesis evidence pack** (formal architecture diagram, model evaluation report, pilot findings) has not been assembled.
 
-- The backend, which is effectively missing
-- The Flutter app, which is still the default scaffold
-- The web apps, which are still duplicated template projects
-- The gap between the paper's kiosk workflow and the actual hardware control code
-
-In plain terms: the paper describes a full smart kiosk platform, but the repository currently contains a strong ML prototype, a separate motor-control firmware prototype, and placeholder client applications that have not yet been integrated into one complete EcoCharge system.
+In plain terms: the paper-to-repo gap this document originally found — "a strong ML prototype, a separate motor-control firmware prototype, and placeholder client applications that have not yet been integrated" — is **closed**. The system is integrated and functionally real. What remains is hosting migration, visual design execution, hardware validation, and the evidence/testing work needed for a defense — which is a materially different, much narrower gap than the original analysis found.
 
 ## What The Thesis Defines
+
+*(Unchanged from the original analysis — the paper itself hasn't been revised as part of this pass.)*
 
 ### Project Intent
 
@@ -46,11 +44,7 @@ The paper frames EcoCharge as a sustainability system that encourages bottle rec
 - Behavioural Incentive Theory
 - Technology Acceptance Model
 
-These are used to justify the product as both an environmental intervention and a user-adoption problem, not just a technical build.
-
 ### Core Objectives From The Paper
-
-The paper states that the study aims to:
 
 1. Determine the required hardware, software, IoT platform, protocol, and dashboard
 2. Design the bottle detection and IoT-based visualization system
@@ -58,8 +52,6 @@ The paper states that the study aims to:
 4. Deploy and assess the system in a real environment with emphasis on ease of use and usefulness
 
 ### Functional System Described In The Paper
-
-From the thesis text and chapter structure, the intended system includes:
 
 - Bottle detection and validation
 - Size-based bottle classification
@@ -74,441 +66,130 @@ From the thesis text and chapter structure, the intended system includes:
 
 ### Hardware Described In The Paper
 
-The paper names or implies these hardware elements:
+Computer, camera bottle detector, touchscreen monitor, ESP32, servo motor, current sensor, relay, breaker, exhaust fan, outlet sockets, power supply, ultrasonic sensor.
 
-- Computer
-- Camera bottle detector
-- Touchscreen monitor
-- ESP32
-- Servo motor
-- Current sensor
-- Relay
-- Breaker
-- Exhaust fan
-- Outlet sockets
-- Power supply
-- Ultrasonic sensor
+### Software Stack Described In The Paper — vs. what actually got built
 
-### Software Stack Described In The Paper
-
-The thesis lists these software elements:
-
-- Python Flask
-- OpenCV
-- NumPy
-- MySQL
-- Flutter + Dart
-- Next.js
-- Tailwind CSS v4
-- YOLO Ultralytics
-- Google Colab
+| Paper says | Actually built | Status |
+|---|---|---|
+| Python Flask | **Node.js + Express + TypeScript + Prisma** | Deliberate divergence — the team built the backend in a different stack than the paper specifies. This needs a thesis-narrative decision the same way the YOLO version did (see below): update the paper to describe the real stack, or document the divergence explicitly as a design decision. Not yet resolved either way as of this refresh. |
+| OpenCV, NumPy | Used within the AI service (`server/server_AI`) | Consistent |
+| MySQL | MySQL (Aiven-hosted currently, self-hosting migration planned) | Consistent |
+| Flutter + Dart | Real Flutter app, calling the real API (`ApiService`) | Consistent, and further along than the paper's own description implies — this isn't a planned nice-to-have, it's built and functional |
+| Next.js | Two real Next.js 15 apps (kiosk web, admin console) | Consistent |
+| Tailwind CSS v4 | In use (`@theme` tokens in `styles/globals.css`) | Consistent |
+| YOLO Ultralytics | YOLO26, not YOLOv8 | **Decision already made** (2026-03-15, this document's own prior revision): YOLO26 is official. Confirm the thesis narrative itself has actually been updated to say so — that was flagged as a to-do in the original CHECKLIST and its status hasn't been independently re-verified in this pass. |
+| Google Colab | Not verified either way in this pass | — |
 
 ### User Need Validation From The Paper
 
-The survey results in the paper support the product concept:
+Unchanged — the paper's survey data (78.8% supported a reward-based recycling system, 84.8% interested in a bottle-for-charging kiosk, 66.7% highly willing to support implementation, 57.6% unaware of existing recycling programs) still stands as the demand justification. This is separate from, and doesn't require re-verifying against, the system's own implementation status.
 
-- 78.8% supported a reward-based recycling system
-- 84.8% were interested in a bottle-for-charging kiosk
-- 66.7% were highly willing to support implementation
-- 57.6% were unaware of existing recycling programs
-- More accessible recycling points were likely to increase recycling participation
-
-This is important because the thesis does not just justify the system technically. It also claims there is user demand and campus relevance.
-
-## What The Repository Actually Contains
+## What The Repository Actually Contains (refreshed 2026-08-10)
 
 ### Repository Overview
 
-Top-level repository areas:
+Top-level areas, current real structure per `analyzation.md` §2: `client/kiosk_web`, `client/web_console`, `client/flutter_app`, `server/server_main`, `server/server_AI`, `esp/ecocharge`, `esp/pico_sensors`, `scripts/`, `runs/`.
 
-- `client/`
-- `esp/`
-- `server/`
-- `scripts/`
-- `runs/`
+### `scripts/` and `runs/` — still the most mature, unchanged assessment
 
-### `scripts/`
+Training pipeline (`train_yolo.py`, `train_bottle_classifier.py`, `predict.py`, `gui_detect.py`) and dataset remain as strong as the original analysis found. **New since the original analysis: the trained weights are now actually deployed** — `server/server_AI/models/best_detector.pt` and `best_classifier.pt` are present and in use by the live inference service, closing the "no deployment wrapper" gap the original analysis flagged.
 
-This is the most complete and most valuable part of the repository.
+### `server/server_main` — real backend, not a Flask skeleton
 
-Implemented:
+Node/Express/TypeScript/Prisma. Auth (JWT + guest), kiosk sessions, bottle-deposit FSM integration, credits ledger, charging sessions, device command queue + telemetry, admin CRUD + analytics + real-time SSE. Full endpoint inventory in `analyzation.md` §8. Security fixes (kiosk endpoint auth, bin-full guard) and operational fixes (guest rate limiting, stale-session sweep) landed 2026-08-10 — see `AUDIT.md` and `memory.md`.
 
-- `scripts/train_yolo.py`
-- `scripts/train_bottle_classifier.py`
-- `scripts/predict.py`
-- `scripts/gui_detect.py`
+### `server/server_AI` — real inference service, not just training scripts
 
-This area includes:
+FastAPI, two-stage pipeline (YOLO26 detector → `BottleAttributeNet` EfficientNet-B0, three heads: brand/volume/condition), `X-Api-Key` auth, `GET /health`. Hosted on a local PC behind a Cloudflare **quick** tunnel — the rotating-URL problem `analyzation.md` flagged is still unresolved (fix: `docs/planning/03-revamp-master.md` §1.2, move to Tailscale Serve).
 
-- A bottle-detection training pipeline
-- A multi-head attribute classifier for brand, volume, and condition
-- A local GUI for inspection and testing
-- Existing training outputs under `runs/`
-- A dataset under `scripts/dataset/Eco-Charge.v1`
+### `esp/ecocharge` — real kiosk controller firmware, not a motor-control prototype
 
-Observed state:
+The original analysis found "motor movement, AP mode networking, simple web control" and explicitly noted this was *not yet* the thesis kiosk controller — no relay control, no current sensing, no bin monitoring, no bottle-credit logic. **All of that gap is now closed**: v2.0.0 implements the full 5-state bottle FSM, 4-port relay charging with an independent 3600s watchdog, 3× HC-SR04 ultrasonic sensing (entrance + bin-top + bin-bottom), current/voltage sensing (including a Raspberry Pi Pico ADC bridge for the channels the ESP32's own ADC can't cover while WiFi is active), and a WiFi provisioning captive portal. Full hardware map in `analyzation.md` §11.
 
-- Dataset size is 148 labeled images total
-- Split is 103 train, 30 valid, 15 test
-- Trained classifier metadata shows:
-  - backbone: `efficientnet_b0`
-  - 10 brand classes
-  - 11 volume classes
-  - 2 condition classes
-- YOLO results show a completed 100-epoch run with strong reported metrics
+**Two known gaps, precisely scoped, not vague:** `SCANNING` has no timeout (can nudge a bottle indefinitely under specific failure conditions) and `CONFIRMING` doesn't re-check the bin sensor before finalizing a reject. Both have exact proposed fixes in `AUDIT.md`, deliberately not yet flashed pending review — see `docs/planning/03-revamp-master.md` §3.2–§3.3.
 
-Important note:
+### `client/kiosk_web` and `client/web_console` — real, functional, not yet visually redesigned
 
-The paper mentions YOLOv8, but the codebase uses YOLO26 naming and workflows. This is a thesis-to-code divergence that should be resolved in documentation and final system decisions.
+Both build and run real EcoCharge flows against the live API — this is a fundamentally different state than the original analysis's "still a starter app" / "functionally identical duplicate" finding, which predates the backend existing at all. Both now carry custom Tailwind v4 color tokens and a customized HeroUI theme (`hero.ts`) — the generic-template-branding gap is closed. **What's still open**: neither has been rebuilt against the actual design mandate (`docs/planning/02-design-mandate.md`) — no typography swap, no kiosk step-wizard/idle-timeout, confirmed via dependency grep 2026-08-10.
 
-### `esp/motor/`
+### `client/flutter_app` — real, API-integrated, not a default scaffold
 
-This is the second most complete subsystem.
+The original analysis's "Hello World, no EcoCharge logic, no auth, no API integration" finding is fully superseded. Real screens (splash/onboarding, login/register, home, kiosk-QR scan, credit balance/transactions, deposit history, charging view/stop, profile) call the real API (`analyzation.md` §13). `lib/models/mock_data.dart`, the last leftover from the scaffold era, has been deleted (confirmed zero importers before removal). **Still open**: no visual redesign yet, no automated tests, no crash reporting found.
 
-Implemented:
+## Paper-To-Repository Gap Analysis (refreshed)
 
-- ESP-IDF / PlatformIO project
-- Motor forward, backward, stop, speed control
-- Safety timeout
-- Wi-Fi access point
-- Embedded HTTP server
-- Simple motor control web UI
-
-Strengths:
-
-- Clear modular C code
-- Good local documentation
-- Config-driven pin assignments
-- Safety monitoring task
-
-But this subsystem is not yet the same thing as the thesis kiosk controller.
-
-Current firmware is focused on:
-
-- Motor movement
-- AP mode networking
-- Simple web control for movement
-
-It is not yet implementing the thesis hardware flow for:
-
-- Charging-port relay control
-- Current sensing and charging-session monitoring
-- Trash-bin fullness monitoring
-- Bottle-credit logic
-- User accounts or session tracking
-
-### `client/kiosk_web/`
-
-This project builds, but it is still a starter app.
-
-Observed state:
-
-- HeroUI template content remains
-- Branding still says `Next.js + HeroUI`
-- Home page is template copy
-- Nav/config still reference placeholder routes and external HeroUI links
-
-### `client/web_console/`
-
-This project is functionally identical to `client/kiosk_web/`.
-
-The two projects currently duplicate each other instead of representing separate products such as:
-
-- user kiosk UI
-- admin dashboard
-
-That duplication adds maintenance cost without yet adding product value.
-
-### `client/flutter_app/`
-
-This is still the default scaffold.
-
-Observed state:
-
-- `Hello World` app
-- No EcoCharge logic
-- No authentication
-- No API integration
-- No charging-credit or bin-status functionality
-
-### `server/server_main/` and `server/server_AI/`
-
-These folders are empty.
-
-This is one of the biggest project gaps because the paper expects:
-
-- backend processing
-- database storage
-- user management
-- monitoring data flow
-- dashboard integration
-
-None of that exists in the repository as an implemented backend service.
-
-### `client/kiosk_electron/`
-
-This folder exists in structure only and is also empty.
-
-## Validation Results From The Current Repo
-
-Checks performed during analysis:
-
-- Python compile check passed for `scripts/`
-- `client/kiosk_web` production build completed
-- `client/web_console` production build completed
-- `npm run lint` fails in the Next apps because `@eslint/compat` is imported but not installed
-- `flutter analyze` could not be run because Flutter is not installed in this environment
-- ESP32 firmware build did not finish within the available timeout window, so firmware build health is not fully confirmed
-
-## Paper-To-Repository Gap Analysis
-
-| Area | Thesis Expectation | Current Repository | Status |
+| Area | Thesis Expectation | Current Repository State | Status |
 | --- | --- | --- | --- |
-| ML bottle detection | YOLO-based bottle detection integrated into kiosk | Real ML training and inference pipeline exists | Strong |
-| Bottle attribute logic | Bottle validation and classification | Brand/volume/condition classifier exists | Strong |
-| Full kiosk workflow | Bottle -> credit -> user session -> charging | Not implemented end to end | Major gap |
-| Backend | Flask, storage, dashboard, system data flow | No implemented backend service | Missing |
-| Database | MySQL and account/transaction storage | No DB layer in repo | Missing |
-| User accounts | Register/login/account balance/OTP | No real auth or account logic | Missing |
-| Charging control | Four charging ports, relay/current monitoring | No charging control subsystem in code | Missing |
-| Sensor integration | Ultrasonic, current sensor, relay, servo | Not implemented in current firmware | Missing |
-| Trash-bin monitoring | Bin status visible in interface | Not implemented end to end | Missing |
-| Kiosk UI | Dedicated kiosk application | Still template web app | Placeholder |
-| Admin web/dashboard | Monitoring console | Duplicate template app | Placeholder |
-| Mobile app | Flutter-based user app | Default Flutter starter | Placeholder |
-| Hardware control | IoT kiosk controller | Motor-control prototype only | Partial |
-| Real deployment evidence | Trial deployment and evaluation loop | Some prototype work, but no full product integration | Partial |
+| ML bottle detection | YOLO-based detection integrated into kiosk | Real, deployed two-stage pipeline, live weights in `server/server_AI/models/` | **Done** |
+| Bottle attribute logic | Bottle validation and classification | Brand/volume/condition classifier, in production use via `/api/detect` | **Done** |
+| Full kiosk workflow | Bottle → credit → user session → charging | Implemented end to end in code, traced step-by-step in `analyzation.md` §6–§7 | **Done** (two firmware edge cases still open, see `AUDIT.md`) |
+| Backend | Storage, dashboard, system data flow | Real Node/Express/Prisma API, all major route groups implemented | **Done** — stack differs from the paper (Node, not Flask); needs a thesis-narrative decision, not more code |
+| Database | MySQL, account/transaction storage | Real Prisma schema, 9+ tables, auto-migrated at startup | **Done** — still hosted on Aiven, not yet self-hosted |
+| User accounts | Register/login/account balance | Real JWT auth (registered + guest), credit balance tracked | **Done** |
+| Charging control | Four charging ports, relay/current monitoring | Real relay control + current/voltage sensing + independent safety watchdog | **Done** |
+| Sensor integration | Ultrasonic, current sensor, relay, servo | All implemented; 3× ultrasonic, current/voltage sensing (incl. Pico bridge), 4× relay, conveyor (not a servo trapdoor — a conveyor-belt design instead) | **Done**, with the design substituting a conveyor for the paper's servo/trapdoor concept — worth naming explicitly in the thesis write-up as an implementation decision |
+| Trash-bin monitoring | Bin status visible in interface | Bin-level telemetry drives real admin alerts (≥80%/≥95%) and a server-side deposit cutoff at ≥95%; kiosk-facing UI treatment not yet built | **Mostly done** — admin-side complete, kiosk-side pending the design revamp |
+| Kiosk UI | Dedicated kiosk application | Real, functional Next.js app against the live API; visual redesign not yet executed | **Functional, not yet redesigned** |
+| Admin web/dashboard | Monitoring console | Real, functional dashboard (overview, kiosks, sessions, deposits, charging, credits, users, alerts, ml-review, analytics, settings); visual redesign not yet executed | **Functional, not yet redesigned** |
+| Mobile app | Flutter-based user app | Real, API-integrated app; visual redesign not yet executed | **Functional, not yet redesigned** |
+| Hardware control | IoT kiosk controller | Full firmware implementation, verified against the real GPIO map | **Done**, two edge-case fixes pending sign-off |
+| Real deployment evidence | Trial deployment and evaluation loop | Not yet — self-hosting migration and hardware validation are prerequisites | **Not started** |
+| Automated testing | (Implied by "evaluate ... reliability and safety") | None found anywhere in the repo | **Not started** — see `docs/planning/05-feature-build-checklist.md` Stage 1 |
 
-## Subsystem Analysis
+## Key Inconsistencies And Risks (refreshed)
 
-### 1. Machine Learning
+### 1. Thesis Scope vs Code Scope — closed
 
-#### Current Strengths
+The original finding ("the repo is still split into disconnected prototypes") no longer holds. The remaining scope gap is narrower: hosting location, visual polish, and evidence/testing — not missing integration.
 
-- Real dataset exists
-- Training scripts are usable
-- Inference pipeline is already assembled
-- GUI tool is useful for manual validation
-- Classifier structure is sensible for multi-attribute prediction
+### 2. Architecture Mismatch — mostly resolved, one open decision
 
-#### Current Weaknesses
+The paper's Flask/MySQL/Next.js/Flutter/IoT stack is now real, except the backend is Node instead of Flask. This is a documentation decision (update the paper, or document the divergence), not an implementation gap.
 
-- Small dataset by production standards
-- Training outputs are committed into the working tree, which complicates repo hygiene
-- No formal evaluation document ties model performance to thesis acceptance criteria
-- No deployment wrapper exists for serving the model to kiosk/backend apps
+### 3. YOLO Version — resolved
 
-#### Thesis Alignment
+**Decision (2026-03-15, unchanged): YOLO26 is official.** No code changes needed. Confirm the thesis narrative itself reflects this before defense — not independently re-verified in this pass.
 
-This is the subsystem that most clearly supports the thesis. It already demonstrates real progress toward the machine-learning core of EcoCharge.
+### 4. Hardware Mismatch — resolved
 
-### 2. Firmware And Embedded Control
+The firmware now covers relays, charging ports, current sensors, and ultrasonic bin sensing. The paper's servo/trapdoor concept was implemented as a conveyor system instead — a real design decision worth stating explicitly in the thesis, not a gap.
 
-#### Current Strengths
+### 5. Product Duplication — resolved
 
-- Structured ESP-IDF project
-- Clear separation of modules
-- Safety timeout is implemented
-- Access-point plus embedded HTTP control exists
-- Good project-level firmware documentation
+`client/kiosk_web` and `client/web_console` are no longer identical templates; they're distinct, real products (kiosk UI vs. admin dashboard) against the same backend.
 
-#### Current Weaknesses
+### 6. Missing System Of Record — resolved
 
-- Firmware scope is centered on motor movement, not the full EcoCharge kiosk
-- Timed movement is advertised in the web UI but not actually implemented
-- Hardcoded Wi-Fi credentials are present
-- No charging-port power logic
-- No current monitoring logic
-- No bin sensor integration
-- No account or point-authorization integration
+Accounts, credits, history, sessions, and admin monitoring all persist against a real database.
 
-#### Thesis Alignment
+### 7. Repo Hygiene — improved, not fully resolved
 
-This is a good prototype foundation, but it is not yet the firmware the thesis describes.
+The Flask prototype (`server_main/app/`) and 27 Knip-verified unused files across both Next.js apps were deleted 2026-08-10. Generated ML artifacts under `runs/` are still committed to the working tree — unchanged from the original finding, still worth a policy decision (external storage vs. accepted as-is for a thesis-scale project).
 
-### 3. Frontend And User Experience
+## Recommended Target Architecture — achieved
 
-#### Current Strengths
+The five-layer architecture the original analysis recommended (detection, device control, local orchestrator, backend, client) is now real: the kiosk web app itself is the local orchestrator (confirmed in `analyzation.md` — there's no separate orchestrator process; the browser calls the AI server and the Node API directly), sitting alongside the other four layers exactly as originally recommended.
 
-- Next.js projects are present and build
-- Tooling base is modern
-- Flutter project scaffold exists
-
-#### Current Weaknesses
-
-- Kiosk web and console web apps are still template copies
-- No real EcoCharge pages, flows, or data integration
-- Flutter app is still default scaffold
-- Broken lint configuration
-- No consistent design system tied to thesis UI screens
-
-#### Thesis Alignment
-
-The paper includes login, register, home, bottle, credit, receipt, and trash-bin-monitor pages. The repository does not currently implement those flows.
-
-### 4. Backend And Data Layer
-
-#### Current Strengths
-
-- Intended architecture is described in the thesis
-- Folder placeholders exist
-
-#### Current Weaknesses
-
-- No backend code
-- No API surface
-- No schema
-- No authentication
-- No session or transaction model
-- No telemetry or monitoring storage
-
-#### Thesis Alignment
-
-This is the biggest implementation gap in the whole repository.
-
-### 5. Hardware-System Integration
-
-#### Current Strengths
-
-- The paper clearly describes a multi-component kiosk
-- The repo already contains embedded work and ML work that could be combined
-
-#### Current Weaknesses
-
-- There is no integrated kiosk controller application
-- No evidence of computer-to-ESP32 protocol design in code
-- No charging relay orchestration
-- No sensor-to-dashboard data pipeline
-- No credit-to-hardware actuation flow
-
-#### Thesis Alignment
-
-The full EcoCharge product depends on integration. That integration is currently the missing middle layer.
-
-### 6. Testing, Quality, And Operations
-
-#### Current Strengths
-
-- Some manual validation artifacts exist through training outputs and firmware docs
-
-#### Current Weaknesses
-
-- No meaningful automated tests
-- No integration tests
-- No API contract tests
-- No hardware-in-the-loop validation scripts
-- No deployment scripts
-- Inconsistent artifact hygiene
-
-## Key Inconsistencies And Risks
-
-### 1. Thesis Scope vs Code Scope
-
-The paper presents a complete EcoCharge kiosk product. The repo is still split into disconnected prototypes.
-
-### 2. Architecture Mismatch
-
-The thesis stack mentions Flask, MySQL, Next.js, Flutter, IoT, and hardware integration. The repo currently has ML scripts, starter frontends, empty servers, and motor firmware. The architectural story is not yet consistent.
-
-### 3. YOLO Version
-
-The paper originally named YOLOv8. The codebase uses YOLO26.
-
-**Decision (2026-03-15): YOLO26 is the official model for EcoCharge.** The thesis narrative should be updated to reflect YOLO26 as the actual implementation. No code changes needed — the existing training scripts and trained weights are correct.
-
-### 4. Hardware Mismatch
-
-The paper describes relays, charging ports, current sensors, ultrasonic bin sensing, and a servo trapdoor. The firmware in the repo does not yet cover that set of hardware responsibilities.
-
-### 5. Product Duplication
-
-There are two web apps with identical starter content. This creates confusion over product boundaries:
-
-- kiosk app
-- admin dashboard
-- marketing or public app
-
-These roles need to be assigned clearly.
-
-### 6. Missing System Of Record
-
-Without a backend and database, the system cannot genuinely support:
-
-- accounts
-- credits
-- history
-- receipts
-- admin monitoring
-- deployment audit trails
-
-### 7. Repo Hygiene
-
-Generated artifacts and large ML outputs are present in normal repo flow. This will make collaboration and reproducibility harder over time.
-
-## Recommended Target Architecture
-
-The project should converge toward five connected layers:
-
-1. Detection Layer
-   - camera input
-   - bottle detection model
-   - bottle attribute classification
-2. Device Control Layer
-   - ESP32 for relay/sensor/actuator control
-   - charging enable/disable
-   - current sensor reading
-   - bin fullness monitoring
-   - servo or gate control
-3. Local Orchestrator Layer
-   - kiosk-side service running on the computer
-   - model inference
-   - user session handling
-   - communication with ESP32
-   - transaction logging
-4. Backend Layer
-   - accounts
-   - credits
-   - transactions
-   - admin APIs
-   - device telemetry
-5. Client Layer
-   - kiosk UI
-   - admin dashboard
-   - optional mobile app
-
-## Overall Maturity Assessment
+## Overall Maturity Assessment (refreshed)
 
 ### Strong
-
-- Research framing
-- ML experimentation
-- Dataset ownership
-- Early embedded work
+- ML pipeline (trained, deployed, in production use)
+- Firmware (full hardware role implemented, not just a prototype)
+- Backend (complete, functionally real)
+- System integration (the full bottle-to-charge journey works end to end in code)
 
 ### Medium
-
-- Hardware documentation
-- local prototyping direction
+- Client applications (functionally real, visually unreformed)
+- Repo hygiene (much improved, some artifact-policy decisions still open)
 
 ### Weak
+- Hosting (still fully on the original Render/Aiven/Supabase stack the migration was meant to replace)
+- Testing and verification discipline (no automated tests exist anywhere)
+- Thesis evidence packaging (not yet assembled)
 
-- integrated architecture
-- backend implementation
-- product UX implementation
-- testing and deployment
-- paper-to-code consistency
+## Final Assessment (refreshed)
 
-## Final Assessment
+The March 2026 assessment — "a solid thesis concept, a credible ML prototype, a separate embedded control prototype, an unfinished application platform" — is no longer accurate. As of 2026-08-10, EcoCharge is a working, integrated system: a user can genuinely deposit a bottle, get it AI-graded, earn credits, and charge a phone, end to end, against real infrastructure.
 
-EcoCharge is a promising project with real technical foundations, but it is not yet a finished platform. Right now, it is best understood as:
-
-- a solid thesis concept
-- a credible ML prototype
-- a separate embedded control prototype
-- an unfinished application platform
-
-The project is most likely to succeed if the next stage focuses on integration and scope discipline, not on adding more disconnected prototype pieces.
-
-The most important shift is this:
-
-EcoCharge should now move from "research idea plus component experiments" to "one defined system with one architecture, one source of truth, and one deployable workflow."
+**The most important shift now is different from the original's:** the project has already made the move from "research idea plus component experiments" to "one defined system with one architecture." What's left is not integration work — it's **operationalization**: get the system off borrowed cloud infrastructure and onto infrastructure the team controls, finish the two hardware edge cases and the key rotation, execute the design system that's already specified but not yet built, and build the testing and evidence base a real defense needs. Track this work in `docs/planning/03-revamp-master.md` and `docs/planning/05-feature-build-checklist.md`, not by re-deriving it from this document each time.

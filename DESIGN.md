@@ -1,10 +1,20 @@
 # EcoCharge Design System
 
-Read this before generating or restyling ANY UI on any surface. Written fresh
-for EcoCharge (no prior DESIGN.md existed); constraints sourced from
-`ECOCHARGE_FULL_REWORK_PROMPT.md` §5–7 and the hardware-clarifications addendum §3.
-Run `/design-review` after every meaningful UI change; the `avoid-ai-design`
-skill's banned-pattern audit applies to all three surfaces.
+Read this before generating or restyling ANY UI on any surface. This is the
+**as-built tracker** — real tokens and real execution status. The full
+**mandate** these tokens satisfy (banned patterns, verification-loop process,
+per-surface screen specs, template references) now lives at
+`docs/planning/02-design-mandate.md` — the two root prompt files this
+document originally cited (`ECOCHARGE_FULL_REWORK_PROMPT.md` §5–7, the
+hardware-clarifications addendum §3) were consolidated into `docs/planning/`
+on 2026-08-10 and deleted from root; see `memory.md`. Run `/design-review`
+after every meaningful UI change; the `avoid-ai-design` skill's
+banned-pattern audit applies to all three surfaces.
+
+**Status, verified 2026-08-10 (unchanged since this file was written — no
+visual execution has started on any surface yet):** see "Redesign execution
+status" at the bottom of this file. Work order for resuming this:
+`docs/planning/04-continue-design-redo.md`.
 
 ---
 
