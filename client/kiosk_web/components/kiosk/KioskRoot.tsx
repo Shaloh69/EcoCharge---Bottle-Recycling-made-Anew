@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { IdleScreen } from "./IdleScreen";
+import { IdleSuspendProvider, useIdleSuspendState } from "@/lib/idle-suspend";
 
 const HOME_IDLE_MS = 30_000;
 const AWAY_IDLE_MS = 120_000;
@@ -16,8 +17,17 @@ const IDLE_EVENTS = [
 ] as const;
 
 export function KioskRoot({ children }: { children: React.ReactNode }) {
+  return (
+    <IdleSuspendProvider>
+      <KioskRootInner>{children}</KioskRootInner>
+    </IdleSuspendProvider>
+  );
+}
+
+function KioskRootInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const suspended = useIdleSuspendState();
 
   const [showIdle, setShowIdle] = useState(false);
 
@@ -26,6 +36,7 @@ export function KioskRoot({ children }: { children: React.ReactNode }) {
   const routerRef = useRef(router);
   const idleRef = useRef(false); // mirrors showIdle — prevents event-handler re-registration
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suspendedRef = useRef(suspended);
 
   useEffect(() => {
     isHomeRef.current = pathname === "/";
@@ -38,11 +49,17 @@ export function KioskRoot({ children }: { children: React.ReactNode }) {
     if (timerRef.current) clearTimeout(timerRef.current);
   };
 
-  // Schedule the next idle trigger based on the current page.
+  // Schedule the next idle trigger based on the current page. A no-op while
+  // suspended (SCANNING, bin-confirmation) — the effect below re-arms this
+  // once suspension actually clears, rather than letting a stale timer fire
+  // mid-scan just because it happened to be longer than that particular
+  // scan took.
   const startTimer = useCallback(() => {
     clearTimer();
+    if (suspendedRef.current) return;
     const ms = isHomeRef.current ? HOME_IDLE_MS : AWAY_IDLE_MS;
     timerRef.current = setTimeout(() => {
+      if (suspendedRef.current) return; // safety net if suspension raced the timeout
       idleRef.current = true;
       setShowIdle(true);
       if (!isHomeRef.current) {
@@ -56,6 +73,18 @@ export function KioskRoot({ children }: { children: React.ReactNode }) {
     if (idleRef.current) return;
     startTimer();
   }, [startTimer]);
+
+  // Suspension changes → clear the timer immediately while suspended, and
+  // re-arm it the moment suspension lifts (unless the idle screen is
+  // already showing, in which case activity/dismiss handles it as usual).
+  useEffect(() => {
+    suspendedRef.current = suspended;
+    if (suspended) {
+      clearTimer();
+    } else if (!idleRef.current) {
+      startTimer();
+    }
+  }, [suspended, startTimer]);
 
   // Wire up global activity listeners once on mount.
   useEffect(() => {

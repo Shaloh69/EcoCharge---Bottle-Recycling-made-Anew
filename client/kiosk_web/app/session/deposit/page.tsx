@@ -12,6 +12,7 @@ import {
   type DetectionResult,
   type KioskSSEEvent,
 } from "@/lib/api";
+import { useSuspendIdle } from "@/lib/idle-suspend";
 
 const KIOSK_ID = parseInt(process.env.NEXT_PUBLIC_KIOSK_ID ?? "1");
 const MAX_RETRIES = 6;
@@ -44,6 +45,13 @@ function DepositContent() {
   const [statusMsg, setStatusMsg] = useState("Waiting for bottle…");
   const [credits, setCredits] = useState(0);
   const [binPending, setBinPending] = useState(false);
+
+  // Suspend the kiosk-wide idle timer during SCANNING and bin-confirmation
+  // (approved, while binPending is true) — docs/planning/02-design-mandate.md
+  // SS4.2: a user is *supposed* to stand still and not touch the screen
+  // during these states, which is exactly when a generic activity-based
+  // idle timer would otherwise misfire.
+  useSuspendIdle(phase === "scanning" || (phase === "approved" && binPending));
 
   // Keep phaseRef in sync with phase state
   useEffect(() => {
