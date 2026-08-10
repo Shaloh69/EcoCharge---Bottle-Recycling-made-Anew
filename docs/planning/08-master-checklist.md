@@ -100,7 +100,7 @@ Every actionable item across `docs/planning/00-07`, in the order `00-start-here.
 
 - [ ] Formal architecture diagram
 - [ ] Hardware wiring diagram
-- [ ] ML evaluation report (assemble from existing `runs/detect/`/`runs/classifier/` outputs — training in progress this session is part of this)
+- [x] **ML evaluation report — done 2026-08-11**: `docs/evidence/ml-evaluation-report.md`, real numbers from the actual training run (`args.yaml`, `results.csv`, the held-out test-set eval) — mAP50 0.995, mAP50-95 0.9447, Precision 0.999, Recall 1.0 on the detector. Honest about what it doesn't cover: classifier eval (not retrained), real-world/field accuracy, cross-dataset validation. **Real, manual follow-up flagged in the report itself**: the actual visual artifacts (confusion matrix, PR curves, val prediction images) live in `runs/detect/ecocharge_bottle_det/` on `desktop-gklhcri` and are gitignored by design (`scripts/runs/`) — someone needs to physically pull those PNGs onto whatever machine assembles the final thesis document, that wasn't done as part of this report.
 - [ ] UI screenshots — blocked on Phase E actually shipping
 - [ ] User testing summary (system usability, distinct from the paper's existing survey data)
 - [ ] Pilot deployment findings — blocked on Phase A + hardware validation
