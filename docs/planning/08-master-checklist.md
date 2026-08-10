@@ -10,7 +10,7 @@ Every actionable item across `docs/planning/00-07`, in the order `00-start-here.
 
 - [x] §1.0 Folder layout on Disk D (`D:\EcoCharge\mysql\`, `\supabase\`, `\backups\`, `\logs\`)
 - [x] §1.3 MySQL running in Docker, healthy, port 13306 (not 3306/3307 — both already taken on the shared machine)
-- [~] §1.4 Self-hosted Supabase — containers pulled and (after a real password-mismatch crash-loop, fixed by wiping and reinitializing the `db` volume) mid-fresh-init when the last session ended. **Re-verify all ~10 services report healthy with zero restarts before trusting this.**
+- [x] §1.4 Self-hosted Supabase — **re-verified 2026-08-11: all 10 services healthy** (`db`, `kong`, `studio`, `imgproxy`, `edge-functions`, `auth`, `meta`, `pooler`, `rest`, `storage`, `realtime`). Several were stuck in `Created` (never actually issued a start) rather than crash-looping — a second `docker compose up -d` got them all running; `auth` genuinely ran its real migrations this time with no password error, confirming the wipe-and-reinit fix from the prior session actually worked.
 - [ ] §1.3 step 3: dump Aiven → restore into the Docker MySQL instance (the actual data migration — not yet done; local MySQL is empty)
 - [ ] §1.4: rewire `storageService.ts` / the avatar-upload handler to the self-hosted Supabase URL + new service-role key
 - [ ] §1.4 step 7: build the avatar-proxy route on the Node API (recommended exposure approach) — or, if not building it, explicitly decide on the Storage-scoped-hostname fallback instead
