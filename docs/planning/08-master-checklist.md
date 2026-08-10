@@ -108,13 +108,13 @@ Every actionable item across `docs/planning/00-07`, in the order `00-start-here.
 ## Phase H — Thesis evidence pack (`05-feature-build-checklist.md` Stage 3)
 
 - [x] **Formal architecture diagram — done 2026-08-11**: `docs/evidence/architecture-diagram.md`, a real Mermaid diagram of the actual live self-hosted topology (not aspirational) — every box either verified reachable this session or explicitly marked not-yet-deployed (`kiosk_web`, dashed, since its field PC isn't provisioned).
-- [ ] Hardware wiring diagram — not done; needs the physical wiring reference (GPIO pin assignments exist in `esp/ecocharge/include/config.h`, but a real wiring diagram is a different artifact than a pinout list)
+- [x] **Hardware wiring diagram — done 2026-08-11**: `docs/evidence/hardware-wiring-diagram.md`, a real Mermaid diagram transcribed directly from `esp/ecocharge/include/config.h`'s actual pin map — including a real, easy-to-miss architectural detail: this is a **two-microcontroller system** (ESP32 + a Raspberry Pi Pico co-processor handling ports 2/4 voltage sensing over UART, because the ESP32's ADC2 is unavailable while WiFi is active). **Not independently verified against the physical hardware** — no hardware access this session; this is a correct transcription of firmware source, not an as-built confirmation.
 - [x] **ML evaluation report — done 2026-08-11**: `docs/evidence/ml-evaluation-report.md`, real numbers from the actual training run (`args.yaml`, `results.csv`, the held-out test-set eval) — mAP50 0.995, mAP50-95 0.9447, Precision 0.999, Recall 1.0 on the detector. Honest about what it doesn't cover: classifier eval (not retrained), real-world/field accuracy, cross-dataset validation. **Real, manual follow-up flagged in the report itself**: the actual visual artifacts (confusion matrix, PR curves, val prediction images) live in `runs/detect/ecocharge_bottle_det/` on `desktop-gklhcri` and are gitignored by design (`scripts/runs/`) — someone needs to physically pull those PNGs onto whatever machine assembles the final thesis document, that wasn't done as part of this report.
 - [ ] UI screenshots — blocked on Phase E actually shipping
 - [ ] User testing summary (system usability, distinct from the paper's existing survey data)
 - [ ] Pilot deployment findings — blocked on Phase A + hardware validation
-- [ ] Limitations and future-work section
-- [ ] Confirm the YOLO26 thesis-narrative update actually landed in the paper itself
+- [x] **Limitations and future-work section — done 2026-08-11**: `docs/evidence/limitations-and-future-work.md`, drawn directly from this checklist's own real, current gaps (not invented for the thesis) — deliberate design decisions, genuinely open product decisions, the hardware-access constraint and everything downstream of it, honest AI-model caveats, the design-revamp gap, and testing scope.
+- [!] **Confirm the YOLO26 thesis-narrative update landed in the paper itself — cannot be checked from this session.** The actual thesis paper document isn't in this repository (searched — no `.docx`/thesis-named files anywhere in the tree); it lives somewhere this session has no access to. Not silently assumed done or not done — needs the user (or whoever has the paper) to confirm directly.
 
 ## Phase I — Hygiene (`05-feature-build-checklist.md` Stage 4)
 
