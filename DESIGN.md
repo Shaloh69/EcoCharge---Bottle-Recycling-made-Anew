@@ -143,9 +143,14 @@ vars in `styles/globals.css` ("AIRAT-NA pattern — green edition") and a fully
 customized HeroUI theme in `hero.ts` (custom palette, radius, layout — the
 "untouched HeroUI defaults" ban is already satisfied). The revamp **aligns and
 extends** that layer rather than replacing it: map its `--green-*`/`--color-eco-*`
-scale onto this file's semantic tokens, keep `hero.ts` palette as the HeroUI
-bridge, and delete the decorative colors that violate the banned list
-(`--color-eco-dusk` #7C3AED and `--color-eco-lavender` purple family).
+scale onto this file's semantic tokens. **Superseded 2026-08-10: `hero.ts` and
+HeroUI are deleted entirely from `web_console`, not kept as a bridge** — see
+`docs/planning/02-design-mandate.md`'s intro/§7 for the reversal and why
+(the user wants a full delete-and-redo; replaced with Mantine). The purple
+`--color-eco-dusk`/`--color-eco-lavender` tokens are **kept, not deleted** —
+an earlier note here calling them a banned-pattern violation was wrong; the
+real Figma reference (§4.6 of the mandate) confirms purple is a deliberate
+accent.
 
 ## Redesign execution status
 
@@ -153,15 +158,29 @@ bridge, and delete the decorative colors that violate the banned list
 - [x] Design-review workflow installed (`.claude/agents/design-review.md`,
   `/design-review` command, `avoid-ai-design` skill)
 - [x] Dead component sweep + dependency prune (Knip-verified, both apps)
-- [ ] Typography: replace Inter-only (banned) — Space Grotesk/Outfit + IBM
-  Plex Sans + IBM Plex Mono via `next/font`, both apps
-- [ ] web_console: status-convention pass (badges/gauge/ports/commands),
-  toast system, skeletons, SSE pulse, sticky alert strip, density pass
-- [ ] kiosk_web: step wizard, scanning banner + Lottie composite, FSM-aware
-  idle timeout (none exists today — build fresh), bin-full + guest-disclosure
-  screens, toasts
+- [x] **`web_console`: HeroUI removed entirely, replaced with Mantine 7** —
+  `lib/mantineTheme.ts` (palette ported 1:1 from the retired `hero.ts`),
+  `lib/toast.ts` (Mantine notifications behind the old `addToast` shape).
+  Verified: `tsc --noEmit` clean, full `next build` succeeds, all 16 routes.
+  **Not yet done**: the actual component-level "Operations Console" pass
+  (dense tables, status badges, bin gauge, SSE pulse, sticky alert strip) —
+  this only replaced the foundation/provider layer, not each page's UI.
+- [x] **`web_console`: typography fixed** — `config/fonts.ts` was loading
+  Inter + Fira Code (the literal banned-pattern default); now Space Grotesk /
+  Manrope / IBM Plex Mono via `next/font`, wired through to `globals.css`'s
+  `--font-sans`/`--font-heading`/`--font-mono` and `mantineTheme.ts`.
+- [ ] `kiosk_web`: HeroUI → shadcn/ui on Radix/Base UI (not started —
+  `web_console` was done first since it had the smaller actual HeroUI
+  footprint, see the mandate's §7), typography fix (still on the old stack,
+  same Inter-class issue likely present, not yet checked), step wizard,
+  scanning banner + Lottie composite, FSM-aware idle timeout (none exists
+  today — build fresh), bin-full + guest-disclosure screens, toasts, the
+  real component catalog from §4.6 (bin gauge, station picker, numeric
+  keypad, OTP entry, wave divider, success/fail halo badge)
 - [ ] flutter_app: theme rework, animation stack deps (skeletonizer/Lottie/
   Rive/flutter_animate/cached_network_image), screen-by-screen pass
+- [ ] `client/web` (new public website): doesn't exist yet, build fresh from
+  Velora UI per the mandate §6
 - [ ] Playwright MCP for `/design-review` screenshot checking (needs MCP
   server config — not yet installed)
 - [ ] Load the `dataviz` skill before touching the analytics charts (required
