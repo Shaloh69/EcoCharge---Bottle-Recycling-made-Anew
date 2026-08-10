@@ -40,7 +40,10 @@
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; padding: 0; overflow-x: hidden; }
 
-html        { background: #051A08; }
+/* Pre-hydration paint color — must match mantineTheme.ts's bgApp (#0A0F0D),
+   not the unused legacy --color-eco-forest token, or dark mode flashes the
+   wrong shade before React mounts. */
+html        { background: #0A0F0D; }
 html.light  { background: #EEF7EE; }
 
 body {

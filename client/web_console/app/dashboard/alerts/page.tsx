@@ -4,21 +4,39 @@ import { useEffect, useState } from "react";
 import { addToast } from "@/lib/toast";
 import { admin, type Alert } from "@/lib/api";
 
+// Real vocabulary the backend emits (src/routes/admin.ts GET /alerts):
+// "critical" (bin >= 95%) and "high" (kiosk offline) both map to the
+// spec's "red = critical/offline" convention; "medium" (bin 80-94%) maps
+// to "amber = degraded/warning". "error"/"warning" never occur — fixed
+// 2026-08-11, this previously matched nothing so every real alert fell
+// through to the neutral fallback below.
 const severityConfig: Record<
   string,
   { bg: string; border: string; color: string; dot: string }
 > = {
-  error: {
+  critical: {
     bg: "rgba(239,68,68,0.08)",
     border: "rgba(239,68,68,0.22)",
     color: "#F87171",
     dot: "#EF4444",
   },
-  warning: {
+  high: {
+    bg: "rgba(239,68,68,0.08)",
+    border: "rgba(239,68,68,0.22)",
+    color: "#F87171",
+    dot: "#EF4444",
+  },
+  medium: {
     bg: "rgba(251,191,36,0.08)",
     border: "rgba(251,191,36,0.22)",
     color: "#FBBF24",
     dot: "#F59E0B",
+  },
+  low: {
+    bg: "rgba(255,255,255,0.04)",
+    border: "rgba(255,255,255,0.10)",
+    color: "rgba(255,255,255,0.65)",
+    dot: "rgba(255,255,255,0.40)",
   },
 };
 

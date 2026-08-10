@@ -72,17 +72,26 @@ router.get(
   async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const kiosks = await prisma.kiosk.findMany({ orderBy: { name: "asc" } });
-      res.json(
-        kiosks.map((k) => ({
-          id: k.id,
-          name: k.name,
-          location: k.location,
-          api_key: k.apiKey,
-          status: k.status,
-          last_seen_at: k.lastSeenAt,
-          created_at: k.createdAt,
-        })),
+      const withBinLevel = await Promise.all(
+        kiosks.map(async (k) => {
+          const latest = await prisma.deviceTelemetry.findFirst({
+            where: { kioskId: k.id },
+            orderBy: { timestamp: "desc" },
+            select: { binLevel: true },
+          });
+          return {
+            id: k.id,
+            name: k.name,
+            location: k.location,
+            api_key: k.apiKey,
+            status: k.status,
+            last_seen_at: k.lastSeenAt,
+            created_at: k.createdAt,
+            bin_level: latest?.binLevel ?? null,
+          };
+        }),
       );
+      res.json(withBinLevel);
     } catch (err) {
       next(err);
     }
@@ -325,6 +334,7 @@ router.get(
         kiosk_name: string;
         message: string;
         severity: string;
+        timestamp: Date;
       }> = [];
 
       for (const kiosk of kiosks) {
@@ -336,6 +346,7 @@ router.get(
             kiosk_name: kiosk.name,
             message: `Kiosk "${kiosk.name}" has been offline for more than 2 minutes`,
             severity: "high",
+            timestamp: kiosk.lastSeenAt ?? kiosk.createdAt,
           });
         }
 
@@ -355,6 +366,7 @@ router.get(
             kiosk_name: kiosk.name,
             message: `Kiosk "${kiosk.name}" bin level is at ${latest.binLevel}%`,
             severity: latest.binLevel >= 95 ? "critical" : "medium",
+            timestamp: latest.timestamp,
           });
         }
       }

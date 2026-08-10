@@ -126,6 +126,7 @@ export interface Kiosk {
   location: string;
   status: "online" | "offline" | "error";
   last_seen_at: string;
+  bin_level: number | null;
 }
 export interface Telemetry {
   id: number;
@@ -174,7 +175,11 @@ export interface Alert {
   kiosk_id: number;
   kiosk_name: string;
   message: string;
-  severity: "warning" | "error";
+  // Real vocabulary the backend actually emits (src/routes/admin.ts GET
+  // /alerts) — "warning"/"error" never occur; fixed 2026-08-11 after a
+  // design-review pass found the strip and alerts page were both silently
+  // failing to flag the one real offline kiosk because of this mismatch.
+  severity: "critical" | "high" | "medium" | "low";
   timestamp: string;
 }
 export interface Overview {

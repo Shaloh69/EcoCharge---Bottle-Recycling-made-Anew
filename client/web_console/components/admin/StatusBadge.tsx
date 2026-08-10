@@ -31,7 +31,7 @@ const STATUS_CONFIG: Record<StatusType, { color: string; label: string }> = {
   active: { color: "voltTeal", label: "Active" },
   warning: { color: "warningAmber", label: "Warning" },
   pending: { color: "warningAmber", label: "Pending" },
-  offline: { color: "gray", label: "Offline" },
+  offline: { color: "dangerRed", label: "Offline" },
   idle: { color: "gray", label: "Idle" },
   fault: { color: "dangerRed", label: "Fault" },
   error: { color: "dangerRed", label: "Error" },

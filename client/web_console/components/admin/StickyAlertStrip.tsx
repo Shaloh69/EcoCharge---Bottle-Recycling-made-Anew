@@ -39,7 +39,14 @@ export function StickyAlertStrip() {
     };
   }, []);
 
-  const critical = alerts.filter((a) => a.severity === "error");
+  // "critical" = bin >= 95%, "high" = kiosk offline — exactly the two
+  // conditions docs/planning/02-design-mandate.md §3 specifies for this
+  // strip. "error"/"warning" never occur in the real payload (fixed
+  // 2026-08-11 — this filter matched nothing, so the strip never fired,
+  // even for the real offline kiosk it exists to flag).
+  const critical = alerts.filter(
+    (a) => a.severity === "critical" || a.severity === "high",
+  );
 
   if (critical.length === 0) return null;
 

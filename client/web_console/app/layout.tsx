@@ -27,7 +27,7 @@ export default function RootLayout({
           fontHeading.variable,
           fontMono.variable,
         )}
-        style={{ background: "#051A08" }}
+        style={{ background: "#0A0F0D" }}
       >
         {/* Animated nature mesh gradient — always behind all content */}
         <div className="bg-animated" />

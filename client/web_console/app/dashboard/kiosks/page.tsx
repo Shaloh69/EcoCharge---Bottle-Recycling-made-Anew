@@ -222,7 +222,7 @@ export default function KiosksPage() {
                 </span>
               </div>
             </div>
-            <BinGauge level={0} />
+            <BinGauge level={k.bin_level ?? 0} />
             <p className="text-[10px] mt-2 text-right" style={dimText(0.28)}>
               Click to manage →
             </p>
