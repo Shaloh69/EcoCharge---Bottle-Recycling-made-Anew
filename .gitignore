@@ -285,3 +285,4 @@ scripts/extract_frames/**
 # to the public repo. Findings from it are written up in
 # docs/planning/02-design-mandate.md SS4.6.
 /EcoCharge.pdf
+.playwright-mcp/

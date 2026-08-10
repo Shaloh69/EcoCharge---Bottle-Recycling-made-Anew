@@ -1,6 +1,19 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import {
+  Alert,
+  Box,
+  Button,
+  Paper,
+  PasswordInput,
+  Stack,
+  Text,
+  TextInput,
+  ThemeIcon,
+  Title,
+} from "@mantine/core";
+import { AlertCircle, ArrowRight, Leaf } from "lucide-react";
 
 import { addToast } from "@/lib/toast";
 import { adminAuth, auth } from "@/lib/api";
@@ -42,142 +55,91 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div
-        className="w-full max-w-sm rounded-3xl p-8"
+    <Box
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "1rem",
+      }}
+    >
+      <Paper
+        withBorder
+        p="xl"
+        radius="lg"
         style={{
-          background: "rgba(255,255,255,0.06)",
-          border: "1px solid rgba(255,255,255,0.12)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          boxShadow:
-            "0 32px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(76,175,80,0.08)",
+          width: "100%",
+          maxWidth: 380,
+          borderTopWidth: 3,
+          borderTopColor: "var(--mantine-color-ecoGreen-6)",
+          borderTopStyle: "solid",
         }}
       >
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div
-            className="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center text-3xl mb-4"
-            style={{
-              background:
-                "linear-gradient(135deg, rgba(76,175,80,0.25), rgba(20,184,166,0.18))",
-              border: "1px solid rgba(76,175,80,0.30)",
-              boxShadow: "0 8px 24px rgba(76,175,80,0.20)",
-            }}
-          >
-            🌿
-          </div>
-          <h1
-            className="text-2xl font-extrabold tracking-tight"
-            style={{
-              background: "linear-gradient(90deg, #4ADE80, #2DD4BF)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
+        <Stack align="center" gap={4} mb="lg">
+          <ThemeIcon color="ecoGreen" radius="md" size={48} variant="light">
+            <Leaf size={26} />
+          </ThemeIcon>
+          <Title order={2} ta="center" fw={700}>
             EcoCharge
-          </h1>
-          <p
-            className="text-xs tracking-widest uppercase mt-1"
-            style={{ color: "rgba(255,255,255,0.35)" }}
+          </Title>
+          <Text
+            c="dimmed"
+            fw={600}
+            size="xs"
+            style={{ letterSpacing: "0.12em" }}
+            tt="uppercase"
           >
-            Admin Console
-          </p>
-        </div>
+            Operations Console
+          </Text>
+        </Stack>
 
-        <form className="space-y-4" onSubmit={handleLogin}>
-          <div>
-            <label
-              className="block text-xs font-semibold mb-1.5"
-              htmlFor="login-email"
-              style={{ color: "rgba(255,255,255,0.50)" }}
-            >
-              Email
-            </label>
-            <input
+        <form onSubmit={handleLogin}>
+          <Stack gap="md">
+            <TextInput
               required
-              className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
-              id="login-email"
+              label="Email"
               placeholder="admin@ecocharge.ph"
-              style={{
-                background: "rgba(255,255,255,0.07)",
-                border: "1px solid rgba(255,255,255,0.12)",
-                color: "rgba(255,255,255,0.90)",
-              }}
               type="email"
               value={form.email}
-              onBlur={(e) => {
-                e.target.style.border = "1px solid rgba(255,255,255,0.12)";
-                e.target.style.boxShadow = "none";
-              }}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              onFocus={(e) => {
-                e.target.style.border = "1px solid rgba(76,175,80,0.50)";
-                e.target.style.boxShadow = "0 0 0 3px rgba(76,175,80,0.12)";
-              }}
+              onChange={(e) =>
+                setForm({ ...form, email: e.currentTarget.value })
+              }
             />
-          </div>
-
-          <div>
-            <label
-              className="block text-xs font-semibold mb-1.5"
-              htmlFor="login-password"
-              style={{ color: "rgba(255,255,255,0.50)" }}
-            >
-              Password
-            </label>
-            <input
+            <PasswordInput
               required
-              className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
-              id="login-password"
+              label="Password"
               placeholder="••••••••"
-              style={{
-                background: "rgba(255,255,255,0.07)",
-                border: "1px solid rgba(255,255,255,0.12)",
-                color: "rgba(255,255,255,0.90)",
-              }}
-              type="password"
               value={form.password}
-              onBlur={(e) => {
-                e.target.style.border = "1px solid rgba(255,255,255,0.12)";
-                e.target.style.boxShadow = "none";
-              }}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              onFocus={(e) => {
-                e.target.style.border = "1px solid rgba(76,175,80,0.50)";
-                e.target.style.boxShadow = "0 0 0 3px rgba(76,175,80,0.12)";
-              }}
+              onChange={(e) =>
+                setForm({ ...form, password: e.currentTarget.value })
+              }
             />
-          </div>
 
-          {error && (
-            <p
-              className="text-xs text-center px-3 py-2 rounded-xl"
-              style={{
-                color: "#FCA5A5",
-                background: "rgba(239,68,68,0.10)",
-                border: "1px solid rgba(239,68,68,0.20)",
-              }}
+            {error && (
+              <Alert
+                color="red"
+                icon={<AlertCircle size={16} />}
+                styles={{ message: { fontSize: 13 } }}
+                variant="light"
+              >
+                {error}
+              </Alert>
+            )}
+
+            <Button
+              color="ecoGreen"
+              loading={loading}
+              mt={4}
+              rightSection={!loading && <ArrowRight size={16} />}
+              size="md"
+              type="submit"
             >
-              {error}
-            </p>
-          )}
-
-          <button
-            className="w-full py-3.5 rounded-xl font-bold text-sm transition-all duration-200 active:scale-[0.97] disabled:opacity-50"
-            disabled={loading}
-            style={{
-              background: "linear-gradient(135deg, #4CAF50, #16A34A)",
-              color: "#fff",
-              boxShadow: "0 8px 24px rgba(76,175,80,0.30)",
-              marginTop: "8px",
-            }}
-            type="submit"
-          >
-            {loading ? "Signing in…" : "Sign In →"}
-          </button>
+              Sign In
+            </Button>
+          </Stack>
         </form>
-      </div>
-    </div>
+      </Paper>
+    </Box>
   );
 }

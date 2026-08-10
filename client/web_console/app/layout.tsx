@@ -29,10 +29,6 @@ export default function RootLayout({
         )}
         style={{ background: "#0A0F0D" }}
       >
-        {/* Animated nature mesh gradient — always behind all content */}
-        <div className="bg-animated" />
-        <div className="bg-noise" />
-
         <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
           {children}
         </Providers>
