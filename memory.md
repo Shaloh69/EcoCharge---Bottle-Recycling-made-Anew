@@ -133,6 +133,16 @@ Asked to clarify "the free cloudflare domain that cloudflare gives yourself" —
 
 ---
 
+## 2026-08-11 — Training had actually finished (real, strong results); AI server deployed; two dead/mismatched AI tunnel URLs fixed
+
+**Checked training status while fixing the AI-URL inconsistency below, and found it had completed** — `EcoChargeTrain`/`EcoChargeTrainResume` scheduled tasks both showed `Ready` (not `Running`), and `runs/detect/ecocharge_bottle_det/weights/best.pt` exists with a full training log ending in real test-set metrics: **mAP50 0.9950, mAP50-95 0.9447, Precision 0.9988, Recall 1.0000**. This hadn't been reported anywhere yet — worth surfacing for the thesis (Phase H evidence pack). The classifier (`best_classifier.pt`) is **not** freshly trained — still the original April weights; `scripts/train_bottle_classifier.py` was never run this session.
+
+**Separately, found a real bug while investigating why the kiosk's AI detection wouldn't have worked even if hardware were reachable:** `server_main/.env`'s `AI_SERVER_URL` and `kiosk_web/.env.local`'s `AI_URL` pointed at two *different* quick-tunnel URLs, and both were dead (`curl` timeouts, not just stale-looking). Root cause: the AI server (`server_AI`) wasn't actually running anywhere — not on the dev laptop, not on `desktop-gklhcri`. Fixed by deploying it properly: `D:\EcoCharge\app\server_AI` on `desktop-gklhcri`, reusing the training venv (`scripts\.venv` already had torch/ultralytics/fastapi from training — only needed `python-dotenv` added, avoided a from-scratch multi-GB install), persistent via the same Task-Scheduler pattern (`EcoChargeAIServer`, port 30012) plus its own quick tunnel (`EcoChargeTunnelAI`). Deployed with the **fresh** detector weights, not the stale ones. All three consumers now point at the one real, live URL — `server_main/.env`, `kiosk_web/.env.local`, and `esp/ecocharge/include/config.h` (source updated, not yet flashed — see hardware-inaccessible note above).
+
+**How to apply:** if the AI pipeline seems broken again, check `D:\EcoCharge\logs\server_AI\` on `desktop-gklhcri` for whether the process is actually running before assuming a code bug — this exact failure mode (process just not running, URLs stale/mismatched from whenever it last was) already happened once. Don't retrain the classifier without being asked — the detector's fresh training was unprompted-but-discovered; the classifier being untouched is a real, known gap, not an oversight to silently fix.
+
+---
+
 ## 2026-08-10/11 — Training stalled under resource contention with the Supabase pull; recovered via resume
 
 Real operational incident, not just a note: the YOLO training run (launched via Task Scheduler, `--workers 6`) genuinely stalled at epoch 32, batch 13/30 — confirmed stuck (not just slow) across multiple checks minutes apart, despite the process still accumulating CPU time (a red herring — CPU activity alone doesn't prove forward progress; this looked like a classic Windows/PyTorch `DataLoader` multiprocessing-worker deadlock, a known category of issue, not corruption or a crash).

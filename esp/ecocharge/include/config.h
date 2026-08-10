@@ -120,7 +120,9 @@
 // ----------------------------------------------------------------------------
 // AI Backend Server
 // ----------------------------------------------------------------------------
-#define AI_SERVER_URL       "https://broke-kills-clear-hostels.trycloudflare.com"
+// Self-hosted on desktop-gklhcri via its own free Cloudflare quick tunnel —
+// same rotation caveat as RENDER_BASE_URL above.
+#define AI_SERVER_URL       "https://recipient-beliefs-landscapes-established.trycloudflare.com"
 #define AI_API_KEY          "SET_AT_BUILD_TIME"
 
 // ----------------------------------------------------------------------------
