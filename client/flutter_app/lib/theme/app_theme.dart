@@ -110,6 +110,17 @@ class AppColors {
 class AppTheme {
   AppTheme._();
 
+  // ── Real, previously-missing aliases, found 2026-08-11: 13 files across the
+  //    app reference AppTheme.primaryGreen/midGreen/lightGreen/danger, none of
+  //    which were ever actually defined here — `flutter analyze` (never run
+  //    before this session, since the SDK was assumed unavailable) fails hard
+  //    on all 13. Mapped onto the real AppColors scale already used
+  //    elsewhere, not new arbitrary hues. ──────────────────────────────────
+  static const Color primaryGreen = AppColors.primaryDark; // #16A34A
+  static const Color midGreen = AppColors.green500; // #22C55E
+  static const Color lightGreen = AppColors.green400; // #4ADE80
+  static const Color danger = AppColors.coral600; // #DC2626 - readable as text/badge on white
+
   // ── Light theme ──────────────────────────────────────────────────────────
   static ThemeData get light => _build(Brightness.light);
 

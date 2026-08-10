@@ -75,7 +75,7 @@ class _CreditBalanceScreenState extends State<CreditBalanceScreen> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(16),
-                  child: CreditBalanceCard(balance: _user?.balanceLabel ?? '— min'),
+                  child: CreditBalanceCard(creditBalance: _user?.creditBalance),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import 'package:flutter_app/theme/app_theme.dart';
 import 'package:flutter_app/services/api_service.dart';
 import 'package:flutter_app/widgets/credit_balance_card.dart';
@@ -17,6 +19,18 @@ class _HomeScreenState extends State<HomeScreen> {
   List<ApiKiosk> _kiosks = [];
   bool _loading = true;
   Timer? _refreshTimer;
+
+  // Skeleton placeholders — same shape as real data so Skeletonizer's bones
+  // match the loaded layout exactly (no layout jump), per the design
+  // mandate's loading rule.
+  static const _placeholderKiosks = [
+    ApiKiosk(id: -1, name: 'Kiosk Name', location: 'Location', status: 'online'),
+    ApiKiosk(id: -2, name: 'Kiosk Name', location: 'Location', status: 'online'),
+  ];
+  static const _placeholderDeposits = [
+    ApiDeposit(id: -1, brand: 'Brand', volumeMl: 500, condition: 'perfect', confidence: 1, creditsAwarded: 2, timestamp: '2026-01-01'),
+    ApiDeposit(id: -2, brand: 'Brand', volumeMl: 500, condition: 'perfect', confidence: 1, creditsAwarded: 2, timestamp: '2026-01-01'),
+  ];
 
   @override
   void initState() {
@@ -78,45 +92,58 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CreditBalanceCard(balance: _user?.balanceLabel ?? '— min'),
-                  const SizedBox(height: 16),
-                  Row(children: [
-                    _StatChip(icon: '🍶', label: 'Bottles', value: '${_deposits.length}'),
-                    const SizedBox(width: 12),
-                    _StatChip(icon: '⚡', label: 'Balance', value: _user?.balanceLabel ?? '—'),
-                  ]),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => context.go('/scan'),
-                      icon: const Icon(Icons.qr_code_scanner),
-                      label: const Text('Scan Kiosk'),
-                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text('Nearby Kiosks', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
-                  const SizedBox(height: 12),
-                  ..._kiosks.take(2).map((k) => _KioskTile(kiosk: k)),
-                  const SizedBox(height: 16),
-                  Row(children: [
-                    const Text('Recent Deposits', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
-                    const Spacer(),
-                    TextButton(onPressed: () => context.go('/history'), child: const Text('See all')),
-                  ]),
-                  ..._deposits.take(2).map((d) => _DepositTile(deposit: d)),
-                  const SizedBox(height: 32),
-                ],
+      body: Skeletonizer(
+        enabled: _loading,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CreditBalanceCard(creditBalance: _loading ? null : _user?.creditBalance),
+              const SizedBox(height: 16),
+              Row(children: [
+                _StatChip(icon: '🍶', label: 'Bottles', value: _loading ? '00' : '${_deposits.length}'),
+                const SizedBox(width: 12),
+                _StatChip(icon: '⚡', label: 'Balance', value: _loading ? '— min' : (_user?.balanceLabel ?? '—')),
+              ]),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => context.go('/scan'),
+                  icon: const Icon(Icons.qr_code_scanner),
+                  label: const Text('Scan Kiosk'),
+                  style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                ),
               ),
-            ),
+              const SizedBox(height: 24),
+              const Text('Nearby Kiosks', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
+              const SizedBox(height: 12),
+              ...(_loading ? _placeholderKiosks : _kiosks.take(2).toList())
+                  .asMap()
+                  .entries
+                  .map((e) => _KioskTile(kiosk: e.value)
+                      .animate(delay: (e.key * 60).ms)
+                      .fadeIn(duration: 280.ms)
+                      .slideX(begin: 0.04, end: 0, duration: 280.ms)),
+              const SizedBox(height: 16),
+              Row(children: [
+                const Text('Recent Deposits', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
+                const Spacer(),
+                TextButton(onPressed: () => context.go('/history'), child: const Text('See all')),
+              ]),
+              ...(_loading ? _placeholderDeposits : _deposits.take(2).toList())
+                  .asMap()
+                  .entries
+                  .map((e) => _DepositTile(deposit: e.value)
+                      .animate(delay: (e.key * 60).ms)
+                      .fadeIn(duration: 280.ms)
+                      .slideX(begin: 0.04, end: 0, duration: 280.ms)),
+              const SizedBox(height: 32),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

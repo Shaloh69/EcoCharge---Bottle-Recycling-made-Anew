@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -35,7 +37,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     setState(() => _uploadingAvatar = true);
     try {
-      await ApiService.uploadAvatar(picked.toFile());
+      await ApiService.uploadAvatar(File(picked.path));
       final updated = await ApiService.getMe();
       if (mounted) setState(() => _user = updated);
       if (mounted) {
