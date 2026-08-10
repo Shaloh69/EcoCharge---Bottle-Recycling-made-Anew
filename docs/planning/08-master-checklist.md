@@ -84,8 +84,8 @@ Every actionable item across `docs/planning/00-07`, in the order `00-start-here.
 ## Phase F — AI detection reliability (`07-ai-detection-improvements.md`)
 
 - [ ] Firmware "nudge complete" signal — tied to Phase C's sign-off gate, same file
-- [ ] Explicit camera capture resolution constraints in `kiosk_web`'s `getUserMedia` call — **independent, no hardware risk, not yet done**
-- [ ] Best-of-N frame capture per scan attempt — **independent, not yet done**
+- [x] **Explicit camera capture resolution constraints — done 2026-08-11**: `app/session/deposit/page.tsx`'s `getUserMedia` now requests `{ width: { ideal: 1280 }, height: { ideal: 720 } }` instead of an unconstrained call, per the diagnosis that some cameras were defaulting to low resolution. Verified via a real `next build` (clean, no new errors/warnings beyond pre-existing prettier formatting noise elsewhere in the file).
+- [x] **Best-of-N frame capture — done 2026-08-11, implemented as client-side sharpness selection rather than N AI-server calls**: each scan attempt now captures 3 frames ~100ms apart (fits inside the firmware's ~1.7s stationary pause between nudges — verified against `BOTTLE_SCAN_INTERVAL_MS`/`BOTTLE_NUDGE_FORWARD_MS`), scores each with a variance-of-Laplacian sharpness heuristic on a downsampled grayscale copy (standard cheap blur metric, computed in-browser, no new dependency), and sends only the sharpest frame to the AI server. Cheaper than calling `/api/detect` 3x per attempt. Verified via a real `next build`.
 - [!] Reconcile the AI server's 0.40 floor vs. the kiosk's 0.5 accept floor — a product decision, ask rather than guess
 - [x] Dataset merge — dropped per explicit user instruction, not pursued further
 

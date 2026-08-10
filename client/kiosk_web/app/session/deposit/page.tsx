@@ -59,9 +59,20 @@ function DepositContent() {
   }, [phase]);
 
   // ── Camera init ────────────────────────────────────────────────────────────
+  // Explicit resolution constraints — docs/planning/07-ai-detection-improvements.md
+  // flagged unconstrained getUserMedia as a real contributor to inconsistent
+  // detection (some cameras default to a low resolution that loses detail
+  // before the frame ever reaches YOLO). `ideal` degrades gracefully instead
+  // of throwing OverconstrainedError on cameras that can't hit 1280x720.
   useEffect(() => {
     navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: "environment" } })
+      .getUserMedia({
+        video: {
+          facingMode: "environment",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+      })
       .then((stream) => {
         if (videoRef.current) videoRef.current.srcObject = stream;
       })
@@ -76,7 +87,7 @@ function DepositContent() {
     };
   }, []);
 
-  // ── Capture a JPEG frame from the camera ───────────────────────────────────
+  // ── Capture a single JPEG frame from the camera ────────────────────────────
   const captureFrame = useCallback(async (): Promise<Blob> => {
     const video = videoRef.current!;
     const canvas = canvasRef.current!;
@@ -100,6 +111,78 @@ function DepositContent() {
       ),
     );
   }, []);
+
+  // ── Sharpness score (variance of Laplacian, the standard cheap blur metric) ──
+  // Run on a small downsampled grayscale copy so this stays fast — we only
+  // need a relative ranking between a handful of frames, not a precise score.
+  const sharpnessScore = useCallback((blob: Blob): Promise<number> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const w = 160;
+        const h = Math.round((img.height / img.width) * w) || 90;
+        const c = document.createElement("canvas");
+        c.width = w;
+        c.height = h;
+        const ctx = c.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, w, h);
+        const gray = new Float32Array(w * h);
+        const { data } = ctx.getImageData(0, 0, w, h);
+        for (let i = 0; i < w * h; i++) {
+          const o = i * 4;
+          gray[i] = 0.299 * data[o] + 0.587 * data[o + 1] + 0.114 * data[o + 2];
+        }
+        let sum = 0;
+        let sumSq = 0;
+        let n = 0;
+        for (let y = 1; y < h - 1; y++) {
+          for (let x = 1; x < w - 1; x++) {
+            const i = y * w + x;
+            const lap =
+              4 * gray[i] -
+              gray[i - 1] -
+              gray[i + 1] -
+              gray[i - w] -
+              gray[i + w];
+            sum += lap;
+            sumSq += lap * lap;
+            n++;
+          }
+        }
+        const mean = sum / n;
+        resolve(sumSq / n - mean * mean); // variance
+      };
+      img.onerror = () => resolve(0);
+      img.src = URL.createObjectURL(blob);
+    });
+  }, []);
+
+  // ── Best-of-N capture — mitigates motion blur from the conveyor's nudge ────
+  // docs/planning/07-ai-detection-improvements.md flagged single-frame capture
+  // as a real reliability gap: the belt is physically moving during the nudge
+  // window, so any one frame can land mid-motion. Grabs N frames a short beat
+  // apart (all local, no AI calls yet) and sends only the sharpest one —
+  // cheaper than calling the AI server N times per attempt.
+  const captureBestFrame = useCallback(
+    async (n = 3, spacingMs = 100): Promise<Blob> => {
+      const frames: Blob[] = [];
+      for (let i = 0; i < n; i++) {
+        frames.push(await captureFrame());
+        if (i < n - 1) await new Promise((r) => setTimeout(r, spacingMs));
+      }
+      const scores = await Promise.all(frames.map(sharpnessScore));
+      let bestIdx = 0;
+      for (let i = 1; i < scores.length; i++) {
+        if (scores[i] > scores[bestIdx]) bestIdx = i;
+      }
+      console.log(
+        `[Stage 1] Best-of-${n} frame selected: #${bestIdx + 1} (scores=${scores.map((s) => s.toFixed(1)).join(",")})`,
+      );
+
+      return frames[bestIdx];
+    },
+    [captureFrame, sharpnessScore],
+  );
 
   // ── Scan loop — up to MAX_RETRIES attempts ─────────────────────────────────
   // The firmware auto-nudges the belt every BOTTLE_SCAN_INTERVAL_MS.
@@ -128,7 +211,7 @@ function DepositContent() {
       await new Promise((r) => setTimeout(r, SCAN_INTERVAL_MS));
 
       try {
-        const blob = await captureFrame();
+        const blob = await captureBestFrame();
         console.log(`[Stage 1] Frame captured — ${blob.size} bytes, attempt ${i}/${MAX_RETRIES}`);
 
         result = await detectBottle(blob, sid);
@@ -177,7 +260,7 @@ function DepositContent() {
     }
 
     scanActive.current = false;
-  }, [captureFrame]);
+  }, [captureBestFrame]);
 
   // ── SSE listener — responds to bottle events from ESP32 telemetry ──────────
   // Bug fix: phase is NOT in the dependency array.
