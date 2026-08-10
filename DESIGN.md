@@ -154,33 +154,18 @@ accent.
 
 ## Redesign execution status
 
-- [x] Tokens defined (this file)
-- [x] Design-review workflow installed (`.claude/agents/design-review.md`,
-  `/design-review` command, `avoid-ai-design` skill)
-- [x] Dead component sweep + dependency prune (Knip-verified, both apps)
-- [x] **`web_console`: HeroUI removed entirely, replaced with Mantine 7** —
-  `lib/mantineTheme.ts` (palette ported 1:1 from the retired `hero.ts`),
-  `lib/toast.ts` (Mantine notifications behind the old `addToast` shape).
-  Verified: `tsc --noEmit` clean, full `next build` succeeds, all 16 routes.
-  **Not yet done**: the actual component-level "Operations Console" pass
-  (dense tables, status badges, bin gauge, SSE pulse, sticky alert strip) —
-  this only replaced the foundation/provider layer, not each page's UI.
-- [x] **`web_console`: typography fixed** — `config/fonts.ts` was loading
-  Inter + Fira Code (the literal banned-pattern default); now Space Grotesk /
-  Manrope / IBM Plex Mono via `next/font`, wired through to `globals.css`'s
-  `--font-sans`/`--font-heading`/`--font-mono` and `mantineTheme.ts`.
-- [ ] `kiosk_web`: HeroUI → shadcn/ui on Radix/Base UI (not started —
-  `web_console` was done first since it had the smaller actual HeroUI
-  footprint, see the mandate's §7), typography fix (still on the old stack,
-  same Inter-class issue likely present, not yet checked), step wizard,
-  scanning banner + Lottie composite, FSM-aware idle timeout (none exists
-  today — build fresh), bin-full + guest-disclosure screens, toasts, the
-  real component catalog from §4.6 (bin gauge, station picker, numeric
-  keypad, OTP entry, wave divider, success/fail halo badge)
-- [ ] flutter_app: theme rework, animation stack deps (skeletonizer/Lottie/
-  Rive/flutter_animate/cached_network_image), screen-by-screen pass
-- [ ] `client/web` (new public website): doesn't exist yet, build fresh from
-  Velora UI per the mandate §6
+**Status key, per `05-feature-build-checklist.md`'s convention — used strictly starting 2026-08-11:** `[ ]` not started · `[~]` code-complete, **not yet screenshot-verified** · `[x]` done **and** screenshot-verified against a real running instance per §0.
+
+**Correction, 2026-08-11: every item below previously marked `[x]` for actual UI work was checked off on the strength of a clean `tsc`/`next build` alone — no screenshot was ever taken, `/design-review` and the `avoid-ai-design` audit were never run.** §0 of `02-design-mandate.md` calls this exact discipline "the enforcement mechanism... not documentation busywork" and says explicitly not to check an item off without a real screenshot. That rule was violated, not followed. Downgraded to `[~]` below, honestly, rather than left overstated. Full accounting: `memory.md`.
+
+- [x] Tokens defined (this file) — a documentation artifact, not a UI claim, `[x]` is accurate here.
+- [x] Design-review workflow installed (`.claude/agents/design-review.md`, `/design-review` command, `avoid-ai-design` skill) — installed, but **never actually run** against any of the work below. Installing the tool isn't the same as using it.
+- [x] Dead component sweep + dependency prune (Knip-verified, both apps) — a static-analysis report, genuinely verifiable without a screenshot.
+- [~] **`web_console`: HeroUI removed, replaced with Mantine 7** — foundation (`lib/mantineTheme.ts`, `lib/toast.ts`) plus a real component-level pass (`StatusBadge`/`BinGauge`/`StatsCard` rebuilt on Mantine primitives, `PulseValue` for the SS3 150ms SSE pulse, `StickyAlertStrip`). `tsc`/`next build` clean, all 16 routes. **Not screenshot-verified. Not done**: the dense-table/skeleton treatment on the actual data pages (deposits, charging, credits, users) — only 5 shared components were touched, not every page.
+- [~] **`web_console`: typography fixed** — Inter/Fira Code (banned) replaced with Space Grotesk/Manrope/IBM Plex Mono via `next/font`. Builds clean. **Not screenshot-verified** — an unloaded/misconfigured web font can fail silently at runtime in a way `next build` won't catch.
+- [~] **`kiosk_web`: HeroUI removed, replaced with shadcn/ui foundation** — `components.json`/`lib/utils.ts` wired, Sonner replacing the (previously unused) HeroUI toast provider. Typography fixed (Baloo 2 + IBM Plex Sans, was falling back to Inter). Mascot art added to the idle screen with attribution. Two real pre-existing bugs fixed: a dead `.float-anim` CSS class, and no `prefers-reduced-motion` handling anywhere on the surface. The idle-timeout is now genuinely FSM-aware (suspended during `SCANNING`/bin-confirmation), correcting this document's own earlier wrong claim that no idle-timeout existed. `tsc`/`next build` clean. **Not screenshot-verified. Not done**: the §4.6 component catalog — wave divider, bin-gauge (kiosk-styled), station picker, numeric keypad, OTP entry, success/fail halo badge. None of these exist in code yet; this is the largest single remaining gap against the mandate.
+- [ ] flutter_app: animation-stack dependencies added (google_fonts, skeletonizer, lottie, rive, flutter_animate, cached_network_image) and real typography wired into the existing theme — confirmed resolved via the IDE's background `pub get` (no Flutter SDK available in this shell to verify directly). **None of the libraries are actually used on any screen yet** — dependency + typography layer only, no screen-by-screen pass.
+- [~] **`client/web` (new public website): built from scratch** (didn't exist before 2026-08-10) — real pages (home w/ aurora hero, how-it-works, changelog sourced from actual git history, docs, about, download), Baloo 2/IBM Plex Sans, eco-green palette. `tsc`/`next build` clean, all 6 routes. **Not screenshot-verified.**
 - [ ] Playwright MCP for `/design-review` screenshot checking (needs MCP
   server config — not yet installed)
 - [ ] Load the `dataviz` skill before touching the analytics charts (required
