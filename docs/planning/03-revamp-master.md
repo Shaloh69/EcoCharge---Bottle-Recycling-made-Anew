@@ -256,6 +256,8 @@ npx knip --fix --allow-remove-files   # review the diff before merging, even tho
 - **Mobile App** (`client/flutter_app`): "Clean Energy Reward" — same palette/meaning as the kiosk, `skeletonizer`/Lottie/Rive/`flutter_animate` animation stack, credit balance as the hero number on Home.
 - **Public Website** (`client/web`, new — no code exists yet): promotional site, real changelog, public docs, an app-download page. Built fresh from the Velora UI template, per `02-design-mandate.md` §6. Doesn't exist as a folder in this repo today — this is new scaffolding work, not a rebuild like the other three.
 
+**Component library, reversed 2026-08-10 — real scope change, not a detail:** HeroUI is being **deleted entirely** from both `client/kiosk_web` and `client/web_console`, not kept and re-themed. Replacements: **Mantine** for the Admin Console, **shadcn/ui on Radix UI or Base UI primitives** for Kiosk Web — full reasoning in `02-design-mandate.md`'s intro and §7. This is a bigger lift than the original "align and extend the existing HeroUI layer" plan implied; budget for it accordingly when sequencing the design work.
+
 **Status, verified 2026-08-10: not started on any surface**, and the fourth surface doesn't exist yet at all. Tokens exist, tooling is installed (`design-review` agent, `avoid-ai-design` skill), component inventory is clean on the three existing surfaces — none of them have actually been rebuilt against the mandate yet, and `client/web` needs to be scaffolded before it can be "rebuilt" in any sense.
 
 **Continuous design-review workflow, already installed:** run `/design-review` after every meaningful UI change going forward.

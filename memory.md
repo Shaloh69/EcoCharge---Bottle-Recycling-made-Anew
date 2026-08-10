@@ -18,6 +18,18 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-08-10 — Mascot decision overridden by the user; HeroUI dropped entirely; AI training location clarified
+
+**Mascot — the user explicitly overrode the copyright caution flagged earlier the same day.** Told directly: the mascot is "for show only," keep using the Genshin-Impact-inspired art, just add an "inspired by the Genshin Impact team" credit in the docs. The user is explicit about being a fan of the franchise. **This is a final, settled decision — don't re-raise the copyright concern.** The one actual follow-through obligation: credit it as inspired-by wherever it's documented (`DESIGN.md`, thesis material), not passed off as fully original. `02-design-mandate.md` §4.6/intro updated accordingly.
+
+**Component library — full reversal, real scope change.** The user wants HeroUI deleted entirely from both `client/kiosk_web` and `client/web_console` — a genuine delete-and-redo, not a re-theme. Earlier guidance in `02-design-mandate.md` (keep `hero.ts` as a bridge) is superseded. Chosen replacements, with reasoning (`02-design-mandate.md` intro + §7): **Mantine** for the Admin Console (dense ops-dashboard fit, already proven on a comparable sibling-project surface), **shadcn/ui on Radix UI or Base UI primitives** for Kiosk Web (the real Figma reference's bespoke pill/wave-divider aesthetic needs unstyled primitives, not another opinionated component library — and this now shares a primitive layer with the new Website surface, which is already shadcn/ui-based via Velora UI). Also corrected a real mistake found while reconciling this: an earlier pass in the design mandate said to delete `--color-eco-dusk`/`--color-eco-lavender` (purple tokens) as banned-pattern violations — wrong, §4.6's real design reference confirms purple is a deliberate accent. Don't delete those.
+
+**AI training location — resolved by checking actual hardware, not assumed.** The user asked to retrain on "the server pc." Checked both real candidates: `desktop-gklhcri` has only an AMD Radeon GPU (no CUDA, `nvidia-smi` absent) — training there would be CPU-only, "several hours" per `SELF_HOSTING.md`'s own estimate. The dev machine (`minniedumpor`, referred to as "MinnieDumpor" in earlier docs) actually has the CUDA-capable GPU (`NVIDIA GeForce RTX 3050 Laptop`, confirmed via `torch.cuda.is_available()` in the existing `scripts/.venv`) — the same GPU `SELF_HOSTING.md` was written against (~15–30 min training runs). **Decision: train on the dev machine (minniedumpor), not `desktop-gklhcri`** — architecturally consistent too, since that's already where the AI inference server runs (`analyzation.md` §15: "local PC + Cloudflare Tunnel"). `desktop-gklhcri` stays the DB/API/storage server per the self-hosting plan; it was never meant to be a compute box.
+
+**Dataset merge — real blocker, not yet resolved.** Asked to merge the `magical-nightingale` dataset (found 2026-08-10, see the entry below) into training. Checked for Ultralytics HUB credentials on both machines — **none found**. The dataset's images can't be pulled without either an API key with access (from the user or the collaborator `jobert-vidad` who registered it) or a manual export/download. Flagged, not silently skipped — this blocks the merge+retrain until credentials exist.
+
+---
+
 ## 2026-08-10 — Self-hosting migration unblocked: SSH access works, real recon done on `desktop-gklhcri`
 
 **SSH access — the actual working credential, don't re-guess this:** `ssh transfer@desktop-gklhcri`, not `Shaloh@...` (the local Windows account name). The `transfer` account is the one with this machine's key authorized. Verified working 2026-08-10.
