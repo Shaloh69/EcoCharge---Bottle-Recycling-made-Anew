@@ -56,6 +56,17 @@ The rework prompt (`03-revamp-master.md`) covers migration, security, and design
 
 Tracked in `DESIGN.md` (as-built) against `02-design-mandate.md` (spec) — see `04-continue-design-redo.md` for the work order. Not duplicated here to avoid two documents drifting out of sync on the same status.
 
+## Stage 1.5 — AI detection reliability (conveyor detection problem)
+
+**STATUS: diagnosed 2026-08-10, not yet fixed.** Full technical detail in `07-ai-detection-improvements.md` — not duplicated here, tracked as a checklist only.
+
+- [ ] Firmware "nudge complete" signal + kiosk capture-on-signal (replaces the current blind-timer capture) — proposed alongside the two paused firmware fixes in `03-revamp-master.md` §3.2/§3.3, same review-before-flash gate
+- [ ] Explicit camera capture resolution constraints in `client/kiosk_web`'s `getUserMedia` call — independent, no hardware involved
+- [ ] Best-of-N frame capture per scan attempt — independent, no hardware involved
+- [ ] Reconcile the AI server's 0.40 detection floor vs. the kiosk's separate 0.5 accept floor — a product decision, not a code problem
+- [ ] Dataset expansion — merge the on-domain Roboflow sets (reverse-vending-machine, conveyor-belt) found in `07-ai-detection-improvements.md` §4.2, plus a real capture pass through the actual production camera/conveyor for classifier training data
+- **Done when:** a real bottle mid-nudge on the actual conveyor is reliably detected across repeated trials, not just in the same conditions the original 148-image set was captured under.
+
 ---
 
 ## Stage 3 — Thesis evidence pack

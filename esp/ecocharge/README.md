@@ -1,148 +1,102 @@
 # EcoCharge ESP32 Kiosk Controller
 
-This folder contains the ESP-IDF firmware for the EcoCharge kiosk hardware controller.
-It runs on an ESP32 dev board and manages all physical subsystems: the bottle conveyor gate (servo), four charging port relays, and four current/voltage sensor pairs.
+**Rewritten 2026-08-10 — the previous version of this README described an older firmware revision** (a servo-based conveyor gate, ACS712 + ADS1115 I2C sensing, no ultrasonic sensors, no bottle FSM, no Raspberry Pi Pico bridge). That's not what's actually running. This version is corrected against `analyzation.md` §11, verified directly from the real v2.0.0 source in `src/`/`include/` — if this ever drifts from the code again, treat the code and `analyzation.md` as authoritative, not this file.
 
-## Role in the System
+This folder contains the ESP-IDF firmware for the EcoCharge kiosk hardware controller. It runs on an ESP32 dev board (PlatformIO, `framework = espidf`, target `esp32dev`, huge_app partition) and manages every physical subsystem: the bottle conveyor, four charging-port relays, three ultrasonic sensors, and per-port current/voltage sensing (partly via a companion Raspberry Pi Pico — see `../pico_sensors`).
+
+## Role in the system
 
 ```
-Render Backend  ←—— HTTPS REST ——→  ESP32 (WiFi STA)
-                                         |
-                                         +-- Servo GPIO 18        — conveyor gate
-                                         +-- Relay 1–4 GPIO 25–27, 14 — charging ports
-                                         +-- Current sensors GPIO 32–35 (ACS712)
-                                         +-- Voltage sensors GPIO 36, 39 (voltage dividers)
+API Server  ←—— HTTPS poll (2s) / telemetry POST (5s) ——→  ESP32 (WiFi STA)
+                                                                  |
+                                                                  +-- Conveyor (L298N H-bridge) — forward/reverse/fast-forward
+                                                                  +-- 4x Relay (charging ports) — active-low, GPIO 25/26/16/5
+                                                                  +-- 3x HC-SR04 ultrasonic — entrance, bin-top, bin-bottom
+                                                                  +-- Current/voltage sensing (ADC1 + a UART bridge to a Pico for
+                                                                      the channels the ESP32's own ADC can't cover while WiFi is up)
 ```
 
-The ESP32 does **not** make decisions. It is a hardware executor:
-- Polls `GET /api/devices/commands` on the Render backend every 2 seconds
-- Executes whatever command arrives (open conveyor, enable relay, etc.)
-- Posts live sensor telemetry back to Render every 5 seconds
-- The Render backend (not the ESP32) decides when to charge and for how long
+The ESP32 executes; it does not decide. It polls `GET /api/devices/commands` every 2 seconds, executes whatever arrives, posts telemetry every 5 seconds, and pings `/health` every 4 minutes (keeps a free-tier Render instance awake — irrelevant once the self-hosting migration lands). **It never receives inbound connections** — this is deliberate, so it works behind NAT/CGNAT with no port forwarding.
 
----
+## The bottle-deposit FSM
 
-## Boot Modes
+`src/bottle_fsm.c` runs `IDLE → SCANNING → DROPPING → CONFIRMING → (IDLE)`, with a `REJECTING` branch. The entrance ultrasonic sensor triggers entry into `SCANNING`; the conveyor nudges the bottle every 2s (`BOTTLE_SCAN_INTERVAL_MS`) for fresh camera angles while the kiosk web app runs AI detection. On accept, `DROPPING` fast-forwards the bottle into the bin (8s cap); `CONFIRMING` waits on the bin ultrasonic sensor to independently confirm the drop.
 
-On every boot, the firmware checks NVS flash for saved WiFi credentials:
+**Two known gaps, not yet fixed, exact proposed values in `../../AUDIT.md`:** `SCANNING` currently has no timeout at all (can nudge indefinitely under specific failure conditions), and `CONFIRMING` doesn't re-sample the bin sensor before finalizing a reject on the `DROPPING` timeout. Both are firmware-level fixes awaiting explicit sign-off before flashing — see `../../docs/planning/03-revamp-master.md` §3.2–§3.3. **A third, separate issue** (bottles not reliably detected while in motion on the conveyor, a capture-timing problem on the kiosk-web side rather than firmware) is diagnosed in `../../docs/planning/07-ai-detection-improvements.md`.
 
-### Normal Mode (credentials saved)
-Connects to WiFi → polls Render for commands → posts telemetry.
-The hardware test page is accessible at `http://<kiosk-IP>/test` while on the same network.
+## Boot modes
 
-### Provisioning Mode (no credentials yet)
-Starts a WiFi Access Point (`EcoCharge_Config`) and a captive-portal DNS server.
-Connect a phone → browser auto-opens → navigate to `/provision` → enter WiFi SSID and password → save → ESP32 reboots into Normal Mode.
+On every boot, the firmware checks NVS flash for saved WiFi credentials.
 
----
+### Normal mode (credentials saved)
+Connects to WiFi → polls the API server for commands → posts telemetry. The local test dashboard is reachable at `http://<kiosk-IP>/test` while on the same network.
 
-## First-Time Setup
+### Provisioning mode (no credentials yet)
+Starts a WiFi access point (`EcoCharge_Config`) with a captive-portal DNS server. Connect a phone → browser auto-opens → navigate to `/provision` → enter WiFi SSID/password → save → ESP32 reboots into Normal mode. Includes real WiFi-scan + signal-strength UI on the provisioning page.
 
-1. Flash the firmware (credentials are not required at compile time)
-2. Power on the ESP32
-3. Connect a phone to the `EcoCharge_Config` WiFi network (password: `ecocharge123`)
-4. The browser should auto-open. If not, navigate to `http://192.168.4.1/provision`
-5. Enter your WiFi credentials and tap **Save & Connect**
-6. The ESP32 reboots and connects to your router
+A hardware **self-test** (`self_test.c`) exercises the Pico UART link, the conveyor motor, and the sensors at boot — extend this (not build a parallel mechanism) if a remote self-test-from-the-admin-console feature is ever added, per the pattern established on sibling projects.
 
-To reset credentials (re-run provisioning), open `http://<kiosk-IP>/test` and click **Reset WiFi**.
+## Local test dashboard (`/test`)
 
----
+Connect to `http://<kiosk-IP>/test` from any browser on the same network. Real endpoints, not a mockup: `/` (status), `/api/status`, `/api/sse` (live sensor stream), conveyor forward/reverse/stop/speed controls, relay on/off/all-off, `/api/wifi/scan`, `/api/selftest`, `/api/reboot`.
 
-## Hardware Test Page
+## Hardware map (verified against `include/config.h`, 2026-08-10)
 
-After provisioning, connect to `http://<kiosk-IP>/test` from any browser on the same network.
-
-| Feature | Description |
-|---|---|
-| Live sensor table | Current (A) and voltage (V) per port, updates every 500 ms via SSE |
-| Relay control | Per-port ON (10 s / 30 s / 10 min) and OFF buttons |
-| Emergency off | Cuts all 4 relays immediately |
-| Servo slider | Drag 0–180° or use Open/Close buttons |
-| WiFi status | Shows connected SSID; Reset WiFi button |
-| Reboot | Soft reboot from the browser |
-
----
-
-## Hardware
-
-| Component | Qty | Notes |
-|---|---|---|
-| ESP32 dev board | 1 | 38-pin or 30-pin |
-| L298N motor driver | 1 | Controls conveyor belt DC motor |
-| DC motor | 1 | Conveyor belt drive |
-| Relay module (4-channel) | 1 | Active LOW, opto-isolated |
-| ACS712 current sensor | 4 | One per charging port (20A variant) |
-| Voltage divider module | 4 | AC voltage sensor 0–250 V → 0–3.3 V |
-| ADS1115 I2C ADC | 1 | For SW4 voltage and current sensors |
-| Charging outlets | 4 | Controlled via relays |
-
-## GPIO Map
-
-### Per-Port Assignments (SW1–SW4)
-
-All sensor pins are on **ADC1** and are WiFi-safe.
-
-| Port | Voltage GPIO | ADC channel | Current GPIO | ADC channel | Relay GPIO |
-|---|---|---|---|---|---|
-| SW1 | 32 | ADC1_CH4 | 33 | ADC1_CH5 | 25 |
-| SW2 | 36 | ADC1_CH0 | 39 | ADC1_CH3 | 26 |
-| SW3 | 34 | ADC1_CH6 | 35 | ADC1_CH7 | 16 |
-| SW4 | ADS1115 CH0 | I2C | ADS1115 CH1 | I2C | 5 |
-
-SW4 uses an **ADS1115 I2C ADC module** (GPIO 17 and 18 have no analog capability).
-Connect: SDA → GPIO 21, SCL → GPIO 22, ADDR → GND.
-
-### Conveyor Motor (L298N)
+### Conveyor (L298N H-bridge)
 
 | Signal | GPIO | Notes |
 |---|---|---|
-| L298N IN1 | 19 | Direction pin 1 |
-| L298N IN2 | 23 | Direction pin 2 |
-| L298N ENA | 18 | LEDC PWM 1 kHz — speed control |
+| IN1 | 19 | Direction pin 1 |
+| IN2 | 23 | Direction pin 2 |
+| ENA | 18 | LEDC PWM 1kHz — speed control |
 
-### Other Pins
+### Charging-port relays (4x, active-low)
 
-| Function | GPIO | Notes |
+GPIO 25 / 26 / 16 / 5 — one per port. Independent 3600s max-on watchdog task runs regardless of server commands (verified fail-safe: `relay_control.c:43` drives every relay to OFF at boot, before any task starts — a reboot mid-session cannot leave a port energized with nothing tracking it).
+
+### Ultrasonic sensors (HC-SR04 ×3)
+
+| Sensor | GPIOs | Threshold |
 |---|---|---|
-| I2C SDA (ADS1115) | 21 | SW4 sensors |
-| I2C SCL (ADS1115) | 22 | SW4 sensors |
-| Status LED | 27 | External LED + resistor |
+| Entrance | 13 / 36 | < 15cm triggers `SCANNING` |
+| Bin-top | 14 / 39 | 20cm |
+| Bin-bottom | 15 / 21 | 20cm |
 
-### What Changed from Original Wiring
+5V → 3.3V voltage dividers on each ECHO line.
 
-| Signal | Old GPIO | New GPIO | Reason |
-|---|---|---|---|
-| SW1 voltage | 12 | 32 | GPIO 12 is ADC2 (WiFi conflict) |
-| SW1 current | 14 | 33 | GPIO 14 is ADC2 (WiFi conflict) |
-| SW1 relay   | 33 | 25 | GPIO 33 freed for SW1 current sensor |
-| SW2 relay   | 35 | 26 | GPIO 35 freed for SW3 current sensor |
-| SW3 voltage | 15 | 34 | GPIO 15 is ADC2 (WiFi conflict) |
-| SW3 current |  2 | 35 | GPIO 2 is ADC2 (WiFi conflict) |
-| SW4 voltage | 17 | ADS1115 CH0 | GPIO 17 has no ADC |
-| SW4 current | 18 | ADS1115 CH1 | GPIO 18 has no ADC |
-| Servo | 18 | 4 | GPIO 18 was taken by SW4 current |
-| Status LED  |  2 | 27 | GPIO 2 was taken by SW3 current |
+### Power sensing
 
----
+| Channel | Source | Notes |
+|---|---|---|
+| SW1, SW3 current + voltage | ESP32 ADC1 — GPIO 33/35/32/34 | WiFi-safe (ADC1 only) |
+| SW4 current | ESP32 ADC2 — GPIO 12 | **Unavailable while WiFi is active** — ADC2 is claimed by the WiFi driver |
+| SW2 (V+I) and SW4 voltage | Raspberry Pi Pico, over UART2 (RX=17, TX=4, 115200 baud) | See `../pico_sensors` — exists specifically because the ESP32 runs out of usable ADC pins once WiFi claims ADC2 |
+
+### Other
+
+Status LED on GPIO 27, distinct blink pattern per FSM/connection state.
+
+## FreeRTOS tasks (priority)
+
+Safety/watchdog (10) · command poll (7) · bottle FSM (6) · httpd (5) · sensors (4) · telemetry (3).
 
 ## Configuration
 
-Before flashing, set the server credentials in `include/config.h`:
+Before flashing, set the server/device identity in `include/config.h`:
 
 ```c
-#define RENDER_BASE_URL   "https://your-ecocharge-app.onrender.com"
-#define DEVICE_API_KEY    "your-device-secret"   // must match server .env
-#define KIOSK_ID          1                       // must match kiosk.id in DB
+#define RENDER_BASE_URL   "https://your-api-host"      // becomes the self-hosted API's URL post-migration
+#define DEVICE_API_KEY    "your-device-secret"          // must match the kiosk's record in the database
+#define KIOSK_ID          1
+#define AI_SERVER_URL     "https://your-ai-host"
+#define AI_API_KEY        "your-ai-secret"
 ```
 
-WiFi credentials are entered at runtime via the provisioning page and stored in NVS.
-The `WIFI_SSID_DEFAULT` / `WIFI_PASS_DEFAULT` values in `config.h` are only used as a fallback
-if NVS is empty (useful during development to skip the provisioning step).
+**These are currently compile-time constants, and are treated as compromised since they're committed in git history** — key rotation (moving device/AI keys into NVS via the provisioning portal, the same pattern already used for WiFi credentials) is planned but not yet done. See `../../AUDIT.md` and `../../docs/planning/03-revamp-master.md` §2 item 3 before reflashing with new keys — this needs to happen as one coordinated change, not piecemeal.
 
----
+WiFi credentials are entered at runtime via the provisioning page and stored in NVS — `WIFI_SSID_DEFAULT`/`WIFI_PASS_DEFAULT` in `config.h` are only a fallback for development, skipping the provisioning step.
 
-## Build and Flash
+## Build and flash
 
 ```bash
 cd esp/ecocharge
@@ -151,57 +105,43 @@ pio run -t upload    # flash to connected ESP32
 pio device monitor   # serial monitor at 115200 baud
 ```
 
----
+## Commands the ESP32 accepts (from the API server)
 
-## Commands the ESP32 Accepts (from Render)
+Polled via `GET /api/devices/commands`:
 
-The ESP32 polls `GET /api/devices/commands?kiosk_id=<id>` and executes:
-
-| Command | Payload | Effect |
-|---|---|---|
-| `activate_port` | `{"port": 1, "duration_seconds": 600}` | Enable relay; auto-off after duration |
-| `deactivate_port` | `{"port": 1}` | Disable relay immediately |
-| `open_conveyor` | `{}` | Start conveyor belt forward |
-| `close_conveyor` | `{}` | Stop conveyor belt |
-| `ping` | `{}` | Heartbeat — no hardware action |
-
----
-
-## Safety
-
-| Rule | Behaviour |
+| Command | Effect |
 |---|---|
-| Overcurrent | Port drawing ≥ 15 A for > 2 s → relay trips automatically |
-| Relay timeout | Relays auto-off after `duration_seconds` (hard cap: 3600 s) |
-| Conveyor auto-close | Gate closes automatically 5 s after opening if no close command |
-| WiFi loss | All relays disabled if WiFi drops for > 30 s |
+| `activate_port` / `deactivate_port` | Enable/disable a charging-port relay |
+| `open_conveyor` / `close_conveyor` / `reverse_conveyor` | Conveyor motor control |
+| `approve_bottle` / `reject_bottle` | Advances the bottle FSM out of `SCANNING` |
+| `ping` | Heartbeat, no hardware action |
 
----
+Also remotely triggerable from the admin console's kiosk detail page — the same command channel, not a separate one.
 
-## File Structure
+## File structure
 
 ```
 esp/ecocharge/
 ├── include/
-│   ├── config.h           — GPIO map, WiFi defaults, API constants, safety thresholds
-│   ├── nvs_config.h       — NVS WiFi credential read/write API
-│   ├── wifi_provision.h   — Captive-portal DNS server API
-│   ├── servo_control.h    — Conveyor servo API
-│   ├── relay_control.h    — Charging port relay API
-│   ├── sensor_monitor.h   — Current + voltage ADC API
-│   ├── api_client.h       — Render HTTP polling API
-│   ├── wifi_sta.h         — WiFi STA connection API
-│   ├── wifi_ap.h          — WiFi AP mode API
-│   └── web_server.h       — Web server API (provision + test pages)
+│   ├── config.h           — GPIO map, WiFi/API defaults, safety thresholds, bottle-FSM timing constants
+│   ├── nvs_config.h        — NVS WiFi credential read/write API
+│   ├── wifi_provision.h    — Captive-portal DNS server API
+│   ├── bottle_fsm.h        — Bottle deposit state machine API
+│   ├── relay_control.h     — Charging-port relay API
+│   ├── sensor_monitor.h    — Ultrasonic + current/voltage sampling API
+│   ├── self_test.h         — Boot-time hardware self-test API
+│   ├── api_client.h        — API-server HTTP polling API
+│   ├── wifi_sta.h / wifi_ap.h — WiFi STA / AP mode APIs
+│   └── web_server.h        — Provisioning page + local test dashboard
 └── src/
-    ├── main.c             — Boot logic + FreeRTOS task startup
-    ├── nvs_config.c       — NVS credential persistence
-    ├── wifi_provision.c   — UDP DNS server for captive portal
-    ├── servo_control.c    — LEDC PWM servo driver
-    ├── relay_control.c    — GPIO relay driver with timeouts
-    ├── sensor_monitor.c   — ADC1 current + voltage sampling
-    ├── api_client.c       — HTTPS polling to Render backend
-    ├── wifi_sta.c         — WiFi STA mode with NVS credential loading
-    ├── wifi_ap.c          — WiFi AP mode for provisioning
-    └── web_server.c       — Provision page, hardware test page, SSE stream
+    ├── main.c               — Boot logic + FreeRTOS task startup
+    ├── bottle_fsm.c          — IDLE/SCANNING/DROPPING/CONFIRMING/REJECTING state machine
+    ├── relay_control.c       — GPIO relay driver, fail-safe boot-off, watchdog
+    ├── sensor_monitor.c      — Ultrasonic + ADC1 current/voltage sampling
+    ├── self_test.c           — Pico UART / motor / sensor self-test
+    ├── nvs_config.c          — NVS credential persistence
+    ├── wifi_provision.c      — UDP DNS server for captive portal
+    ├── api_client.c          — HTTPS polling to the API server
+    ├── wifi_sta.c / wifi_ap.c — WiFi STA / AP mode
+    └── web_server.c          — Provisioning page, local test dashboard, SSE stream
 ```

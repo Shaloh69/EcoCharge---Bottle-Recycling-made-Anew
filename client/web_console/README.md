@@ -1,53 +1,26 @@
-# Next.js & HeroUI Template
+# EcoCharge — Admin Console
 
-This is a template for creating applications using Next.js 14 (app directory) and HeroUI (v2).
+The operations dashboard for the whole system: live kiosk telemetry, CRUD over users/deposits/charging/credits, remote kiosk hardware control, and analytics.
 
-[Try it on CodeSandbox](https://githubbox.com/heroui-inc/heroui/next-app-template)
+## Stack
 
-## Technologies Used
+Next.js 15 (App Router), HeroUI, Tailwind CSS v4, Recharts. Auth is a JWT in `sessionStorage` plus a value-less `admin_authed=1` cookie (SameSite=Strict); Next.js edge middleware gates `/dashboard/**` on that cookie.
 
-- [Next.js 14](https://nextjs.org/docs/getting-started)
-- [HeroUI v2](https://heroui.com/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [Tailwind Variants](https://tailwind-variants.org)
-- [TypeScript](https://www.typescriptlang.org/)
-- [Framer Motion](https://www.framer.com/motion/)
-- [next-themes](https://github.com/pacocoursey/next-themes)
+## Real pages, not a template
 
-## How to Use
+All under `/dashboard`: overview (live SSE stats), kiosks (CRUD + device API key) and per-kiosk detail (live telemetry, relay/conveyor/bottle remote controls, command audit log), sessions, deposits, charging, credits (transaction ledger), users, alerts (kiosk offline / bin fullness), ml-review (low-confidence AI detections), analytics (kWh/credits/cost charts), settings (the tunable economics — credit tiers, energy budget, rate limits). Full endpoint-level detail in `analyzation.md` §10.
 
-### Use the template with create-next-app
+The kiosk remote-control channel (`POST /api/admin/kiosks/:id/command` — activate/deactivate a port, open/close/reverse the conveyor, approve/reject a bottle, ping) is real, working infrastructure — the strongest "admin can unstick a physical problem" capability in the whole system. See `docs/planning/06-must-have-app-features.md`'s appendix for why this is worth calling out specifically.
 
-To create a new project based on this template using `create-next-app`, run the following command:
-
-```bash
-npx create-next-app -e https://github.com/heroui-inc/next-app-template
-```
-
-### Install dependencies
-
-You can use one of them `npm`, `yarn`, `pnpm`, `bun`, Example using `npm`:
+## Running
 
 ```bash
 npm install
-```
-
-### Run the development server
-
-```bash
 npm run dev
 ```
 
-### Setup pnpm (optional)
+Requires `NEXT_PUBLIC_API_URL` — see `.env.local` (not committed).
 
-If you are using `pnpm`, you need to add the following code to your `.npmrc` file:
+## Design status
 
-```bash
-public-hoist-pattern[]=*@heroui/*
-```
-
-After modifying the `.npmrc` file, you need to run `pnpm install` again to ensure that the dependencies are installed correctly.
-
-## License
-
-Licensed under the [MIT license](https://github.com/heroui-inc/next-app-template/blob/main/LICENSE).
+Functional, not yet visually rebuilt. The target design ("Operations Console" — dense, dark-mode-first, monitoring-oriented) is specified in `../../docs/planning/02-design-mandate.md` §3 — read that before touching any UI here, not this file. Load the `dataviz` skill before touching the analytics charts specifically.

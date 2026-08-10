@@ -1,53 +1,30 @@
-# Next.js & HeroUI Template
+# EcoCharge — Kiosk Web
 
-This is a template for creating applications using Next.js 14 (app directory) and HeroUI (v2).
+The touchscreen UI that runs on the physical kiosk PC's browser. This is also the system's local orchestrator — there's no separate orchestrator process; this app owns the camera, calls the AI server, and drives the whole deposit/charging session (see `analyzation.md` §3, §5, and `docs/PROJECT_PLAN.md`'s Phase 5).
 
-[Try it on CodeSandbox](https://githubbox.com/heroui-inc/heroui/next-app-template)
+## Stack
 
-## Technologies Used
+Next.js 15 (App Router), HeroUI, Tailwind CSS v4, framer-motion. Session state (token/session/user) lives in `sessionStorage`.
 
-- [Next.js 14](https://nextjs.org/docs/getting-started)
-- [HeroUI v2](https://heroui.com/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [Tailwind Variants](https://tailwind-variants.org)
-- [TypeScript](https://www.typescriptlang.org/)
-- [Framer Motion](https://www.framer.com/motion/)
-- [next-themes](https://github.com/pacocoursey/next-themes)
+## Real flow, not a template
 
-## How to Use
+`/` (idle/attract) → `/auth` (QR or guest) → `/session` (menu) → `/session/deposit` (camera capture → AI detect → approve/reject) → `/session/bin` (bin-confirmation wait) → `/session/credits`, `/session/charging` (port grid, live SSE) → `/session/result`, `/receipt/charge`, `/receipt/credit`, plus `/diag` (diagnostics). Full detail in `analyzation.md` §9.
 
-### Use the template with create-next-app
+Two server-side proxy routes keep secrets off the client: `POST /api/detect` (streams to the AI server with its API key attached) and `GET /api/health-ai` / `GET /api/health-backend`.
 
-To create a new project based on this template using `create-next-app`, run the following command:
-
-```bash
-npx create-next-app -e https://github.com/heroui-inc/next-app-template
-```
-
-### Install dependencies
-
-You can use one of them `npm`, `yarn`, `pnpm`, `bun`, Example using `npm`:
+## Running
 
 ```bash
 npm install
-```
-
-### Run the development server
-
-```bash
 npm run dev
 ```
 
-### Setup pnpm (optional)
+Requires `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_KIOSK_ID`, `AI_URL`, `AI_KEY` — see `.env.local` (not committed; ask for the current values or see `analyzation.md` §14 for what each controls).
 
-If you are using `pnpm`, you need to add the following code to your `.npmrc` file:
+## Design status
 
-```bash
-public-hoist-pattern[]=*@heroui/*
-```
+Functional, not yet visually rebuilt. The target design ("Clean Energy Reward") is specified in `../../docs/planning/02-design-mandate.md` §4 — read that before touching any UI here, not this file.
 
-After modifying the `.npmrc` file, you need to run `pnpm install` again to ensure that the dependencies are installed correctly.
+## A known issue worth reading before touching the deposit flow
 
-## License
-
-Licensed under the [MIT license](https://github.com/heroui-inc/next-app-template/blob/main/LICENSE).
+`app/session/deposit/page.tsx`'s capture loop and the ESP32 firmware's conveyor-nudge loop are two independent timers with no shared synchronization signal — this is the leading suspected cause of a real reported problem ("bottles not detected properly inside the conveyor"). Full diagnosis and proposed fix: `../../docs/planning/07-ai-detection-improvements.md` §2.1.
