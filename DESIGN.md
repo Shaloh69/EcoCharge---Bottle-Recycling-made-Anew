@@ -11,10 +11,17 @@ on 2026-08-10 and deleted from root; see `memory.md`. Run `/design-review`
 after every meaningful UI change; the `avoid-ai-design` skill's
 banned-pattern audit applies to all three surfaces.
 
-**Status, verified 2026-08-10 (unchanged since this file was written — no
-visual execution has started on any surface yet):** see "Redesign execution
-status" at the bottom of this file. Work order for resuming this:
-`docs/planning/04-continue-design-redo.md`.
+**Status, corrected 2026-08-11 — the line above was stale and contradicted this
+file's own bottom section:** real visual/component work has started on the
+Admin Console and Kiosk Web (HeroUI removed from both, a first real
+component/bug-fix pass done), and the public Website has been scaffolded from
+scratch. See "Redesign execution status" at the bottom of this file for the
+honest, evidence-qualified per-item breakdown — most items are `[~]`
+(code-complete, not yet screenshot-verified), not `[x]`. Playwright MCP is now
+confirmed working (2026-08-11, after two prior sessions that couldn't get it
+loaded — see `memory.md`), so the actual screenshot-verification pass this
+file's `[~]` items are waiting on can now proceed for real. Work order for
+resuming: `docs/planning/04-continue-design-redo.md`.
 
 ---
 

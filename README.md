@@ -15,10 +15,10 @@ Full, code-verified system documentation: [`analyzation.md`](analyzation.md).
 
 | Path | Stack | Role |
 |---|---|---|
-| [`client/kiosk_web`](client/kiosk_web) | Next.js 15 + HeroUI | The kiosk touchscreen UI — camera capture, deposit flow, charging flow |
-| [`client/web_console`](client/web_console) | Next.js 15 + HeroUI + Recharts | Admin dashboard — live telemetry, CRUD, analytics, remote kiosk control |
+| [`client/kiosk_web`](client/kiosk_web) | Next.js 15 + shadcn/ui | The kiosk touchscreen UI — camera capture, deposit flow, charging flow |
+| [`client/web_console`](client/web_console) | Next.js 15 + Mantine + Recharts | Admin dashboard — live telemetry, CRUD, analytics, remote kiosk control |
 | [`client/flutter_app`](client/flutter_app) | Flutter | Companion mobile app — register/login, QR-link to a kiosk, balances, history |
-| `client/web` *(planned, not built yet)* | Next.js + shadcn/ui (Velora UI base) | Public promotional website — how it works, changelog, docs, app download |
+| [`client/web`](client/web) | Next.js + shadcn/ui | Public promotional website — how it works, changelog, docs, app download. Scaffolded 2026-08-10 (home/how-it-works/changelog/docs/about/download, all 6 routes build clean); visual polish and screenshot-verification still open, see `docs/planning/08-master-checklist.md` Phase E4 |
 | [`server/server_main`](server/server_main) | Node.js + Express + TypeScript + Prisma | Central API — auth, sessions, deposits, credits, charging, device commands, SSE, admin |
 | [`server/server_AI`](server/server_AI) | Python + FastAPI + PyTorch/Ultralytics | Two-stage bottle detection & classification inference service |
 | [`esp/ecocharge`](esp/ecocharge) | ESP32, ESP-IDF (PlatformIO), FreeRTOS | Kiosk hardware controller — conveyor, relays, sensors, bottle FSM, WiFi provisioning |
@@ -40,18 +40,17 @@ This project has been through several audit/rework passes; these documents are k
 
 `docs/CHECKLIST.md` is a one-screen status board across all of the above.
 
-## Current status (2026-08-10)
+## Current status (2026-08-11)
 
-The full bottle-to-credit-to-charge journey works end to end against real infrastructure — this is a functionally complete, integrated system, not a set of disconnected prototypes. What's still in progress:
+The full bottle-to-credit-to-charge journey works end to end against real infrastructure — this is a functionally complete, integrated system, not a set of disconnected prototypes. **The self-hosting migration is done** (corrected 2026-08-11 — the below was stale): Aiven, Supabase, and Render are all fully decommissioned. Docker MySQL, the Node API, the admin console, and the AI server all run as persistent services on `desktop-gklhcri`, each on its own public Cloudflare quick tunnel — see `docs/planning/08-master-checklist.md` Phase A for live URLs and verification evidence. What's still in progress:
 
-- **Self-hosting migration** — target machine and architecture confirmed (`desktop-gklhcri`, Docker-based MySQL + self-hosted Supabase on Disk D), execution not yet started. Still running on Render + Aiven MySQL + Supabase Storage + a rotating Cloudflare quick-tunnel today.
-- **Two firmware fixes** (a `SCANNING`-state timeout, a `CONFIRMING`-state bin-sensor re-check) — exact values proposed in `AUDIT.md`, awaiting sign-off before flashing.
-- **Design revamp** — tokens and mandate defined (`DESIGN.md`, `docs/planning/02-design-mandate.md`), visual rebuild not yet started on any of the three client surfaces.
-- **Testing infrastructure** — no automated tests exist yet anywhere in the repo; see `docs/planning/05-feature-build-checklist.md` Stage 1.
+- **Two firmware fixes** (a `SCANNING`-state timeout, a `CONFIRMING`-state bin-sensor re-check) — implemented in source, exact values from `AUDIT.md`, still awaiting the actual flash (needs physical hardware access + explicit sign-off, neither available remotely).
+- **Design revamp** — tokens and mandate defined (`DESIGN.md`, `docs/planning/02-design-mandate.md`); HeroUI has been dropped entirely from both Next.js apps (Mantine on the admin console, shadcn/ui on the kiosk), with a first real component/bug-fix pass done on both plus the new public website scaffolded — full current status, including what's still screenshot-unverified, in `docs/planning/08-master-checklist.md` Phase E.
+- **Testing infrastructure** — built 2026-08-11: `vitest` (backend), `pytest` (AI server), and a real integration suite against an isolated test database. See `docs/planning/08-master-checklist.md` Phase G.
 
-## Running the system locally (current, pre-migration state)
+## Running the system
 
-Each service has its own dependencies and `.env.example` — see that service's README for detail. At a high level:
+The system now runs self-hosted on `desktop-gklhcri`, not Render/Aiven — see `docs/planning/08-master-checklist.md` Phase A for the live topology and public URLs (they rotate on tunnel restart; check that document or `D:\EcoCharge\logs\cloudflared\*.log` on the host for the current ones, don't trust a URL written down elsewhere). For local development, each service still has its own dependencies and `.env.example`:
 
 ```bash
 # API server
@@ -60,12 +59,13 @@ cd server/server_main && npm install && npm run dev
 # AI inference server (separate venv — see SELF_HOSTING.md)
 cd server/server_AI && .venv\Scripts\activate && uvicorn app.main:app --reload
 
-# Kiosk web / Admin console
+# Kiosk web / Admin console / public website
 cd client/kiosk_web && npm install && npm run dev
 cd client/web_console && npm install && npm run dev
+cd client/web && npm install && npm run dev
 
 # Mobile app
 cd client/flutter_app && flutter pub get && flutter run
 ```
 
-Model training and self-hosting the AI server behind a Cloudflare Tunnel are documented in full in [`SELF_HOSTING.md`](SELF_HOSTING.md). These commands describe the system as it runs today (Render/Aiven-backed); they'll change once the self-hosting migration in `docs/planning/03-revamp-master.md` §1 lands — that document, not this README, is the live source of truth for run instructions during the migration.
+Local dev's `DATABASE_URL` needs either an SSH tunnel to `desktop-gklhcri`'s MySQL or a separate local instance — the live `.env` points at `127.0.0.1:13306`, which is only correct when running on that host itself (`docs/planning/08-master-checklist.md` Phase A, open item). `SELF_HOSTING.md` predates this migration (dated 2026-03-31, describes a Render/RunPod/NSSM-based setup) — it's kept for the from-scratch model-training walkthrough (still generally accurate) but its hosting/deployment sections describe a superseded approach; see that file's own correction banner.

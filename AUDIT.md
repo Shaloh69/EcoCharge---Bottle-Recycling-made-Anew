@@ -1,5 +1,15 @@
 # EcoCharge Rework — 2026-07-22
 
+> **Status correction, 2026-08-11: this document is a historical point-in-time audit record (dated 2026-07-22) — most of the "Migration status: BLOCKED" summary and the "Blocked / needs your review" list at the end are now resolved.** Kept as-written below for the historical record of what was found and why (the findings themselves are still an accurate account of what existed on 2026-07-22); don't read the "BLOCKED"/"needs your input" language as current. Real current status of each blocked item, checked against `memory.md`/`docs/planning/08-master-checklist.md`:
+> 1. Self-hosting migration — **done**, target machine (`desktop-gklhcri`) confirmed 2026-08-10, full migration complete 2026-08-11 (Docker MySQL, Node API, admin console, AI server all live, Aiven/Supabase/Render decommissioned).
+> 2. Aiven DB migration — **moot**, Aiven found dead by DNS and explicitly abandoned by the user; no migration attempted or needed.
+> 3. Guest pooled balance — **resolved**, kept as-is, rate-limited.
+> 4. Device-key timing — **resolved**, accepted as-is.
+> 5. Firmware physical-behavior fixes (SCANNING timeout, CONFIRMING re-check) — **implemented in source 2026-08-11** with exactly the values proposed below; **still not flashed** — needs physical hardware access + explicit sign-off, neither available remotely. Post-reboot session recovery — **also resolved**, server-side stale-session sweep closes the gap.
+> 6. Key rotation — **still genuinely open**, the one item from this list that remains a real to-do.
+>
+> See `docs/planning/08-master-checklist.md` for the live, currently-accurate status of everything in this repo — treat that document as authoritative over this one for "is X done," and this document as authoritative for "what did the 2026-07-22 audit actually find and why."
+
 ## Summary
 
 **Migration status: BLOCKED — needs your input before anything moves.** The rework prompt targets `desktop-gklhcri`, but this machine is `MINNIEDUMPOR`, and the tailnet currently shows only `minniedumpor` and `formlab3b` — no `desktop-gklhcri` anywhere. Section 1 cannot start until you confirm the actual target machine (details in "Blocked / needs your review" at the end).

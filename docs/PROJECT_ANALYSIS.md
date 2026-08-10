@@ -1,5 +1,7 @@
 # EcoCharge Project Analysis
 
+**Update, 2026-08-11: the "Hosting" and "Testing" weaknesses this document's Executive Summary and Overall Maturity Assessment call out below are both resolved as of this date — self-hosting migration is done (Docker MySQL + Node API + admin console + AI server all live on `desktop-gklhcri`, Aiven/Supabase/Render decommissioned) and real test infrastructure now exists (`vitest`/`pytest`/an E2E integration suite). Left inline below rather than rewritten, since this document's own convention is dated refresh notes, not silent edits — see `docs/planning/08-master-checklist.md` Phases A and G for the live, current status of both.**
+
 **Refreshed 2026-08-10.** The original version of this document (2026-03-15) was written when `server/server_main` and `server/server_AI` were empty scaffolds and both client web apps were unmodified templates. That's no longer true — a real backend, a real AI inference service, and real firmware have existed and been independently verified since (`analyzation.md`, 2026-07-22; `AUDIT.md`, 2026-08-10). This refresh keeps the paper-vs-repo framing that made the original useful, but replaces the "what the repository actually contains" section and the gap table with current, code-verified status. Where the original document is quoted or referenced below, it's marked as historical.
 
 ## Purpose

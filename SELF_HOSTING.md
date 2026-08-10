@@ -1,6 +1,15 @@
 # EcoCharge — Complete Setup & Self-Hosting Guide (Philippines)
 
 **Last updated:** 2026-03-31
+
+> **Correction, 2026-08-11: the deployment sections below (Parts 2–4) describe a superseded approach and do not match how the live system actually runs today.** This guide predates the real self-hosting migration (`docs/planning/03-revamp-master.md` §1, done 2026-08-11) and still describes NSSM as the process manager, a from-scratch Cloudflare named-tunnel/`dpdns.org` setup, and hosting on whichever machine is running the guide. **None of that is what actually shipped:**
+> - The live system runs on a dedicated machine, `desktop-gklhcri`, not "whichever PC you're on."
+> - **NSSM is not installed there and isn't the pattern used** — checked directly, absent. The real, working pattern is a `.bat` launcher with a crash-restart loop, registered as a Windows Scheduled Task (`schtasks`, `ONSTART` trigger) — see `memory.md`'s 2026-08-10/11 entries for the full pattern and why `Start-Process` alone doesn't survive an SSH session ending.
+> - **The tunnel is a free quick tunnel (`cloudflared tunnel --url ...`), not a named tunnel with a `dpdns.org` domain** — the user explicitly chose the free rotating-URL path over the named-tunnel setup Part 3 Step 4 describes (see `memory.md`). Real live URLs are logged on `desktop-gklhcri` at `D:\EcoCharge\logs\cloudflared\*.log`; check `docs/planning/08-master-checklist.md` Phase A for the current ones rather than trusting anything written down here.
+> - **Training actually ran on `desktop-gklhcri`, CPU-only (AMD GPU, no CUDA)** — real, by explicit user instruction overriding the GPU-based recommendation this guide's own "~15-30 minutes on an RTX 3050" estimate assumes (see `memory.md`, 2026-08-10). CPU training took multiple hours, not minutes; real results: mAP50 0.9950, mAP50-95 0.9447 on the detector.
+>
+> **Parts 0–1 (dataset, training commands) are still generally accurate** as a from-scratch walkthrough and are kept for that reason. **Parts 2–4 (running the AI server, Cloudflare Tunnel, NSSM auto-restart) describe the wrong process manager and the wrong tunnel type for the actual live deployment** — for the real, current setup, see `memory.md` (2026-08-10/11 entries) and `docs/planning/08-master-checklist.md` Phase A instead. This file is left as a "how you'd bootstrap this from a blank machine" reference, not a description of the live system.
+
 **Target:** Windows 11 PC, Philippine residential internet connection
 **Goal:** Train the AI models from scratch, then expose the FastAPI inference server to the internet so the kiosk and ESP32 can reach it — free, stable, and HTTPS.
 

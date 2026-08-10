@@ -2,6 +2,14 @@
 
 **Last verified against code:** 2026-07-22 (branch `main`)
 
+> **Status note, 2026-08-11 — per this document's own re-run policy in `docs/planning/01-audit-prompt.md` ("don't re-run reflexively; `AUDIT.md` already carries forward more recent, narrower findings"), this is a targeted correction of the specific claims below now known stale, not a full re-audit.** `docs/planning/08-master-checklist.md` is the live, currently-accurate tracker — treat it as authoritative over this document for current status. Known-stale sections, checked against real current state this session:
+> - **§2 component table**: Kiosk Web and Admin Console are no longer HeroUI — HeroUI was dropped entirely 2026-08-10/11 (Mantine on the Admin Console, shadcn/ui on Kiosk Web). A fourth surface, the public Website (`client/web`), now also exists (scaffolded 2026-08-10) and isn't listed here at all.
+> - **§3 architecture diagram / §15 deployment table**: describe Render + Aiven MySQL + Supabase Storage — **all decommissioned as of 2026-08-11.** The real, live topology is Docker MySQL + Node API + admin console + AI server all self-hosted on `desktop-gklhcri`, each on its own public Cloudflare quick tunnel, media on local disk. See `docs/evidence/architecture-diagram.md` for the current real topology diagram.
+> - **§5 known security gaps**: "Kiosk read endpoints are unauthenticated" is **fixed** (2026-08-10, `requireAuth` added). "`.env` files with live credentials exist in the tree" was already corrected by `AUDIT.md` itself — verified false, only the firmware `config.h` carries live secrets, no `.env` was ever tracked.
+> - **§14 environment variables**: `SUPABASE_URL`/`SUPABASE_SERVICE_KEY`/`SUPABASE_BUCKET` no longer exist — removed along with the Supabase decommission. Avatar upload now writes to local disk (`MEDIA_STORAGE_PATH`), not Supabase.
+>
+> Everything else below (data model, FSMs, API inventory, hardware map) was not independently re-verified this session and is assumed still substantially accurate absent evidence otherwise — a full re-run per `01-audit-prompt.md`'s methodology is the right move if a future session needs to trust this document at a glance again, rather than patching it further piecemeal.
+
 Every claim in this document was checked against the actual source. Stale documentation from earlier revisions has been removed.
 
 ---
