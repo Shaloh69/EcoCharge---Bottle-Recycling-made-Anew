@@ -78,6 +78,17 @@ def parse_args():
         default=4,
         help="Number of data loading workers (default: 4, safe for Windows)",
     )
+    parser.add_argument(
+        "--freeze",
+        type=int,
+        default=None,
+        help=(
+            "Freeze the first N layers when fine-tuning from pretrained weights "
+            "(e.g. 10 freezes most of the YOLO26 backbone, leaving the final "
+            "C2PSA block trainable). Cuts training time substantially on CPU; "
+            "not set by default so GPU runs keep full fine-tuning unless asked."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -192,6 +203,16 @@ def train(args):
 
     if args.resume:
         train_kwargs["resume"] = True
+
+    if args.freeze is not None:
+        train_kwargs["freeze"] = args.freeze
+
+    if train_kwargs.get("device") == "cpu":
+        # amp (FP16 mixed precision) is a GPU-only optimization; leaving it on
+        # for a CPU run is a no-op at best and has caused dtype issues on some
+        # CPU backends in past Ultralytics versions, so disable it explicitly
+        # rather than relying on auto-detection to always do the right thing.
+        train_kwargs["amp"] = False
 
     print("Training configuration:")
     for k, v in train_kwargs.items():
