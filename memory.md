@@ -18,6 +18,20 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-08-10 — Kiosk premade designs reviewed; real mascot copyright problem found
+
+`EcoCharge.pdf` (80 pages, a Figma export at true kiosk resolution — 1080×1920) was dropped at the repo root and reviewed in full. Findings folded into `02-design-mandate.md` §4.6 — real palette (including a genuine, repeated purple tertiary accent this document didn't previously have), real typography (a rounded/friendly display face, not the previously-speculated Outfit), a signature wave/blob divider shape, and a real component catalog (bin-level battery gauge, station-picker grid, on-screen numeric keypad, OTP entry, success/fail halo badge, receipt screen).
+
+**Real problem found, not previously known:** several mascot/avatar images in the deck are fan art of an existing copyrighted character — one carries an explicit **"© Genshin Impact"** credit visible in the file, and at least two others are stylistically consistent with the same source (miHoYo/HoYoverse). **This cannot ship in any public-facing context** (public GitHub repo, live kiosk, thesis defense) without real licensing, which almost certainly isn't obtainable for a student project. Not a nitpick — a real legal/practical exposure if shipped as-is.
+
+**Decision, not yet made by the user — flagged, not resolved:** the recommended path (stated in the mandate) is to treat the deck's mascot art as *mood/style reference only* (chibi nature-spirit, flower crown, green palette, holding a bottle) and commission or generate an original character in that spirit rather than the traced art itself. **Don't build or ship any mascot-bearing screen using the deck's actual character images until this is explicitly resolved with the user.**
+
+**Also found, real and new:** a language-switcher control ("Eng ⌄") in the deck — multi-language support is in scope, but which languages beyond English isn't decided (Bisaya/Cebuano is the obvious local candidate given the UC Lapu-Lapu/Mandaue deployment, but ask, don't assume).
+
+**How to apply:** the Figma-designs blocker from the earlier 2026-08-10 entry is resolved — don't re-ask for it. The mascot blocker has shifted shape: it's no longer "no art exists," it's "the existing art can't be used as-is." Don't silently proceed with the traced character on any screen.
+
+---
+
 ## 2026-08-10 — Fourth client surface added (public website), Kiosk design clarifications, Tailscale on the kiosk PC
 
 **Four separate additions from the same message, recorded together since they landed at once:**

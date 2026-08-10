@@ -278,3 +278,9 @@ scripts/**/*.log
 
 # Extracted frames / preprocessing
 scripts/extract_frames/**
+
+# Design reference PDF — 41MB and contains third-party fan art (unlicensed
+# mascot reference, see memory.md 2026-08-10); kept local only, not published
+# to the public repo. Findings from it are written up in
+# docs/planning/02-design-mandate.md SS4.6.
+/EcoCharge.pdf

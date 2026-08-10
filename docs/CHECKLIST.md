@@ -30,7 +30,7 @@ These block specific downstream work and shouldn't be guessed at:
 - **`ml-review` gate** — should a low-confidence AI detection hold credits pending human review, or stay the current retrospective audit trail? (`docs/planning/03-revamp-master.md` §3.1)
 - **Firmware fix values** — `BOTTLE_SCAN_TIMEOUT_MS`/`BOTTLE_BIN_RECHECK_MS` proposed in `AUDIT.md`, need explicit approval before any flash.
 - **Backend stack divergence** — update the thesis paper to describe Node/Express, or document the Flask-to-Node divergence explicitly as a design decision (`docs/PROJECT_ANALYSIS.md`).
-- **Kiosk Figma designs** — the user has premade Figma designs for the Kiosk surface, not yet linked in any document. Needed before final (non-structural) visual work on the Kiosk.
-- **Mascot/character visual design** — confirmed to exist, not yet provided. Needed before building any mascot-specific screen moment.
+- **Mascot character** — the premade Figma designs (reviewed 2026-08-10, see `memory.md`) use fan art of an existing copyrighted character ("© Genshin Impact" credited in the file). Cannot ship publicly as-is. Needs an explicit decision: commission/generate an original character in the same style, or a different direction entirely.
+- **Language scope** — the reviewed designs include a language switcher; which languages beyond English isn't decided (Bisaya/Cebuano is the obvious candidate given the deployment context, not yet confirmed).
 
 Already decided, don't re-ask: self-hosting target machine (`desktop-gklhcri`, Disk D, Docker MySQL + self-hosted Supabase), guest pooled balance (kept, rate-limited), device-key timing (accepted as-is). Full reasoning in `memory.md`.
