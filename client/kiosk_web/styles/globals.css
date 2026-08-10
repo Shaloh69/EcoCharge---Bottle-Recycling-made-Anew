@@ -612,6 +612,25 @@ body {
 .idle-zoom       { animation: idle-zoom       0.42s cubic-bezier(0.16,1,0.3,1) both; }
 .idle-flip       { animation: idle-flip       0.42s ease both; }
 
+/* Idle-screen falling-leaves background (components/kiosk/FallingLeaves.tsx),
+   decided 2026-08-11 replacing the unbuilt Aurora direction. Fall + a gentle
+   left-right sway (via the per-leaf --leaf-drift custom property) + a slow
+   tumble (--leaf-rotate-start) — vh-based fall distance so it always clears
+   the viewport regardless of kiosk screen height. */
+@keyframes leaf-fall {
+  0% {
+    transform: translate3d(0, -10vh, 0) rotate(var(--leaf-rotate-start));
+  }
+  50% {
+    transform: translate3d(var(--leaf-drift), 55vh, 0)
+      rotate(calc(var(--leaf-rotate-start) + 180deg));
+  }
+  100% {
+    transform: translate3d(0, 120vh, 0)
+      rotate(calc(var(--leaf-rotate-start) + 360deg));
+  }
+}
+
 /* Referenced by IdleScreen's fact icon and the mascot image - was missing
    entirely (a dead className reference, no-op) until 2026-08-10. */
 @keyframes float-anim {

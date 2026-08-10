@@ -66,12 +66,13 @@ Every actionable item across `docs/planning/00-07`, in the order `00-start-here.
 
 ### E2 — Kiosk Web ("Clean Energy Reward")
 - [~] HeroUI → shadcn/ui foundation; typography fixed; mascot added to idle screen; idle-timeout made FSM-aware; two real bugs fixed (`float-anim`, `prefers-reduced-motion`)
-- [ ] §4.5 animated background on the idle screen (Aurora, real component chosen from the four candidates)
-- [ ] §4.6 component catalog — **the largest concrete gap**: wave/blob divider, kiosk-styled bin gauge (battery shape, not the current 5-bar version), station-picker grid with occupied/available states, on-screen numeric keypad, OTP entry (bottom-sheet), success/fail halo badge
+- [x] **§4.5 animated background — done 2026-08-11 (4th session), falling leaves (not Aurora — user redirected before Aurora was ever built, see `memory.md`).** Real SVG leaves (not emoji), eco-green/volt-amber/bloom-violet recolor, CSS-only (no canvas/WebGL). **Deployed as a real staging instance** on `desktop-gklhcri:30013` (`EcoChargeKioskWeb` task) with its own public quick tunnel (`EcoChargeTunnelKiosk`, `https://existing-workflow-names-continuous.trycloudflare.com`, verified reachable from outside the tailnet) — also closes the Kiosk-Web half of the tunnel-consistency work item. **Screenshot-verified against the live deployed instance.**
+- [!] **Real, significant finding, not yet fixed: the idle screen's 12-fact carousel uses full-bleed dark, moody per-fact gradients, directly conflicting with §4.5's explicit "Green + White is the base identity... recognizable from across a room" rule.** This is the single most-seen screen on a public kiosk and is currently the furthest from the light identity of anything in the app. `app/page.tsx` (a separate pre-idle splash) has the same problem (`text-white`-on-dark throughout). Pre-existing, not introduced this session — found while screenshot-verifying the falling-leaves work. Flagged as real Phase E2 scope, not a nitpick to silently skip. Full detail: `memory.md`.
+- [ ] §4.6 component catalog — **still the largest concrete gap**: wave/blob divider, kiosk-styled bin gauge (battery shape, not the current 5-bar version), station-picker grid with occupied/available states, on-screen numeric keypad, OTP entry (bottom-sheet), success/fail halo badge
 - [ ] Bin-full and guest-disclosure screens (§4.4)
 - [ ] Real `react-step-wizard` flow structure (§4.1)
-- [ ] Scanning banner + Lottie composite (§4.3)
-- [ ] **Screenshot-verify at the real running instance, light mode only per the mandate — not done**
+- [ ] Scanning banner + Lottie composite (§4.3), plus the two new sourced moments from §2/§4.3a (bottle-fill loading, bottle-crush accept) — not built
+- [x] Mascot copyright — reconfirmed settled 2026-08-11: real art renders correctly, `public/mascot/CREDITS.md` attribution is real and correct, nothing to fix
 - [ ] Run `/design-review` and `avoid-ai-design`
 
 ### E3 — Mobile App

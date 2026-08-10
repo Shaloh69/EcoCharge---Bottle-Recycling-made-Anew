@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 
+import { FallingLeaves } from "./FallingLeaves";
+
 interface Fact {
   icon: string;
   title: string;
@@ -177,6 +179,8 @@ export function IdleScreen({ onDismiss }: { onDismiss: () => void }) {
           pointerEvents: "none",
         }}
       />
+
+      <FallingLeaves />
 
       {/*
        * Mascot — a welcoming presence on the attract screen, per
