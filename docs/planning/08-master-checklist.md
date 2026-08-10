@@ -91,10 +91,10 @@ Every actionable item across `docs/planning/00-07`, in the order `00-start-here.
 
 ## Phase G — Testing infrastructure (`05-feature-build-checklist.md` Stage 1)
 
-- [ ] Backend test runner + coverage of the Phase B security fixes specifically
-- [ ] AI server `pytest` coverage
-- [ ] End-to-end / integration scripts (happy path + the five fault paths listed in Stage 1.3)
-- [ ] Hardware validation — needs physical access to the real kiosk, flag as conditional
+- [x] **Backend test runner + coverage of the Phase B security fixes — done 2026-08-11, from scratch (no test infra existed before)**: `vitest` added (`npm test`), 11 real tests across two files. `rateLimit.test.ts` covers the guest-session rate limiter with fake timers — allows the first 5/window, rejects the 6th, IPs don't cross-contaminate, resets after the window elapses. `auth.test.ts` covers `requireAuth`/`requireAdmin` — no token, malformed token, expired token, valid token via both the `Authorization` header and the `?token=` query param (the SSE/EventSource path specifically, since that's what the 2026-08-10 unauthenticated-endpoint fix actually depends on), and the admin-only 403 path. All 11 pass; `tsconfig.json` updated to exclude `*.test.ts` from the production build (verified — a fresh `dist/` has no test files in it).
+- [ ] AI server `pytest` coverage — not done, real gap
+- [ ] End-to-end / integration scripts (happy path + the five fault paths listed in Stage 1.3) — not done, real gap
+- [ ] Hardware validation — needs physical access to the real kiosk, currently unavailable (see Phase A/C notes)
 
 ## Phase H — Thesis evidence pack (`05-feature-build-checklist.md` Stage 3)
 
@@ -111,7 +111,7 @@ Every actionable item across `docs/planning/00-07`, in the order `00-start-here.
 
 - [x] Root `README.md`
 - [x] `client/kiosk_electron` — confirmed gone
-- [ ] Real `npm run lint` confirmation that the `@eslint/compat` gap is actually resolved (absence of a string match isn't proof)
+- [x] **Real `npm run lint` run on all three Next.js apps, 2026-08-11 — the `@eslint/compat` gap is genuinely resolved**, not just absent from a string search: `web_console` and `client/web` both lint clean (0 warnings), `kiosk_web` lints clean except pre-existing `no-console` warnings (intentional debug logging, not a config problem). `eslint --fix` auto-reformatted ~19 pre-existing files in `kiosk_web` (line-wrapping only, verified via `tsc`+`next build` before committing) — a real side effect of actually running the tool, not something to have left half-applied.
 
 ---
 
