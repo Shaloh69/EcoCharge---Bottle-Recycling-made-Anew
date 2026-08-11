@@ -1,6 +1,6 @@
 # EcoCharge — Full Revamp Master Prompt
 
-Single source of truth for the rework. Give this file, alongside `analyzation.md` and `AUDIT.md`, to Claude Code. Use `docs/planning/00-start-here.md` as the actual chat message to kick things off.
+Single source of truth for the rework. Give this file, alongside `docs/planning/09-system-analysis.md` and `docs/planning/11-audit-findings.md`, to Claude Code. Use `docs/planning/00-start-here.md` as the actual chat message to kick things off.
 
 **Provenance note:** this file consolidates two documents that previously lived as untracked files at the repo root — `ECOCHARGE_FULL_REWORK_PROMPT.md` and `ECOCHARGE_KIOSK_HARDWARE_CLARIFICATIONS.md` (an addendum that corrected a location assumption, gave precise hardware context, and resolved several open items). Both have been deleted from the root now that their content lives here; see `memory.md`'s 2026-08-10 entry for why. Nothing below is new content — it's the same material, merged and with status corrected against what was actually verified in code on 2026-08-10.
 
@@ -8,7 +8,7 @@ Single source of truth for the rework. Give this file, alongside `analyzation.md
 
 ## 0. Ground truth
 
-`analyzation.md` (verified 2026-07-22, methodology in `01-audit-prompt.md`) is the primary source of truth for what exists in this repo. `AUDIT.md` is a later, narrower pass — it found and mostly fixed five specific issues `analyzation.md` flagged, ran the process audit in §3 below, and proposed exact values for two firmware fixes that are **still awaiting explicit user sign-off before anything gets flashed** (see §3.2/§3.3 and `memory.md`).
+`docs/planning/09-system-analysis.md` (verified 2026-07-22, methodology in `01-audit-prompt.md`) is the primary source of truth for what exists in this repo. `docs/planning/11-audit-findings.md` is a later, narrower pass — it found and mostly fixed five specific issues `docs/planning/09-system-analysis.md` flagged, ran the process audit in §3 below, and proposed exact values for two firmware fixes that are **still awaiting explicit user sign-off before anything gets flashed** (see §3.2/§3.3 and `memory.md`).
 
 **What EcoCharge is:** a reverse-vending kiosk. A user deposits a PET bottle, an ESP32-driven conveyor and a two-stage AI pipeline (YOLO26 detector → EfficientNet-B0 classifier) identify and grade it, credits are awarded by volume tier, and those credits pay for phone charging at one of 4 relay-switched AC ports. Currently hosted on Render (API + both Next.js apps), Aiven MySQL, Supabase Storage (avatars), and a local PC running the AI server behind a rotating Cloudflare quick-tunnel.
 
@@ -16,7 +16,7 @@ Single source of truth for the rework. Give this file, alongside `analyzation.md
 - §2's five fixes: **four done** (URL consistency is still pending, tied to the migration below), key rotation still outstanding.
 - §3's six process-audit questions: all six answered/resolved except the `ml-review` gate question (§3.1), which is still genuinely open — a product decision, not a code question.
 - §4 component inventory: **done**, both Next.js apps Knip-clean, no duplicate nav components found.
-- §5–§7 design revamp: **not started visually** — tokens exist (`DESIGN.md`, full spec in `02-design-mandate.md`), nothing has been rebuilt against them yet (verified via dependency grep: no font/animation-library additions on any of the three surfaces).
+- §5–§7 design revamp: **not started visually** — tokens exist (`docs/planning/02-design-mandate.md`, full spec in `02-design-mandate.md`), nothing has been rebuilt against them yet (verified via dependency grep: no font/animation-library additions on any of the three surfaces).
 - **§1 self-hosting migration: substantially underway as of 2026-08-11, not just planned.** The Node API now runs live on `desktop-gklhcri` (`D:\EcoCharge\app\server_main`, `EcoChargeAPI` scheduled task) against the Dockerized MySQL (fresh schema, no Aiven data — Aiven is dead/abandoned, not migrated, by explicit decision) and writes media to a local folder on the same box instead of Supabase (Supabase — cloud and self-hosted — is fully decommissioned, see §1.4). Still open: `ALLOWED_ORIGINS` still lists `*.onrender.com` (tied to the Cloudflare Tunnel step, not yet done), the AI server is still on a rotating `*.trycloudflare.com` URL, and the two Next.js apps haven't been moved to persistent services yet. **Target machine confirmed 2026-08-10: `desktop-gklhcri`**, per the user directly, corroborated by the Tailscale admin console — a distinct online Windows device from the dev machine (`minniedumpor`), registered under its own dedicated `ecocharge123@gmail.com` account. Storage lives on **Disk D** (more free space than C:).
 
 ---
@@ -70,7 +70,7 @@ The kiosk firmware polls a public HTTPS URL directly (`RENDER_BASE_URL`, compile
 
 **Re-check `client/kiosk_web`'s actual code with this in mind before migrating, specifically for anything that assumes co-location:**
 - Any hardcoded `localhost` or local-network reference to the AI server, instead of going through `kiosk_web`'s own `/api/detect` server-side proxy route.
-- Any assumption that `kiosk_web` can reach the ESP32 directly. Per `analyzation.md`, the ESP32 polls the *cloud API* for commands and posts telemetry there — it does not talk to `kiosk_web` directly. Confirm `kiosk_web`'s code doesn't assume otherwise anywhere (a leftover local-network call from an earlier development setup where everything really was on one machine/network would be a real bug, invisible until the API server actually moves).
+- Any assumption that `kiosk_web` can reach the ESP32 directly. Per `docs/planning/09-system-analysis.md`, the ESP32 polls the *cloud API* for commands and posts telemetry there — it does not talk to `kiosk_web` directly. Confirm `kiosk_web`'s code doesn't assume otherwise anywhere (a leftover local-network call from an earlier development setup where everything really was on one machine/network would be a real bug, invisible until the API server actually moves).
 - Confirm the kiosk PC's actual local network only needs to reach the ESP32 (whatever genuine local-network interaction actually exists — verify against code, don't assume) and the public internet. It should need nothing from the server machine's local network directly.
 
 ### 1.1a The kiosk PC needs Tailscale too — for remote admin, not for its runtime traffic
@@ -166,7 +166,7 @@ The two Next.js apps (admin console, kiosk web) still need the same treatment �
 
 ---
 
-## 2. `analyzation.md`'s five original issues — current status
+## 2. `docs/planning/09-system-analysis.md`'s five original issues — current status
 
 1. **Inconsistent backend URLs across clients** — firmware, kiosk web `.env.local`, and the Flutter/console default point at three different Render hostnames. **Still open** — resolves as part of §1.6 step 4 (all four clients repointed to the single stable Cloudflare Tunnel hostname at once). Don't fix this piecemeal before the migration; fixing it early just means fixing it twice.
 2. **Rotating Cloudflare quick-tunnel AI URLs** — **still open**, confirmed via `server/server_main/.env` (`AI_SERVER_URL` is still a `*.trycloudflare.com` link). Resolve by moving the AI server onto `tailscale serve` (tailnet-only, per §1.2, since nothing external calls it directly) instead of a Cloudflare quick tunnel.
@@ -190,13 +190,13 @@ The admin console's `/ml-review` page lists deposits with AI confidence below 0.
 
 Verified in `esp/ecocharge/src/bottle_fsm.c`: `SCANNING` exits only on an `approve_bottle`/`reject_bottle` command. If the kiosk browser crashes mid-scan, the AI is down, or someone drops a bottle with no active session (the FSM triggers on the entrance sensor alone), the conveyor nudges every 2s indefinitely with no exit.
 
-**Proposed fix** (`AUDIT.md`, grounded in the hardware description below): `BOTTLE_SCAN_TIMEOUT_MS = 60000` (60s) — covers ≥4 full worst-case AI attempts (the `/api/detect` proxy is capped ~12s) plus command-poll latency, bounding conveyor wear to ≤30 nudges instead of unbounded. On timeout, transition to `REJECTING` (the existing 10s cap already bounds that state) so an unreadable object is physically returned. Set a `scan_timed_out` telemetry flag so the kiosk UI can show a real reason instead of a silent reset. **Not yet flashed** — confirmed via grep, `BOTTLE_SCAN_TIMEOUT_MS` doesn't exist in code yet.
+**Proposed fix** (`docs/planning/11-audit-findings.md`, grounded in the hardware description below): `BOTTLE_SCAN_TIMEOUT_MS = 60000` (60s) — covers ≥4 full worst-case AI attempts (the `/api/detect` proxy is capped ~12s) plus command-poll latency, bounding conveyor wear to ≤30 nudges instead of unbounded. On timeout, transition to `REJECTING` (the existing 10s cap already bounds that state) so an unreadable object is physically returned. Set a `scan_timed_out` telemetry flag so the kiosk UI can show a real reason instead of a silent reset. **Not yet flashed** — confirmed via grep, `BOTTLE_SCAN_TIMEOUT_MS` doesn't exist in code yet.
 
 ### 3.3 `CONFIRMING` treats one missed sensor reading as a definitive reject — **fix proposed, awaiting sign-off before flashing**
 
 On the 8s `DROPPING` timeout, `s_bin_confirmed` latches `false` and `CONFIRMING` never re-samples the bin sensor — a sensor timing glitch is indistinguishable from "bottle never dropped," and a bottle that physically landed but whose drop the ultrasonic missed earns zero credits for something now unrecoverably inside the machine.
 
-**Proposed fix** (`AUDIT.md`): on the `DROPPING` timeout, take one immediate fresh `ultrasonic_bottle_in_bin()` reading before latching anything; during `CONFIRMING`, keep sampling each 100ms FSM tick for up to `BOTTLE_BIN_RECHECK_MS = 4000` (4s), flipping `s_bin_confirmed = true` on `BOTTLE_BIN_CONFIRM_SAMPLES = 3` consecutive positives (≈1.5s of sustained detection — debounces a stray echo in both directions). Total worst case stays ~12.5s, inside the kiosk's bin-wait UX budget. **Not yet flashed.**
+**Proposed fix** (`docs/planning/11-audit-findings.md`): on the `DROPPING` timeout, take one immediate fresh `ultrasonic_bottle_in_bin()` reading before latching anything; during `CONFIRMING`, keep sampling each 100ms FSM tick for up to `BOTTLE_BIN_RECHECK_MS = 4000` (4s), flipping `s_bin_confirmed = true` on `BOTTLE_BIN_CONFIRM_SAMPLES = 3` consecutive positives (≈1.5s of sustained detection — debounces a stray echo in both directions). Total worst case stays ~12.5s, inside the kiosk's bin-wait UX budget. **Not yet flashed.**
 
 **Design principle preserved by both fixes, worth keeping in mind for any future change here:** every stage of the bottle path has its own independent sensor confirming the previous stage's claimed outcome (entrance sensor confirms an object arrived, bin sensor confirms it actually dropped) — don't simplify this away for convenience.
 

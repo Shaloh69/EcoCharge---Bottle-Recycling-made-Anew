@@ -1,9 +1,12 @@
 # EcoCharge — Design Evidence & Reference Comparison
 
-Started 2026-08-11, during the full-redo pass. This folder holds the real
-screenshots behind every design claim made in
+Started 2026-08-11, during the full-redo pass. This is the narrative index for
+the real screenshots behind every design claim made in
 `docs/planning/08-master-checklist.md` Phase E, plus the reference material each
-surface was actually built against.
+surface was actually built against. **The actual image files live in
+`docs/design-screenshots/` at the repo root (moved there 2026-08-12 to match
+EngiRent's own screenshot-folder convention exactly)** — this file just narrates
+what each one shows.
 
 `docs/planning/02-design-mandate.md` §0 requires a screenshot of a real running
 instance before any design item is marked done. This folder is where those
@@ -46,25 +49,37 @@ directly with PyMuPDF, not eyeballed.
 All taken against a real running instance at the surface's real resolution —
 the Kiosk at **1080×1920**, its actual hardware geometry.
 
-### Admin Console (`screenshots/admin/`)
+**Folder convention changed 2026-08-12, now matches EngiRent's `docs/design-screenshots/` exactly** (a top-level, flat, surface-prefixed layout with `reference/` and `deployed/` subfolders — instead of the previous `docs/design-screenshots/<surface>/NN-name-BEFORE.png` nested/numbered scheme). Screenshots now live in `docs/design-screenshots/` at the repo root, not under this folder — this `docs/design-screenshots/README.md` file stays as the narrative index, but the files it describes below have moved. Paths in the tables below are updated to match.
+
+### Admin Console
 
 | File | What it shows |
 |---|---|
-| `00-login-BEFORE-generic-card.png` | The centred logo-over-two-fields card. This is the layout §2 bans outright, and it is what prompted the redo. |
-| `01-login-split-screen.png` | Rebuilt. Left rail probes the real `/health` — captured showing `OPERATIONAL`, `139 ms`, real server time. |
-| `00-dashboard-BEFORE.png` | Emoji icons in rounded-square chips (§1 banned), four competing border hues, `0 kiosks online` rendered **green**. |
-| `02-dashboard.png` | Rebuilt. Lucide icons, no chips, semantic tone — `0` online is red, "of 1 in fleet". `LIVE`/`STREAMING` badges now correct. |
-| `00-analytics-BEFORE-empty-boxes.png` | Three charts rendering as blank cards. §0: "a missing chart entirely is not [acceptable]". |
-| `03-analytics-empty-state.png` | Rebuilt with a real labelled empty state; totals in text tokens, not decorative green. |
+| `admin-login-before.png` | The centred logo-over-two-fields card. This is the layout §2 bans outright, and it is what prompted the redo. |
+| `admin-login-split-screen.png` | Rebuilt. Left rail probes the real `/health` — captured showing `OPERATIONAL`, `139 ms`, real server time. |
+| `admin-dashboard-before.png` | Emoji icons in rounded-square chips (§1 banned), four competing border hues, `0 kiosks online` rendered **green**. |
+| `admin-dashboard.png` | Rebuilt. Lucide icons, no chips, semantic tone — `0` online is red, "of 1 in fleet". `LIVE`/`STREAMING` badges now correct. |
+| `admin-analytics-before.png` | Three charts rendering as blank cards. §0: "a missing chart entirely is not [acceptable]". |
+| `admin-analytics-empty-state.png` | Rebuilt with a real labelled empty state; totals in text tokens, not decorative green. |
 
-### Kiosk Web (`screenshots/kiosk/`)
+### Kiosk Web
 
 | File | What it shows |
 |---|---|
-| `00-splash-BEFORE-600px-column.png` | Content in a ~600px column with dead bands either side; emoji three-card grid; sub-20px copy. |
-| `01-splash-fullbleed-1080.png` | Rebuilt. Full 1080px bleed, real mascot art, 78px display type, 124px primary target, wave divider, leaves confined to the hero. |
-| `00-auth-BEFORE-broken-wave-no-disclosure.png` | Header band and wave separated by a white gap, stray mascot orb, 55% dead space, **no guest disclosure at all**. |
-| `02-auth-with-guest-disclosure.png` | Rebuilt. Two explicit options; §4.4's required guest-credit disclosure now stated **before** the choice. |
+| `kiosk-splash-before.png` | Content in a ~600px column with dead bands either side; emoji three-card grid; sub-20px copy. |
+| `kiosk-splash-fullbleed.png` | Rebuilt. Full 1080px bleed, real mascot art, 78px display type, 124px primary target, wave divider, leaves confined to the hero. |
+| `kiosk-auth-before.png` | Header band and wave separated by a white gap, stray mascot orb, 55% dead space, **no guest disclosure at all**. |
+| `kiosk-auth-guest-disclosure.png` | Rebuilt. Two explicit options; §4.4's required guest-credit disclosure now stated **before** the choice. |
+| `kiosk-session-before.png` | Emoji tiles on the mode-select screen. |
+| `kiosk-session-mode-select.png` | Rebuilt mode-select screen. |
+| `kiosk-bin-full.png` | §4.4's bin-full cutoff screen. |
+
+### Deployed (`deployed/`) — verified against the real public Cloudflare tunnel, not localhost
+
+| File | What it shows |
+|---|---|
+| `deployed/admin-login.png` | Admin Console login, captured through the real tunneled hostname per §7a's rule that a local screenshot is not evidence about the deployed instance. |
+| `deployed/kiosk-splash.png` | Kiosk splash, same rule, same verification standard. |
 
 ---
 

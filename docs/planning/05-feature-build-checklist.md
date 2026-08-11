@@ -1,10 +1,10 @@
 # EcoCharge — Feature & Evidence Build Checklist
 
-Everything left once `03-revamp-master.md`'s phases (self-hosting migration, security fixes, design revamp) are done — testing infrastructure, thesis evidence, and the handful of repo-hygiene items that have been sitting untouched since `docs/PROJECT_PLAN.md`'s original Phase 0/1/8. New synthesis, not ported from another project — EcoCharge had no equivalent document before this pass.
+Everything left once `03-revamp-master.md`'s phases (self-hosting migration, security fixes, design revamp) are done — testing infrastructure, thesis evidence, and the handful of repo-hygiene items that have been sitting untouched since `docs/planning/13-project-roadmap.md`'s original Phase 0/1/8. New synthesis, not ported from another project — EcoCharge had no equivalent document before this pass.
 
 **Status key:** `[ ]` not started · `[~]` in progress · `[x]` done and verified
 
-**Every item's status below was checked against real code/files on 2026-08-10, not assumed from an older doc** — `docs/CHECKLIST.md` (last updated 2026-03-15) claimed several of these were further along than they actually are; treat this file as the current source of truth for build status, not that one.
+**Every item's status below was checked against real code/files on 2026-08-10, not assumed from an older doc** — `docs/planning/08-master-checklist.md` (last updated 2026-03-15) claimed several of these were further along than they actually are; treat this file as the current source of truth for build status, not that one.
 
 ---
 
@@ -19,7 +19,7 @@ The rework prompt (`03-revamp-master.md`) covers migration, security, and design
 **STATUS: not started. Verified 2026-08-10 — no test files exist anywhere in the repo** (`server/server_main`, `server/server_AI`, `client/flutter_app` all checked; no `*.test.ts`/`*.spec.ts`, no `test_*.py`/`*_test.py`, no e2e scripts).
 
 ### 1.1 Backend (`server/server_main`)
-- [ ] Stand up a real test runner (the repo doesn't currently declare one — check `package.json` before assuming Jest is already wired, `docs/CHECKLIST.md`'s claim that this exists is for the old Flask-era plan and doesn't apply to the Node rewrite)
+- [ ] Stand up a real test runner (the repo doesn't currently declare one — check `package.json` before assuming Jest is already wired, `docs/planning/08-master-checklist.md`'s claim that this exists is for the old Flask-era plan and doesn't apply to the Node rewrite)
 - [ ] Auth routes: register, login, refresh, guest
 - [ ] Kiosk routes: session create/delete, bottle approve/reject, qr-link/qr-status
 - [ ] Charging routes: start (balance check, port-conflict 409), stop, active
@@ -54,7 +54,7 @@ The rework prompt (`03-revamp-master.md`) covers migration, security, and design
 
 ## Stage 2 — Design revamp execution
 
-Tracked in `DESIGN.md` (as-built) against `02-design-mandate.md` (spec), with the live per-item work order in `08-master-checklist.md` Phase E. Not duplicated here to avoid two documents drifting out of sync on the same status. (`04-continue-design-redo.md`, previously named here as the work order, was retired 2026-08-11 — fully superseded.)
+Tracked in `docs/planning/02-design-mandate.md` (as-built) against `02-design-mandate.md` (spec), with the live per-item work order in `08-master-checklist.md` Phase E. Not duplicated here to avoid two documents drifting out of sync on the same status. (`04-continue-design-redo.md`, previously named here as the work order, was retired 2026-08-11 — fully superseded.)
 
 ## Stage 1.5 — AI detection reliability (conveyor detection problem)
 
@@ -71,27 +71,27 @@ Tracked in `DESIGN.md` (as-built) against `02-design-mandate.md` (spec), with th
 
 ## Stage 3 — Thesis evidence pack
 
-**STATUS: not started.** `docs/PROJECT_PLAN.md`'s Phase 8 called for this from the start; nothing in `docs/`, `AUDIT.md`, or `DESIGN.md` indicates any of it has been produced yet.
+**STATUS: not started.** `docs/planning/13-project-roadmap.md`'s Phase 8 called for this from the start; nothing in `docs/`, `docs/planning/11-audit-findings.md`, or `docs/planning/02-design-mandate.md` indicates any of it has been produced yet.
 
-- [ ] **Formal architecture diagram** — the ASCII diagram in `analyzation.md` §3 is accurate and can be the source, but the thesis defense needs a real diagram (draw.io or similar), covering all five layers per `docs/PROJECT_PLAN.md`'s original recommended architecture (detection, device control, orchestrator/kiosk-web, backend, client).
-- [ ] **Hardware wiring diagram** — ESP32 GPIO → components, sourced from the real pin map in `analyzation.md` §11, not redrawn from memory.
-- [ ] **ML evaluation report** — mAP50/precision/recall for the YOLO26 detector, classification accuracy for brand/volume/condition. Training outputs already exist in `runs/detect/` and `runs/classifier/` (confusion matrices, training-history plots per `SELF_HOSTING.md`) — this is assembling what's already been generated into a defense-ready document, not re-running training.
+- [ ] **Formal architecture diagram** — the ASCII diagram in `docs/planning/09-system-analysis.md` §3 is accurate and can be the source, but the thesis defense needs a real diagram (draw.io or similar), covering all five layers per `docs/planning/13-project-roadmap.md`'s original recommended architecture (detection, device control, orchestrator/kiosk-web, backend, client).
+- [ ] **Hardware wiring diagram** — ESP32 GPIO → components, sourced from the real pin map in `docs/planning/09-system-analysis.md` §11, not redrawn from memory.
+- [ ] **ML evaluation report** — mAP50/precision/recall for the YOLO26 detector, classification accuracy for brand/volume/condition. Training outputs already exist in `runs/detect/` and `runs/classifier/` (confusion matrices, training-history plots per `docs/planning/12-self-hosting-guide.md`) — this is assembling what's already been generated into a defense-ready document, not re-running training.
 - [ ] **UI screenshots** — once the design revamp (Stage 2) actually ships, not before; a screenshot of the pre-revamp UI documents the wrong end state for a thesis defense.
-- [ ] **User testing summary** — the paper's own survey data (78.8% supported a reward-based system, 84.8% interested in a bottle-for-charging kiosk, etc., per `docs/PROJECT_ANALYSIS.md`) already exists; this item is about *system* usability testing on the actually-built product, which is separate and hasn't happened yet.
+- [ ] **User testing summary** — the paper's own survey data (78.8% supported a reward-based system, 84.8% interested in a bottle-for-charging kiosk, etc., per `docs/planning/10-paper-vs-repo-gap.md`) already exists; this item is about *system* usability testing on the actually-built product, which is separate and hasn't happened yet.
 - [ ] **Pilot deployment findings** — UC Lapu-Lapu and Mandaue, per the paper's stated deployment context. Depends on the self-hosting migration and hardware validation (Stage 1.4) being done first — a pilot on an unmigrated, untested system would produce findings about the wrong system.
 - [ ] **Limitations and future work section** — write honestly once the above is in hand; a defensible thesis says what's *not* done as plainly as what is (the guest-pooled-balance design, the `ml-review` gate decision once made, and anything the design revamp doesn't reach in time are all legitimate, statable limitations rather than things to hide).
-- [ ] **Thesis narrative alignment** — the paper as of `docs/PROJECT_ANALYSIS.md` still names YOLOv8; the actual implementation is YOLO26 (decided 2026-03-15, per `docs/PROJECT_ANALYSIS.md`'s own note — "no code changes needed, the thesis narrative should be updated"). Confirm this narrative update has actually been made in the paper itself, not just decided in a repo doc.
+- [ ] **Thesis narrative alignment** — the paper as of `docs/planning/10-paper-vs-repo-gap.md` still names YOLOv8; the actual implementation is YOLO26 (decided 2026-03-15, per `docs/planning/10-paper-vs-repo-gap.md`'s own note — "no code changes needed, the thesis narrative should be updated"). Confirm this narrative update has actually been made in the paper itself, not just decided in a repo doc.
 
 ---
 
 ## Stage 4 — Small repo-hygiene leftovers
 
-Open since `docs/PROJECT_PLAN.md`'s original Phase 0/1, never revisited. Cheap individually; worth clearing in one pass rather than leaving indefinitely.
+Open since `docs/planning/13-project-roadmap.md`'s original Phase 0/1, never revisited. Cheap individually; worth clearing in one pass rather than leaving indefinitely.
 
-- [ ] **Root `README.md`** — verified absent (2026-08-10). Every other sibling-project pattern this methodology follows has one: architecture overview, how to run each service, links to `analyzation.md`/`AUDIT.md`/`DESIGN.md`/`docs/planning/00-start-here.md` as the deeper references. Write this once the self-hosting migration lands, so it documents the real run commands rather than Render-era ones that'll need rewriting immediately after.
-- [x] **`client/kiosk_electron`** — the empty, role-less folder `docs/PROJECT_ANALYSIS.md` flagged is gone; verified absent from the current tree. No action needed.
-- [ ] **ESLint `@eslint/compat` gap** — `docs/PROJECT_ANALYSIS.md` (2026-03-15) reported `npm run lint` failing in both Next apps over a missing `@eslint/compat` import. Not found in either `package.json` on a 2026-08-10 grep, which likely means it was already resolved during the Knip dependency-prune pass — confirm with a real `npm run lint` run rather than trusting the absence of a string match.
-- [ ] **Playwright MCP for `/design-review`** — explicitly flagged as not-yet-installed in `DESIGN.md`'s own execution-status list. Needed before the hardened screenshot-verification loop in `02-design-mandate.md` §0 can actually run automated, not manual, screenshot checks.
+- [ ] **Root `README.md`** — verified absent (2026-08-10). Every other sibling-project pattern this methodology follows has one: architecture overview, how to run each service, links to `docs/planning/09-system-analysis.md`/`docs/planning/11-audit-findings.md`/`docs/planning/02-design-mandate.md`/`docs/planning/00-start-here.md` as the deeper references. Write this once the self-hosting migration lands, so it documents the real run commands rather than Render-era ones that'll need rewriting immediately after.
+- [x] **`client/kiosk_electron`** — the empty, role-less folder `docs/planning/10-paper-vs-repo-gap.md` flagged is gone; verified absent from the current tree. No action needed.
+- [ ] **ESLint `@eslint/compat` gap** — `docs/planning/10-paper-vs-repo-gap.md` (2026-03-15) reported `npm run lint` failing in both Next apps over a missing `@eslint/compat` import. Not found in either `package.json` on a 2026-08-10 grep, which likely means it was already resolved during the Knip dependency-prune pass — confirm with a real `npm run lint` run rather than trusting the absence of a string match.
+- [ ] **Playwright MCP for `/design-review`** — explicitly flagged as not-yet-installed in `docs/planning/02-design-mandate.md`'s own execution-status list. Needed before the hardened screenshot-verification loop in `02-design-mandate.md` §0 can actually run automated, not manual, screenshot checks.
 
 ---
 
@@ -100,5 +100,5 @@ Open since `docs/PROJECT_PLAN.md`'s original Phase 0/1, never revisited. Cheap i
 No item is ticked until:
 
 1. Verified against **real running code/hardware**, not narrated as "should work."
-2. `docs/CHECKLIST.md`, `DESIGN.md`, and `memory.md` updated to match.
+2. `docs/planning/08-master-checklist.md`, `docs/planning/02-design-mandate.md`, and `memory.md` updated to match.
 3. If a fault/failure path is claimed covered, it was actually exercised — not just the happy path.

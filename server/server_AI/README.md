@@ -22,7 +22,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-Requires `AI_API_KEY`, `YOLO_WEIGHTS`, `CLASSIFIER_WEIGHTS`, `CONF_THRESHOLD` — see `.env.example`. Full training-from-scratch and self-hosting-behind-a-tunnel walkthrough: `../../SELF_HOSTING.md`.
+Requires `AI_API_KEY`, `YOLO_WEIGHTS`, `CLASSIFIER_WEIGHTS`, `CONF_THRESHOLD` — see `.env.example`. Full training-from-scratch and self-hosting-behind-a-tunnel walkthrough: `../../docs/planning/12-self-hosting-guide.md`.
 
 ## Auth
 

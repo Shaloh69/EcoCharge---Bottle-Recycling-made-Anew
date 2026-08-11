@@ -2,10 +2,10 @@
 
 **Last verified against code:** 2026-07-22 (branch `main`)
 
-> **Status note, 2026-08-11 — per this document's own re-run policy in `docs/planning/01-audit-prompt.md` ("don't re-run reflexively; `AUDIT.md` already carries forward more recent, narrower findings"), this is a targeted correction of the specific claims below now known stale, not a full re-audit.** `docs/planning/08-master-checklist.md` is the live, currently-accurate tracker — treat it as authoritative over this document for current status. Known-stale sections, checked against real current state this session:
+> **Status note, 2026-08-11 — per this document's own re-run policy in `docs/planning/01-audit-prompt.md` ("don't re-run reflexively; `docs/planning/11-audit-findings.md` already carries forward more recent, narrower findings"), this is a targeted correction of the specific claims below now known stale, not a full re-audit.** `docs/planning/08-master-checklist.md` is the live, currently-accurate tracker — treat it as authoritative over this document for current status. Known-stale sections, checked against real current state this session:
 > - **§2 component table**: Kiosk Web and Admin Console are no longer HeroUI — HeroUI was dropped entirely 2026-08-10/11 (Mantine on the Admin Console, shadcn/ui on Kiosk Web). A fourth surface, the public Website (`client/web`), now also exists (scaffolded 2026-08-10) and isn't listed here at all.
 > - **§3 architecture diagram / §15 deployment table**: describe Render + Aiven MySQL + Supabase Storage — **all decommissioned as of 2026-08-11.** The real, live topology is Docker MySQL + Node API + admin console + AI server all self-hosted on `desktop-gklhcri`, each on its own public Cloudflare quick tunnel, media on local disk. See `docs/evidence/architecture-diagram.md` for the current real topology diagram.
-> - **§5 known security gaps**: "Kiosk read endpoints are unauthenticated" is **fixed** (2026-08-10, `requireAuth` added). "`.env` files with live credentials exist in the tree" was already corrected by `AUDIT.md` itself — verified false, only the firmware `config.h` carries live secrets, no `.env` was ever tracked.
+> - **§5 known security gaps**: "Kiosk read endpoints are unauthenticated" is **fixed** (2026-08-10, `requireAuth` added). "`.env` files with live credentials exist in the tree" was already corrected by `docs/planning/11-audit-findings.md` itself — verified false, only the firmware `config.h` carries live secrets, no `.env` was ever tracked.
 > - **§14 environment variables**: `SUPABASE_URL`/`SUPABASE_SERVICE_KEY`/`SUPABASE_BUCKET` no longer exist — removed along with the Supabase decommission. Avatar upload now writes to local disk (`MEDIA_STORAGE_PATH`), not Supabase.
 >
 > Everything else below (data model, FSMs, API inventory, hardware map) was not independently re-verified this session and is assumed still substantially accurate absent evidence otherwise — a full re-run per `01-audit-prompt.md`'s methodology is the right move if a future session needs to trust this document at a glance again, rather than patching it further piecemeal.
@@ -64,8 +64,8 @@ Every claim in this document was checked against the actual source. Stale docume
 │           Node.js API Server (Express + Prisma, on Render)        │
 │  /api/auth /api/users /api/kiosk /api/charging /api/devices       │
 │  /api/admin /health /api/log/ai-error                             │
-│                    MySQL 8 (Aiven, TLS)                           │
-│              Supabase Storage (profile avatars)                   │
+│         MySQL 8 (Docker, self-hosted on desktop-gklhcri)          │
+│      Local disk MEDIA_STORAGE_PATH, served at /media (avatars)    │
 └──────┬─────────────────────────────────────────────┬──────────────┘
        │ (kiosk web proxies /api/detect)             │ HTTPS poll every 2–5 s
        ▼                                             ▼
@@ -85,7 +85,7 @@ Key design point: the **ESP32 never receives inbound connections** from the clou
 
 `server/server_main/prisma/schema.prisma`:
 
-- **User** — email/password (bcrypt), unique `qr_code`, `credit_balance`, `is_admin`, optional avatar URL (Supabase).
+- **User** — email/password (bcrypt), unique `qr_code`, `credit_balance`, `is_admin`, optional avatar URL (local disk, served from `/media/avatars/`).
 - **Kiosk** — name, location, **unique `api_key`** (device auth), `status` (online/offline/error), `last_seen_at`.
 - **KioskSession** — a user's visit at a kiosk (`sessions` table).
 - **BottleDeposit** — brand/volume/condition/confidence from AI, `credits_awarded`, `status`: `pending_bin` → `confirmed` | `rejected`.
@@ -111,7 +111,7 @@ Migrations live in `prisma/migrations/` and are **auto-applied at server startup
 - `requireAuth` accepts the token from the `Authorization` header **or** `?token=` query param (needed because `EventSource` cannot set headers).
 - `requireAdmin` = `requireAuth` + `isAdmin` claim check.
 - **CORS**: explicit `ALLOWED_ORIGINS` allowlist parsed from env at startup; rejected origins are logged with a `[CORS]` prefix. (Wildcard origin + credentials is spec-illegal and is not used.)
-- **Transport**: Aiven MySQL over TLS — `DATABASE_URL` must use `sslca=certs/ca.pem` (the hyphenated `ssl-ca` is silently ignored by mysql2). The CA cert is committed at `server/server_main/app/certs/ca.pem`.
+- **Transport**: **corrected 2026-08-12** — this described Aiven MySQL over TLS with a CA cert at `server/server_main/app/certs/ca.pem`, a path that no longer exists (the real leftover cert is at `server/server_main/certs/ca.pem`, now unused). The live database is Docker MySQL on `desktop-gklhcri`, reached over loopback at `127.0.0.1:13306` — no TLS CA and no `sslca=` parameter is involved. Local dev against it needs an SSH tunnel (see `docs/planning/08-master-checklist.md` Phase A).
 - AI server: `X-Api-Key` header auth (with `Authorization: Bearer` fallback), because Cloudflare tunnels can strip `Authorization` on multipart bodies.
 
 ### Known security gaps (verified in code, worth fixing before defense)
@@ -186,7 +186,7 @@ All verified in `server/server_main/src/routes/`.
 
 **Auth** (`/api/auth`): `POST /login`, `POST /register`, `POST /guest`, `POST /refresh`
 
-**Users** (`/api/users`, JWT): `GET /me`, `GET /me/credits`, `GET /me/deposits`, `GET /me/transactions`, `POST /me/avatar` (multer → Supabase Storage bucket, returns public URL)
+**Users** (`/api/users`, JWT): `GET /me`, `GET /me/credits`, `GET /me/deposits`, `GET /me/transactions`, `POST /me/avatar` (multer memory storage → written to `MEDIA_STORAGE_PATH/avatars/`, served back by `express.static` at `/media`; returns an absolute URL on the API origin — **corrected 2026-08-12**, this previously described a Supabase Storage bucket that no longer exists)
 
 **Kiosk** (`/api/kiosk`): `POST /sessions`, `DELETE /sessions/:id`, `POST /deposits` (legacy), `POST /bottle/approve`, `POST /bottle/reject`, `POST /qr-link`, `GET /qr-status`, `GET /list`, `GET /:id/ports`, `GET /:id/sse`
 
@@ -278,7 +278,7 @@ Response: `{detected, confidence, bounding_box, brand, brand_confidence, volume_
 
 **Hosting:** runs on a local PC (`start.bat`, `.venv`) exposed through a Cloudflare Tunnel, or as a Docker container (Dockerfile targets RunPod). GPU used when available, CPU fallback. Quick tunnels get a new URL on every restart — `AI_URL`/`AI_SERVER_URL` env values must be updated, or a named tunnel set up (`cloudflared tunnel create ecocharge`).
 
-**Training** (`scripts/`, see `SELF_HOSTING.md` for the full guide): Roboflow-annotated dataset in `scripts/dataset/`, `train_yolo.py` and `train_bottle_classifier.py`, outputs in `runs/detect/` and `runs/classifier/`.
+**Training** (`scripts/`, see `docs/planning/12-self-hosting-guide.md` for the full guide): Roboflow-annotated dataset in `scripts/dataset/`, `train_yolo.py` and `train_bottle_classifier.py`, outputs in `runs/detect/` and `runs/classifier/`.
 
 ---
 
@@ -301,7 +301,7 @@ Flutter app talking to the real API (`ApiService`, base URL via `--dart-define=A
 | `JWT_EXPIRES_IN` / `JWT_REFRESH_EXPIRES_IN` | No | defaults `4h` / `30d` |
 | `ALLOWED_ORIGINS` | Prod | comma-separated frontend URLs; **redeploy API after changing** |
 | `AI_SERVER_URL`, `AI_API_KEY` | No | used only for the startup AI health/auth check |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_BUCKET` | For avatars | avatar upload returns 503 if unset |
+| `MEDIA_STORAGE_PATH` | For avatars | local media root (default `D:\EcoCharge\media` in production); avatar upload fails if unwritable. **Replaced the former `SUPABASE_*` trio, removed 2026-08-11.** |
 | `PORT` | No | default 3001 |
 
 Note: `DEVICE_API_KEY` still appears in `config.ts` but is **unused** — device auth is the per-kiosk key stored in the `kiosks` table (generated by admin kiosk creation).
@@ -323,9 +323,9 @@ No env — `RENDER_BASE_URL`, `DEVICE_API_KEY`, `KIOSK_ID`, `AI_SERVER_URL`, `AI
 |---|---|
 | API server | Render (Node), auto-migrates on boot |
 | Kiosk web / Admin console | Render (Next.js) |
-| MySQL | Aiven (TLS) |
+| MySQL | Docker container on `desktop-gklhcri`, port 13306 (self-hosted) |
 | AI server | Local PC + Cloudflare Tunnel (or Docker/RunPod) |
-| Avatar storage | Supabase Storage |
+| Avatar storage | Local disk on the API host (`MEDIA_STORAGE_PATH`), served at `/media` |
 
 **Currently observable issues (as of 2026-07-22):**
 

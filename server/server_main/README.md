@@ -15,11 +15,11 @@ npm run dev          # tsx watch src/index.ts
 
 Other scripts: `npm run build` / `npm start` (compiled), `npm run db:migrate` (`prisma migrate deploy`), `npm run seed`.
 
-Requires a `.env` (not committed — see `.env.example`). Full variable-by-variable reference: `analyzation.md` §14. The database URL, Supabase credentials, and allowed-origins list all change as part of the self-hosting migration — don't assume the current `.env.example` reflects the post-migration shape.
+Requires a `.env` (not committed — see `.env.example`). Full variable-by-variable reference: `../../docs/planning/09-system-analysis.md` §14. The database URL, Supabase credentials, and allowed-origins list all change as part of the self-hosting migration — don't assume the current `.env.example` reflects the post-migration shape.
 
 ## API surface
 
-Full route-by-route inventory (method, path, purpose, auth requirement): `analyzation.md` §8. Real-time channels: `analyzation.md` §8's SSE subsection (`GET /api/kiosk/:id/sse` for kiosk-facing telemetry, `GET /api/admin/sse` for the admin dashboard).
+Full route-by-route inventory (method, path, purpose, auth requirement): `../../docs/planning/09-system-analysis.md` §8. Real-time channels: `../../docs/planning/09-system-analysis.md` §8's SSE subsection (`GET /api/kiosk/:id/sse` for kiosk-facing telemetry, `GET /api/admin/sse` for the admin dashboard).
 
 ## Security notes — read before touching auth-adjacent code
 
@@ -27,4 +27,4 @@ Full route-by-route inventory (method, path, purpose, auth requirement): `analyz
 - The device API key (per-kiosk, DB-stored) comparison is a DB lookup, not constant-time — accepted as-is, see `../../memory.md`.
 - Guest-facing endpoints (session creation, deposits, charging starts) are per-IP rate-limited.
 
-Full findings/fix history: `../../AUDIT.md`.
+Full findings/fix history: `../../docs/planning/11-audit-findings.md`.

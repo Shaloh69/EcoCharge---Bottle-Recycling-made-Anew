@@ -1,6 +1,6 @@
 # EcoCharge — AI Bottle Detection: System Understanding, the Conveyor Detection Problem, and Dataset Expansion
 
-New document, 2026-08-10 — nothing before this covered the detection pipeline at this level of detail or the reported "bottles not detected properly inside the conveyor" issue. Read `analyzation.md` §6 and §12 first for the broader system context; this document goes deeper specifically on the AI side and stays actionable rather than just descriptive.
+New document, 2026-08-10 — nothing before this covered the detection pipeline at this level of detail or the reported "bottles not detected properly inside the conveyor" issue. Read `docs/planning/09-system-analysis.md` §6 and §12 first for the broader system context; this document goes deeper specifically on the AI side and stays actionable rather than just descriptive.
 
 ---
 
@@ -10,7 +10,7 @@ Restating this precisely matters, because the bug below lives in the handoff bet
 
 1. **Physical trigger**: the entrance ultrasonic sensor on `esp/ecocharge` detects an object (< 15cm). This is what starts everything — the conveyor is not running continuously waiting for a bottle, it starts on this signal.
 2. **Firmware enters `SCANNING`**: the conveyor motor nudges the bottle forward on a fixed interval (`BOTTLE_SCAN_INTERVAL_MS`, referenced in the kiosk code as 2000ms) to present fresh camera angles. Motion and capture are meant to be interleaved — nudge, pause, nudge, pause — not simultaneous.
-3. **The kiosk web app (`client/kiosk_web`, running in a browser on the kiosk PC) is the actual orchestrator** — confirmed in `analyzation.md` §3/§5, restated in `docs/PROJECT_PLAN.md`'s Phase 5 status. It's the browser that owns the camera (via `getUserMedia`), owns the retry loop, and calls the AI server. Firmware doesn't know anything about AI results until the kiosk tells it `approve_bottle` or `reject_bottle`.
+3. **The kiosk web app (`client/kiosk_web`, running in a browser on the kiosk PC) is the actual orchestrator** — confirmed in `docs/planning/09-system-analysis.md` §3/§5, restated in `docs/planning/13-project-roadmap.md`'s Phase 5 status. It's the browser that owns the camera (via `getUserMedia`), owns the retry loop, and calls the AI server. Firmware doesn't know anything about AI results until the kiosk tells it `approve_bottle` or `reject_bottle`.
 4. **Detection**: `client/kiosk_web/app/session/deposit/page.tsx`'s `runScanLoop()` captures a JPEG frame from the live camera feed and calls `POST /api/detect` (proxied to `server/server_AI`). The AI server runs YOLO26 (bottle localization, single class `plastic-bottle`, confidence threshold 0.40) then, on a hit, crops and runs the EfficientNet-B0 classifier for brand/volume/condition (`server/server_AI/app/inference.py`).
 5. **Accept/reject**: the kiosk only treats a result as approved if **`result.detected && result.confidence >= 0.5`** — this is a **second, higher threshold applied client-side**, on top of the AI server's own 0.40 acceptance floor. A detection that comes back `detected: true` with confidence between 0.40 and 0.50 is silently treated as a failed attempt and retried — this exists in the code today (`deposit/page.tsx:134`) and wasn't previously documented anywhere; worth reconciling explicitly rather than leaving two different thresholds live in two different codebases (see §3.4).
 6. Up to `MAX_RETRIES = 6` attempts, each preceded by a 2-second wait, before the kiosk gives up and calls `rejectBottle`.
@@ -26,7 +26,7 @@ This is a real, verifiable design issue found by reading the actual capture code
 `deposit/page.tsx`'s own comment states the intent plainly: *"Wait for firmware nudge cycle before capturing... We wait the same interval so each attempt sees a fresh bottle position."* But look at what actually happens:
 
 - The **firmware's** nudge cycle starts when its FSM enters `SCANNING`, triggered by the entrance sensor, on its own internal clock.
-- The **kiosk's** 2-second wait starts when it receives an SSE `bottleAtEntrance` event — which depends on when the ESP32's telemetry POST carrying that flag actually arrives and gets relayed (telemetry posts on its own schedule, per `analyzation.md` §11).
+- The **kiosk's** 2-second wait starts when it receives an SSE `bottleAtEntrance` event — which depends on when the ESP32's telemetry POST carrying that flag actually arrives and gets relayed (telemetry posts on its own schedule, per `docs/planning/09-system-analysis.md` §11).
 
 These are **two independent timers with the same period (2000ms) but no shared start signal and no handshake** — using the same number doesn't make them synchronized, it just makes them *coincidentally* likely to be close some of the time and out of phase the rest of the time. There is no signal from firmware saying "the nudge just finished, the bottle is stationary now, it's safe to capture" — the kiosk is capturing blind, on a timer, hoping it lands in the pause between nudges rather than during the motion itself. A frame captured mid-nudge is motion-blurred, and a blurred bottle is exactly the kind of input that would make a small, undertrained detector (see §3) miss it or return low confidence — which reads exactly like "bottles not detected properly inside the conveyor."
 
@@ -34,7 +34,7 @@ These are **two independent timers with the same period (2000ms) but no shared s
 
 ### 2.2 No explicit camera resolution requested
 
-`getUserMedia({ video: { facingMode: "environment" } })` requests no `width`/`height`/`frameRate` constraints — the browser negotiates whatever the connected camera's default is, which varies by device and can be lower than what the model was trained on (`SELF_HOSTING.md`'s training defaults are 640px). Detection quality is currently at the mercy of camera/driver defaults rather than a deliberate choice. **Fix:** request explicit constraints matching the classifier's `imgsz` (224) and a YOLO-friendly capture size (e.g. `width: { ideal: 1280 }, height: { ideal: 960 }` — capture high, let the existing crop-and-resize pipeline downscale, rather than starting low).
+`getUserMedia({ video: { facingMode: "environment" } })` requests no `width`/`height`/`frameRate` constraints — the browser negotiates whatever the connected camera's default is, which varies by device and can be lower than what the model was trained on (`docs/planning/12-self-hosting-guide.md`'s training defaults are 640px). Detection quality is currently at the mercy of camera/driver defaults rather than a deliberate choice. **Fix:** request explicit constraints matching the classifier's `imgsz` (224) and a YOLO-friendly capture size (e.g. `width: { ideal: 1280 }, height: { ideal: 960 }` — capture high, let the existing crop-and-resize pipeline downscale, rather than starting low).
 
 ### 2.3 Single-frame capture, no sharpness check
 
@@ -62,7 +62,7 @@ Worth restating as its own item: a detection landing between 0.40 and 0.50 confi
 
 ## 4. Dataset expansion — real, found candidates, not invented
 
-The existing dataset (`scripts/dataset/Eco-Charge.v1`, Roboflow project [`hubssoftdev/ecocharge`](https://universe.roboflow.com/hubssoftdev/ecocharge/dataset/1)) is small — 103 train / 30 valid / 15 test images, single class `plastic-bottle`, per `docs/PROJECT_ANALYSIS.md`. That's genuinely thin for a detector expected to generalize across lighting, angle, and motion conditions.
+The existing dataset (`scripts/dataset/Eco-Charge.v1`, Roboflow project [`hubssoftdev/ecocharge`](https://universe.roboflow.com/hubssoftdev/ecocharge/dataset/1)) is small — 103 train / 30 valid / 15 test images, single class `plastic-bottle`, per `docs/planning/10-paper-vs-repo-gap.md`. That's genuinely thin for a detector expected to generalize across lighting, angle, and motion conditions.
 
 ### 4.0 Check this first, before anything below — a second dataset may already exist
 
@@ -110,4 +110,4 @@ General-purpose, still useful for volume/robustness:
 
 ## 5. Where this fits in the broader plan
 
-This document is a sibling to `03-revamp-master.md`, not a replacement for anything in it. The firmware-side fix in §2.1/§3 item 1 should be proposed with exact values the same way the `SCANNING` timeout and `CONFIRMING` re-check were (`AUDIT.md`), and go through the same review-before-flash gate. The dataset and kiosk-side fixes (§2.2–§2.4, §4) don't touch hardware and can proceed independently. Track completion of both against `docs/planning/05-feature-build-checklist.md` once work starts — add a stage there rather than duplicating status tracking in a third place.
+This document is a sibling to `03-revamp-master.md`, not a replacement for anything in it. The firmware-side fix in §2.1/§3 item 1 should be proposed with exact values the same way the `SCANNING` timeout and `CONFIRMING` re-check were (`docs/planning/11-audit-findings.md`), and go through the same review-before-flash gate. The dataset and kiosk-side fixes (§2.2–§2.4, §4) don't touch hardware and can proceed independently. Track completion of both against `docs/planning/05-feature-build-checklist.md` once work starts — add a stage there rather than duplicating status tracking in a third place.

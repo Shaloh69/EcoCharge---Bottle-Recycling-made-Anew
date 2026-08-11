@@ -4,7 +4,7 @@ The companion mobile app: account registration/login, QR-linking to a kiosk sess
 
 ## Stack
 
-Flutter (Dart SDK ^3.9). Talks to the real API (`ApiService`, base URL via `--dart-define=API_BASE_URL`, currently defaulting to the Render-hosted API — see `analyzation.md` §13 and §15, this changes once the self-hosting migration lands). Auth token persisted with `shared_preferences`.
+Flutter (Dart SDK ^3.9). Talks to the real API (`ApiService`, base URL via `--dart-define=API_BASE_URL`, currently defaulting to the Render-hosted API — see `../../docs/planning/09-system-analysis.md` §13 and §15, this changes once the self-hosting migration lands). Auth token persisted with `shared_preferences`.
 
 ## Real screens, not a default scaffold
 

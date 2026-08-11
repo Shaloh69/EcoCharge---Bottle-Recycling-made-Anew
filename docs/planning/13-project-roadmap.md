@@ -2,7 +2,7 @@
 
 **Update, 2026-08-11: two of this document's "still open" claims below are now resolved — self-hosting migration is done (Docker MySQL + Node API + admin console + AI server all live on `desktop-gklhcri`, Aiven/Supabase/Render decommissioned) and testing infrastructure now exists (`vitest`/`pytest`/a real E2E integration suite). Both corrected inline below rather than left contradicting `docs/planning/08-master-checklist.md`, which is the live tracker for both.**
 
-**Refreshed 2026-08-10.** The original plan (written when `server/server_main`/`server/server_AI` were empty scaffolds) has been substantially executed — Phases 0–5 are done, Phase 6 is functionally done but not yet visually redesigned, Phase 7 is resolved and built. This refresh marks each phase's real status and points to the documents that now track the remaining detail live (`analyzation.md`, `AUDIT.md`, `docs/planning/03-revamp-master.md`, `docs/planning/05-feature-build-checklist.md`) rather than re-listing every task here — dual-maintaining the same checklist in two places is exactly the kind of drift this refresh pass exists to close. Where a phase is done, this file states that plainly and moves on; where it isn't, the detail lives in the newer docs and this file links to it.
+**Refreshed 2026-08-10.** The original plan (written when `server/server_main`/`server/server_AI` were empty scaffolds) has been substantially executed — Phases 0–5 are done, Phase 6 is functionally done but not yet visually redesigned, Phase 7 is resolved and built. This refresh marks each phase's real status and points to the documents that now track the remaining detail live (`docs/planning/09-system-analysis.md`, `docs/planning/11-audit-findings.md`, `docs/planning/03-revamp-master.md`, `docs/planning/05-feature-build-checklist.md`) rather than re-listing every task here — dual-maintaining the same checklist in two places is exactly the kind of drift this refresh pass exists to close. Where a phase is done, this file states that plainly and moves on; where it isn't, the detail lives in the newer docs and this file links to it.
 
 ## Purpose
 
@@ -14,7 +14,7 @@ Unchanged: build toward one system, keep the paper and repo aligned (or document
 
 ## Primary End State
 
-Unchanged, and **now achieved at the code level**: a user can authenticate/start a kiosk session, deposit a bottle, have it detected and classified, receive credits, select a charging port, charge for the correct duration, see transaction feedback, and admins can monitor usage/credits/kiosk health. Verified end to end in `analyzation.md` §6–§7. What's *not* yet achieved is the operational surrounding: self-hosting, visual design, and evidence/testing — see Phase 8 below.
+Unchanged, and **now achieved at the code level**: a user can authenticate/start a kiosk session, deposit a bottle, have it detected and classified, receive credits, select a charging port, charge for the correct duration, see transaction feedback, and admins can monitor usage/credits/kiosk health. Verified end to end in `docs/planning/09-system-analysis.md` §6–§7. What's *not* yet achieved is the operational surrounding: self-hosting, visual design, and evidence/testing — see Phase 8 below.
 
 ## Phase 0: Alignment And Scope Freeze — **done**
 
@@ -26,7 +26,7 @@ Unchanged, and **now achieved at the code level**: a user can authenticate/start
 - Hardware: **more than originally confirmed** — the freeze said 1 servo, 4 relays, 4 current/voltage sensors; the real build is a conveyor (not a servo trapdoor) plus 3× ultrasonic sensors plus a Raspberry Pi Pico ADC bridge for sensor channels the ESP32 alone can't cover.
 
 **Still open from this phase, genuinely unresolved:**
-- [ ] **Backend stack divergence (Flask → Node) needs a thesis-narrative decision** — update the paper to describe the real stack, or explicitly document the divergence as a design decision. Tracked in `docs/PROJECT_ANALYSIS.md`'s software-stack table.
+- [ ] **Backend stack divergence (Flask → Node) needs a thesis-narrative decision** — update the paper to describe the real stack, or explicitly document the divergence as a design decision. Tracked in `docs/planning/10-paper-vs-repo-gap.md`'s software-stack table.
 - [ ] Formal architecture diagram (draw.io or similar) — tracked in `docs/planning/05-feature-build-checklist.md` Stage 3.
 - [ ] Thesis narrative updated for YOLO26 (replace YOLOv8 references) — decided 2026-03-15, completion not independently re-verified.
 
@@ -42,7 +42,7 @@ Unchanged, and **now achieved at the code level**: a user can authenticate/start
 
 ## Phase 2: Backend And Data Foundation — **done, different stack than planned**
 
-All the capabilities this phase called for (accounts, login/registration, transaction history, credit balance, kiosk sessions, bottle deposits, charging sessions, device telemetry, admin reporting) are implemented — in Node/Express/Prisma, not the Flask backend this phase originally specified. Full endpoint and schema inventory: `analyzation.md` §4 and §8. The original phase's task list (`flask db migrate`, `flask db upgrade`, Render env vars for a Flask deploy) no longer applies — Prisma migrations run automatically at server startup with self-healing logic (`src/startup.ts`), already verified working.
+All the capabilities this phase called for (accounts, login/registration, transaction history, credit balance, kiosk sessions, bottle deposits, charging sessions, device telemetry, admin reporting) are implemented — in Node/Express/Prisma, not the Flask backend this phase originally specified. Full endpoint and schema inventory: `docs/planning/09-system-analysis.md` §4 and §8. The original phase's task list (`flask db migrate`, `flask db upgrade`, Render env vars for a Flask deploy) no longer applies — Prisma migrations run automatically at server startup with self-healing logic (`src/startup.ts`), already verified working.
 
 ## Phase 3: Machine Learning Productization — **done**
 
@@ -54,7 +54,7 @@ All the capabilities this phase called for (accounts, login/registration, transa
 
 Every hardware responsibility this phase called for is implemented: relay control for charging ports, current sensing, ultrasonic bin-fullness sensing, conveyor actuation (the design uses a conveyor rather than the servo/trapdoor concept originally scoped — a real, worth-stating-explicitly design decision), a real host-device HTTP polling protocol, structured telemetry, and fail-safe behavior (relays confirmed to default OFF on any reboot, `relay_control.c:43`).
 
-**Still open, exact fix values already proposed in `AUDIT.md`, pending sign-off before flashing:**
+**Still open, exact fix values already proposed in `docs/planning/11-audit-findings.md`, pending sign-off before flashing:**
 - [ ] `SCANNING` state has no timeout (conveyor can nudge indefinitely under specific failure conditions)
 - [ ] `CONFIRMING` state doesn't re-check the bin sensor before finalizing a reject
 - [ ] Device/AI API key rotation (currently committed in firmware history, must be treated as compromised)
@@ -63,7 +63,7 @@ Full technical detail: `docs/planning/03-revamp-master.md` §2–§3.
 
 ## Phase 5: Local Kiosk Orchestrator — **done, different shape than planned**
 
-This phase assumed a separate orchestrator service. **Confirmed in `analyzation.md`: there isn't one, and the system doesn't need one** — the kiosk web app's browser *is* the orchestrator. It calls the AI server directly (via its own server-side `/api/detect` proxy, keeping the AI key off the client) and the Node API directly, manages the session flow client-side, and reacts to SSE events for bin confirmation and charging status. This satisfies the phase's actual goal (camera inference, device control, user flow, and backend communication coordinated from one place) without the extra service the original plan assumed would be necessary.
+This phase assumed a separate orchestrator service. **Confirmed in `docs/planning/09-system-analysis.md`: there isn't one, and the system doesn't need one** — the kiosk web app's browser *is* the orchestrator. It calls the AI server directly (via its own server-side `/api/detect` proxy, keeping the AI key off the client) and the Node API directly, manages the session flow client-side, and reacts to SSE events for bin confirmation and charging status. This satisfies the phase's actual goal (camera inference, device control, user flow, and backend communication coordinated from one place) without the extra service the original plan assumed would be necessary.
 
 ## Phase 6: Kiosk UI And Admin Dashboard — **functional, not yet visually redesigned**
 
@@ -71,7 +71,7 @@ Both apps are real, live, and wired to the real backend — the original phase's
 
 ## Phase 7: Mobile App Decision And Delivery — **resolved: kept, and built**
 
-Option A (keep Flutter in scope) was chosen and executed — further than this phase's own task list describes. Login/registration, credit balance, transaction/deposit history, kiosk-QR scan, and charging view/stop are all real and API-integrated (`analyzation.md` §13). **Not done:** notifications/alerts (not found in the current screen inventory), and — same as the other two surfaces — the visual redesign per `docs/planning/02-design-mandate.md` §5.
+Option A (keep Flutter in scope) was chosen and executed — further than this phase's own task list describes. Login/registration, credit balance, transaction/deposit history, kiosk-QR scan, and charging view/stop are all real and API-integrated (`docs/planning/09-system-analysis.md` §13). **Not done:** notifications/alerts (not found in the current screen inventory), and — same as the other two surfaces — the visual redesign per `docs/planning/02-design-mandate.md` §5.
 
 ## Phase 8: Testing, Validation, And Thesis Evidence — **testing infra done 2026-08-11, evidence pack partially done**
 
@@ -82,7 +82,7 @@ Required validation scenarios (unchanged from the original plan, still all open)
 ## Workstream Backlog By Area — current state
 
 ### Machine Learning — mostly done
-Dataset and label policy documented in `SELF_HOSTING.md`; production model versions frozen (YOLO26); inference behind a stable interface (`POST /api/detect`). **Not done:** a defined rejection/confidence policy beyond the existing 0.40 detection threshold and 0.70 ml-review flag threshold — worth confirming these are the final, intentional values rather than leftover defaults.
+Dataset and label policy documented in `docs/planning/12-self-hosting-guide.md`; production model versions frozen (YOLO26); inference behind a stable interface (`POST /api/detect`). **Not done:** a defined rejection/confidence policy beyond the existing 0.40 detection threshold and 0.70 ml-review flag threshold — worth confirming these are the final, intentional values rather than leftover defaults.
 
 ### Firmware — done except the two flagged edge cases
 Relay control, sensor modules, a real HTTP polling protocol, and fail-safe behavior are all implemented. Two specific gaps remain, both scoped with exact proposed values — see Phase 4 above.
@@ -103,7 +103,7 @@ Standardized build commands: partially true (each service has its own `package.j
 
 The original 10-step order (scope freeze → backend → orchestrator → firmware → ML → kiosk UI → admin dashboard → integration test → pilot → evidence) is **effectively complete through step 7** — what's left is a different order than the original plan anticipated, because the remaining work isn't sequential build-out anymore, it's operationalization:
 
-1. Self-hosting migration (`docs/planning/03-revamp-master.md` §1) — blocks a real pilot deployment.
+1. ~~Self-hosting migration (`docs/planning/03-revamp-master.md` §1) — blocks a real pilot deployment.~~ **Done 2026-08-11** (`docs/planning/08-master-checklist.md` Phase A). **But see the 2026-08-12 entry in `memory.md`**: the deployed services did not survive the machine reboot on 2026-08-11 (a Scheduled-Task registration defect), so "migrated" is not yet the same as "durably running".
 2. Key rotation + the two firmware fixes (same document, §2–§3) — blocks safely reflashing hardware.
 3. The `ml-review` gate product decision (§3.1) — blocks writing the "low-confidence detection flow" test in Phase 8.
 4. Design revamp execution (`docs/planning/02-design-mandate.md`, tracked live in `docs/planning/08-master-checklist.md` Phase E) — blocks taking the UI screenshots the thesis evidence pack needs.
@@ -123,7 +123,7 @@ EcoCharge should be considered complete only when all of these are true:
 - admin monitoring is fully implemented — **functionally done, visual redesign pending**
 - mobile scope is either delivered or formally removed — **delivered**
 - end-to-end tests exist — **not started**
-- pilot evidence exists — **not started, blocked on self-hosting + hardware validation**
+- pilot evidence exists — **not started, blocked on hardware validation** (self-hosting itself landed 2026-08-11; its persistence across reboots is a separate open problem, see `memory.md` 2026-08-12)
 - the system can be demonstrated as one integrated product — **already true today**, even before the remaining items above are finished
 
 ## Final Planning Note (refreshed)

@@ -6,6 +6,100 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-08-12 (5th session) — Folder scatter fixed structurally: everything planning/status/reference is now one numbered series under `docs/planning/`; two documents retired outright
+
+**The root cause the 2026-08-12 reset named — "no single file is structurally forced to be the one a session updates" — is closed by consolidation, not by another correction pass.** Root and `docs/` no longer hold planning documents at all; only `README.md` (pointer-only) and `memory.md` remain at root, matching EngiRent's own convention. All moves done via `git mv`, so history is preserved on every file.
+
+| Was | Now | Why |
+|---|---|---|
+| `analyzation.md` (root) | `docs/planning/09-system-analysis.md` | Kept — it is the code-verified *system* reference (architecture, data model, API surface, hardware map, FSMs). Renamed because "analyzation" vs. "PROJECT_ANALYSIS" was the confusable pair. |
+| `docs/PROJECT_ANALYSIS.md` | `docs/planning/10-paper-vs-repo-gap.md` | Kept — **not** a duplicate of the above, as the reset suspected. It is thesis-paper-vs-repository gap analysis, a genuinely different job. The near-duplicate impression came entirely from the two names, so the new name states the actual purpose. |
+| `AUDIT.md` (root) | `docs/planning/11-audit-findings.md` | Kept — still the only place the two firmware fixes' exact proposed values live. |
+| `SELF_HOSTING.md` (root) | `docs/planning/12-self-hosting-guide.md` | Kept — its hosting sections are superseded (own banner says so) but the from-scratch model-training walkthrough is still the only copy. |
+| `docs/PROJECT_PLAN.md` | `docs/planning/13-project-roadmap.md` | Kept — phase roadmap and milestone ordering, still the only narrative account of *why* the phases are ordered as they are. |
+| `docs/design/README.md` | `docs/design-screenshots/README.md` | Moved to sit with the screenshots it indexes (the 2026-08-12 screenshot move left it orphaned pointing at paths that no longer existed). `docs/design/` is now gone entirely. |
+| `DESIGN.md` (root) | **RETIRED** | Fully superseded, verified before deleting: its banned-patterns list and token table both exist in `02-design-mandate.md` (§1 and §2, confirmed by direct grep — `#16A34A`/`#FBBF24` and the full banned table are there), and its "Redesign execution status" section was the *third* confirmed staleness incident, superseded by `08-master-checklist.md` Phase E. Nothing unique remained. |
+| `docs/CHECKLIST.md` | **RETIRED** | Strict subset of `08-master-checklist.md` (35 lines vs. 157), with a header dated 2026-08-10 over 2026-08-11 body content. Its two genuinely unique open decisions (thesis-narrative backend-stack divergence; language scope beyond English) were **not** lost — folded into `08-master-checklist.md` as real `[!]` items. |
+
+**Cross-references updated everywhere except `memory.md` itself — a deliberate call.** 163 references across 22 files were rewritten (all of `docs/`, the root `README.md`, and every subproject `README.md`; the subproject ones also needed their `../../` relative prefixes rebuilt, which the naive rewrite got wrong at first and was caught by checking). `memory.md`'s own 29 references were **left as written**: this file is a dated historical log, and silently rewriting old entries to cite filenames that didn't exist when those entries were written would falsify the record. Use the table above to map an old name to its current location.
+
+**How to apply:** there is now exactly one place a planning/status document can live — `docs/planning/`, numbered. Don't create a new status file at root or in `docs/`; extend the numbered series or update `08-master-checklist.md`. `docs/evidence/` stays separate on purpose (thesis artifacts, not planning).
+
+---
+
+## 2026-08-12 (5th session) — CRITICAL: API, Admin Console and AI server have been DOWN ~7 hours; the "not verified across a reboot" caveat got tested for real and failed. All five public tunnel URLs are dead.
+
+**This is the ground-zero reset's first real payoff — a `[x]` that did not survive contact with the live system.** `08-master-checklist.md` line 16 carried an explicit honest caveat: *"Not verified: behavior across an actual reboot (inferred from the training-task pattern, not independently tested)."* The machine rebooted **2026-08-11 20:09:17**. The inference was wrong. Confirmed by direct measurement, not assumption:
+
+- **All five `trycloudflare.com` URLs recorded in `08-master-checklist.md` are NXDOMAIN** (`curl` exit 6, `nslookup` "Non-existent domain"), while general internet resolves fine. Not a local network problem — the tunnels are genuinely gone.
+- **On the tailnet: ports 30010 (API), 30011 (Admin Console), 30012 (AI server) time out; only 30013 (Kiosk Web) and 30014 (Website) answer 200.** `netstat` on the host confirms only 30013/30014 are in LISTENING state — the other three services are not running at all.
+- **Docker MySQL is fine** (`ecocharge-mysql`, Up 7 hours, healthy) — Docker Desktop's restart policy brought it back independently of Task Scheduler.
+
+**Real root cause, found by diffing a dead task against a live one — it is not a crash, it is a task-registration defect:**
+
+| Task | Run As User | Logon Mode | Survived reboot? |
+|---|---|---|---|
+| `EcoChargeAPI`, `EcoChargeAdminConsole`, `EcoChargeAIServer`, `EcoChargeTunnelAPI`, `EcoChargeTunnelAdmin`, `EcoChargeTunnelAI` | `transfer` | **Interactive only** | **No** |
+| `EcoChargeKioskWeb`, `EcoChargeWeb`, `EcoChargeTunnelKiosk`, `EcoChargeTunnelWeb` | `SYSTEM` | Interactive/Background | Yes |
+
+A Scheduled Task registered under a normal user account without stored credentials gets Logon Mode "Interactive only", which **cannot fire an `ONSTART` trigger** — there is no interactive session at boot. The six tasks created earlier (as `transfer`) silently never started; the four created later (as `SYSTEM`) did. `EcoChargeAPI`'s Last Run Time is still 11/08 09:05 — the previous session's *manual* `schtasks /Run`, which is why it looked healthy then and has looked healthy in every doc since.
+
+**Consequence worth stating plainly:** the Kiosk Web and Website staging instances are *up but non-functional* — they're serving pages that call an API tunnel hostname that no longer resolves. "Reachable" and "working" came apart here.
+
+**Fix identified but NOT APPLIED — blocked by the Claude Code auto-mode classifier**, which denied both `schtasks /Create` (re-register the six as `/RU SYSTEM`, the real durable fix) and the lesser `schtasks /Run` (bring them up now). Needs the user's go-ahead or a Bash permission rule. Pre-checked and safe: the launchers use bare `node`/`npm`/`cloudflared` (machine PATH — already proven resolvable under SYSTEM by the four working tasks) and an absolute venv path for the AI server, so nothing in them is user-profile-scoped.
+
+**Second-order consequence once the tunnels do restart: every URL rotates again.** `esp/ecocharge/include/config.h`, `client/flutter_app/lib/services/api_service.dart`, `kiosk_web/.env.local`, `web_console`'s build-time `NEXT_PUBLIC_API_URL`, and the API's `ALLOWED_ORIGINS` all hardcode the old dead hostnames and will all need re-pointing. This is the accepted-risk-of-quick-tunnels tradeoff (2026-08-11) materializing for the first time — the user accepted it on the premise "the pc will never turn off"; the PC did turn off.
+
+**How to apply:** don't trust a Task-Scheduler-backed service on this machine until its Logon Mode reads Interactive/Background — "the task exists and Status: Ready" is not evidence it runs. `Ready` means *not currently running*. See [[reference-desktop-gklhcri-access]], whose persistence pattern is correct but under-specified: it says register a Scheduled Task with `/SC ONSTART`, and omits that `/RU SYSTEM` is load-bearing.
+
+---
+
+## 2026-08-12 (same day, later still) — Mobile App template/animated-background gap closed, screenshot folder reorganized to match EngiRent's convention exactly
+
+**Mobile App had no explicit template references at all**, unlike every other surface in this document and unlike EngiRent's own Phone App section — closed by locking three real Figma Community references (Loyalify, Wallet App UI Kit, Rewards and Discounts App UI Kit), all wallet/loyalty-genre, cross-checked against EngiRent's e-commerce/rental Flutter kits and confirmed non-overlapping. The Wallet App UI Kit reference also formalizes a direction `docs/design/README.md` had already informally adopted (Mobbin's wallet-balance pattern) but that was never written into the mandate itself.
+
+**Mobile App also had no animated background specified** — the one surface the falling-leaves motif (§4.5, chosen for Kiosk, extended to the Website) never reached. Closed with `flutter_floating_particles`'s real, published `ParticleConfig.fallingLeaves` config for auth/onboarding screens — same placement as EngiRent's Phone App `mesh_gradient` background, deliberately different technique (particle system vs. fragment-shader gradient), and it completes the leaf motif across all three consumer-facing surfaces that share the "Clean Energy Reward" identity.
+
+**Screenshot folder reorganized to match EngiRent's `docs/design-screenshots/` convention exactly, per direct instruction.** Moved from `docs/design/screenshots/<surface>/NN-name-BEFORE.png` (nested, numbered) to a top-level `docs/design-screenshots/` with flat `<surface>-<screen>[-before].png` naming, a `reference/` subfolder (mascot deck exports, unchanged), and a `deployed/` subfolder for real-tunneled-instance verification screenshots — same three-tier structure EngiRent already uses (flat surface files + `reference`-equivalent + `deployed`). `docs/design/README.md` kept in place as the narrative index (its own fate — merge into `DESIGN.md` or not — is still an open folder-consolidation call for a future session, per the earlier 2026-08-12 entry) but every file path inside it updated to match the move. Done via `git mv`, so history is preserved on every file.
+
+**How to apply:** this is now the permanent screenshot-saving convention for this project — new screenshots from any future Phase E work go straight into `docs/design-screenshots/` using this flat, surface-prefixed naming, not back into the old nested structure.
+
+---
+
+## 2026-08-12 (same day, later) — Design mandate cross-checked directly against EngiRent's; real template overlap found and fixed, strict light/dark dual-palette rule added
+
+**Direct line-by-line comparison of `02-design-mandate.md` against EngiRent's own `02-design-mandate.md` §3, ordered because the two theses' admin consoles need to read as different products, not a shared template re-skinned twice.** Real finding: the 2026-08-11 correction that moved the Admin Console's structural reference away from "EngiRent's own admin UI" didn't actually solve the problem — it pointed at `design-sparx/mantine-analytics-dashboard` and `qqharry21/nextjs-mantine-dashboard`, which are EngiRent's own primary/alternate Admin Console references too, plus TailAdmin (this doc's separate "templates to pull structure from" line), which EngiRent also cites. Three-for-three overlap, previously undetected because nobody had actually opened EngiRent's mandate and compared line-by-line.
+
+**Fixed**: both citations replaced with genre-matched alternatives found via real search 2026-08-12 — a Signal-style terminal/ops-monitoring dashboard pattern (Next.js + shadcn/ui, live device/incident-state views) and ThingsBoard's real IoT-platform information architecture (device list → detail → live telemetry → alarms), neither referenced by EngiRent anywhere and both a closer domain match for "kiosks are IoT devices reporting live telemetry" than a generic analytics-dashboard template ever was. Mantine itself stays as the component library — that choice already stood on independent technical merits (dense tables, dark mode) and isn't what was overlapping.
+
+**Two smaller overlaps also found and fixed**: the Website's "Pages to build" line still said "using Velora UI's real page set as the starting skeleton" — a leftover from before the 2026-08-11 correction that explicitly moved away from Velora's page compositions, never updated to match; fixed to reference Taxonomy/OpenStacked instead, consistent with the correction already made just above it. The Kiosk's "Self Service Kiosk" Figma Community citation (§4.5) turned out to be the exact same file EngiRent's own §4.6 cites — flagged in place as a minor, explicitly non-load-bearing secondary reference rather than removed outright, since the Kiosk's real layout authority is the EcoCharge-specific premade deck (§4.6), which has no EngiRent equivalent and already makes the two kiosks visually distinct regardless (dark Mondrian-block-assembly vs. light pill-shaped/wave-divider).
+
+**Real gap closed, direct instruction: light and dark modes must be independently authored palettes, not one derived by inverting the other, enforced strictly.** The Admin Console previously only had a dark ramp specified in this document (light mode was noted as "exists" with no actual values) — now has explicit light-mode hex values, deliberately close-but-distinct from the Kiosk's own light palette so the two don't converge. Mobile App and Website got a real shared light/dark table for the first time (they previously just said "light + dark" with no values). Locked hard rule, mirrored directly from EngiRent's §1.3b: a light-mode primary/accent may never be used unlifted on a dark ground — dark-mode primary now has its own lifted value (`#34D399`), not a reused light-mode hex.
+
+**How to apply:** any future cross-surface template or reference decision in this document should be checked against EngiRent's `02-design-mandate.md` directly before being called "independent" — the 2026-08-11 correction shows that *intending* to differentiate isn't the same as verifying it, and this exact gap already recurred once.
+
+---
+
+## 2026-08-12 — Full ground-zero reset ordered: recurring doc-staleness confirmed a third time, folder structure flagged as inconsistent, `08-master-checklist.md`'s `[x]` marks stripped of automatic trust
+
+**Ordered from the sibling EngiRent project's session, via a cross-project documentation audit run there against this repo (a general-purpose agent read all 27 non-planning-06 docs in full and cross-checked them).** Real findings, not assumed:
+
+- **`00-start-here.md` itself went stale within the same session it kicked off, for the third confirmed time.** It documented the *start* of the 2026-08-11 4th session and was never updated after that session deployed Kiosk Web/Website, ran the doc audit, and did Phase E work — all three of which it still describes as not-yet-done. This is the same class of gap this file's own "Real doc-vs-reality drift" entries have flagged before, recurring in a new location (itself, this time) rather than being prevented by having been flagged once.
+- **A second, smaller instance of the same pattern in `README.md`**: the 4th session's doc-audit pass corrected it early on, but later same-session Phase E4 completion (Website screenshot-verified) was never back-ported — `README.md` still points at Phase E4 as open.
+- **A third instance inside `DESIGN.md`'s own "execution status" section**, stale relative to `08-master-checklist.md`'s more detailed, more current Phase E entries (dense-table pass and the §4.6 component catalog both show done in the checklist, still shown as the biggest gaps in `DESIGN.md`).
+- **An internal contradiction inside this very file**: the "Full documentation audit pass" entry below (2026-08-11) lists `04-continue-design-redo.md` as "confirmed still accurate" — but `DESIGN.md` and `05-feature-build-checklist.md` both say it was retired the same day, and the file is in fact gone. The audit-pass entry was written before the retirement decision landed and never revised.
+- **`analyzation.md` §8's avatar-upload description is stale and outside that file's own correction banner's scope** — still describes `POST /me/avatar` writing to a Supabase Storage bucket, which was rewritten to local-disk storage before the correction pass happened.
+- **`docs/PROJECT_ANALYSIS.md` has two table rows describing MySQL as still Aiven-hosted**, outside that file's own banner's scope, even though self-hosting is done and other sentences in the same file were corrected.
+- **Folder structure itself is inconsistent and likely a root cause of the recurring staleness, not just a cosmetic issue**: root-level `analyzation.md`/`AUDIT.md`/`DESIGN.md`/`SELF_HOSTING.md`, a separate `docs/` folder with its own `CHECKLIST.md`/`PROJECT_ANALYSIS.md`/`PROJECT_PLAN.md`, and only then the numbered `docs/planning/` folder — with at least three genuine near-duplicate pairs coexisting (`docs/CHECKLIST.md` vs. `08-master-checklist.md`; `analyzation.md` vs. `docs/PROJECT_ANALYSIS.md`; `DESIGN.md` vs. `02-design-mandate.md` vs. `docs/design/README.md`). No single file is structurally forced to be the one a session updates.
+- **The EngiRent-style hard-block "Update Required" app-version gate is confirmed absent as a planned Flutter feature** — the public Website has a real `/update-required` *page* with real release highlights, but nothing wires the Flutter app itself to check its version and redirect there. Named once, in this file's 2026-08-11 entry, as real future work, never scheduled anywhere else.
+- **`README.md`'s own suggested reading order omits both `08-master-checklist.md` (the actual current source of truth) and `06-must-have-app-features.md`** — a new reader following it as written would miss the two most load-bearing docs in the project.
+
+**Decision: full ground-zero reset, not another incremental correction pass.** Every `[x]` in `08-master-checklist.md` is downgraded to unverified-until-reconfirmed — not because the underlying work is assumed wrong, but because trust in old checkmarks has now produced three confirmed same-day staleness incidents, and the checklist's own stated discipline ("done" = live-verified, not just present in code) has to actually be re-earned rather than carried forward. See the rewritten `docs/planning/00-start-here.md` for the full reset work order, including a proposed folder-consolidation mapping and the specific stale claims listed above.
+
+**How to apply:** the next session should not re-run this same audit — the findings above are already real and cited. It should re-verify against the live deployed instances (not re-read the docs against each other again) and fix the folder scatter structurally, not just patch individual sentences.
+
+---
+
 ## 2026-08-11 (later same day, 4th session) — Playwright MCP confirmed genuinely working this session; the path-casing fix held
 
 **Confirmed via `ToolSearch` for `mcp__playwright__browser_navigate`/`browser_take_screenshot` — real schemas returned, not just names.** This is the first session where Playwright tool schemas actually load, after two prior sessions restarted specifically for this and still found nothing (see the "real root cause" entry immediately below). The `~/.claude.json` path-casing fix from that entry (copying the `mcpServers.playwright` block into all three path-variant keys) is what fixed it — no further action needed. Full Phase E screenshot-verification work can now proceed for real. This session picks up the interrupted combined task (tunnel consistency + doc audit + Phase E + app-distribution pages) from a completely fresh start.

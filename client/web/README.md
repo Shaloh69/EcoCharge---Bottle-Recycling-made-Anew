@@ -1,6 +1,6 @@
 # EcoCharge — Public Website
 
-The public-facing marketing/promotional site: what EcoCharge is, how it works, a real changelog, public docs, and the app download page. New surface, added 2026-08-10 — see `docs/planning/02-design-mandate.md` §6 for the full spec this was built against.
+The public-facing marketing/promotional site: what EcoCharge is, how it works, a real changelog, public docs, and the app download page. New surface, added 2026-08-10 — see `../../docs/planning/02-design-mandate.md` §6 for the full spec this was built against.
 
 ## Stack
 

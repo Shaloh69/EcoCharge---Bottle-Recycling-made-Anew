@@ -9,7 +9,7 @@ A reverse-vending kiosk that rewards PET bottle recycling with phone-charging cr
 3. On acceptance, the conveyor drops the bottle into the bin; a second, independent bin sensor confirms the drop before credits are awarded (1–3 credits, by volume tier).
 4. Credits pay for phone charging at one of four ports, each relay-switched and monitored for real-time voltage/current.
 
-Full, code-verified system documentation: [`analyzation.md`](analyzation.md).
+Full, code-verified system documentation: [`docs/planning/09-system-analysis.md`](docs/planning/09-system-analysis.md).
 
 ## Repository structure
 
@@ -18,7 +18,7 @@ Full, code-verified system documentation: [`analyzation.md`](analyzation.md).
 | [`client/kiosk_web`](client/kiosk_web) | Next.js 15 + shadcn/ui | The kiosk touchscreen UI — camera capture, deposit flow, charging flow |
 | [`client/web_console`](client/web_console) | Next.js 15 + Mantine + Recharts | Admin dashboard — live telemetry, CRUD, analytics, remote kiosk control |
 | [`client/flutter_app`](client/flutter_app) | Flutter | Companion mobile app — register/login, QR-link to a kiosk, balances, history |
-| [`client/web`](client/web) | Next.js + shadcn/ui | Public promotional website — how it works, changelog, docs, app download. Scaffolded 2026-08-10 (home/how-it-works/changelog/docs/about/download, all 6 routes build clean); visual polish and screenshot-verification still open, see `docs/planning/08-master-checklist.md` Phase E4 |
+| [`client/web`](client/web) | Next.js + shadcn/ui | Public promotional website — how it works, changelog, docs, app download, `/update-required`. Deployed and screenshot-verified 2026-08-11 (`docs/planning/08-master-checklist.md` Phase E4); `/download` serves a real release APK. Remaining: the formal `/design-review` + `avoid-ai-design` passes |
 | [`server/server_main`](server/server_main) | Node.js + Express + TypeScript + Prisma | Central API — auth, sessions, deposits, credits, charging, device commands, SSE, admin |
 | [`server/server_AI`](server/server_AI) | Python + FastAPI + PyTorch/Ultralytics | Two-stage bottle detection & classification inference service |
 | [`esp/ecocharge`](esp/ecocharge) | ESP32, ESP-IDF (PlatformIO), FreeRTOS | Kiosk hardware controller — conveyor, relays, sensors, bottle FSM, WiFi provisioning |
@@ -27,25 +27,31 @@ Full, code-verified system documentation: [`analyzation.md`](analyzation.md).
 
 ## Documentation map — start here, not with the code
 
-This project has been through several audit/rework passes; these documents are kept current and are the actual source of truth, in the order you'd read them:
+**All planning, status, and reference documents now live under [`docs/planning/`](docs/planning) in one numbered series** — consolidated 2026-08-12 from a previous scatter across the repo root and `docs/`, which had let three documents go stale independently while a more current one sat beside them. Only this file and `memory.md` remain at root. Read in this order:
 
 1. [`docs/planning/00-start-here.md`](docs/planning/00-start-here.md) — the current kickoff/status prompt. Read this first.
-2. [`analyzation.md`](analyzation.md) — full system audit, verified against real code (architecture, data model, API surface, hardware map, FSMs).
-3. [`AUDIT.md`](AUDIT.md) — a later, narrower pass: findings, fixes applied, and exact proposed values for the two firmware fixes still awaiting sign-off before any flash.
-4. [`docs/planning/03-revamp-master.md`](docs/planning/03-revamp-master.md) — the active migration/rework plan (self-hosting, security, design).
-5. [`docs/planning/02-design-mandate.md`](docs/planning/02-design-mandate.md) + [`DESIGN.md`](DESIGN.md) — the design system spec and its as-built execution status.
-6. [`docs/planning/07-ai-detection-improvements.md`](docs/planning/07-ai-detection-improvements.md) — the AI detection pipeline explained, a diagnosed real-world detection issue, and a dataset-expansion plan.
-7. [`docs/planning/05-feature-build-checklist.md`](docs/planning/05-feature-build-checklist.md) — remaining testing/evidence work.
-8. [`memory.md`](memory.md) — the cross-session decision log. Read this before re-raising something that's already been decided.
+2. [`docs/planning/08-master-checklist.md`](docs/planning/08-master-checklist.md) — **the single source of truth for what is actually done.** Every other status claim in this repo defers to it.
+3. [`docs/planning/09-system-analysis.md`](docs/planning/09-system-analysis.md) — full system audit, verified against real code (architecture, data model, API surface, hardware map, FSMs).
+4. [`docs/planning/11-audit-findings.md`](docs/planning/11-audit-findings.md) — a later, narrower pass: findings, fixes applied, and exact proposed values for the two firmware fixes still awaiting sign-off before any flash.
+5. [`docs/planning/03-revamp-master.md`](docs/planning/03-revamp-master.md) — the active migration/rework plan (self-hosting, security, design).
+6. [`docs/planning/02-design-mandate.md`](docs/planning/02-design-mandate.md) — the design system spec: banned patterns, tokens, the light/dark dual palette, per-surface screen specs, and the screenshot-verification loop. Evidence index: [`docs/design-screenshots/README.md`](docs/design-screenshots/README.md).
+7. [`docs/planning/06-must-have-app-features.md`](docs/planning/06-must-have-app-features.md) — the cross-surface feature bar every client app is held to.
+8. [`docs/planning/07-ai-detection-improvements.md`](docs/planning/07-ai-detection-improvements.md) — the AI detection pipeline explained, a diagnosed real-world detection issue, and a dataset-expansion plan.
+9. [`docs/planning/05-feature-build-checklist.md`](docs/planning/05-feature-build-checklist.md) — remaining testing/evidence work.
+10. [`memory.md`](memory.md) — the cross-session decision log. Read this before re-raising something that's already been decided.
 
-`docs/CHECKLIST.md` is a one-screen status board across all of the above.
+Also present: [`docs/planning/10-paper-vs-repo-gap.md`](docs/planning/10-paper-vs-repo-gap.md) (thesis-paper-vs-repository gap analysis), [`docs/planning/12-self-hosting-guide.md`](docs/planning/12-self-hosting-guide.md) (from-scratch setup + model-training walkthrough), [`docs/planning/13-project-roadmap.md`](docs/planning/13-project-roadmap.md) (phase roadmap), and [`docs/evidence/`](docs/evidence) (thesis evidence pack).
 
-## Current status (2026-08-11)
+## Current status (2026-08-12)
 
-The full bottle-to-credit-to-charge journey works end to end against real infrastructure — this is a functionally complete, integrated system, not a set of disconnected prototypes. **The self-hosting migration is done** (corrected 2026-08-11 — the below was stale): Aiven, Supabase, and Render are all fully decommissioned. Docker MySQL, the Node API, the admin console, and the AI server all run as persistent services on `desktop-gklhcri`, each on its own public Cloudflare quick tunnel — see `docs/planning/08-master-checklist.md` Phase A for live URLs and verification evidence. What's still in progress:
+The full bottle-to-credit-to-charge journey is implemented end to end — a functionally complete, integrated system, not a set of disconnected prototypes. Aiven, Supabase, and Render are all fully decommissioned; the system is self-hosted on `desktop-gklhcri`.
 
-- **Two firmware fixes** (a `SCANNING`-state timeout, a `CONFIRMING`-state bin-sensor re-check) — implemented in source, exact values from `AUDIT.md`, still awaiting the actual flash (needs physical hardware access + explicit sign-off, neither available remotely).
-- **Design revamp** — tokens and mandate defined (`DESIGN.md`, `docs/planning/02-design-mandate.md`); HeroUI has been dropped entirely from both Next.js apps (Mantine on the admin console, shadcn/ui on the kiosk), with a first real component/bug-fix pass done on both plus the new public website scaffolded — full current status, including what's still screenshot-unverified, in `docs/planning/08-master-checklist.md` Phase E.
+> **⚠️ The backend is currently DOWN and has been since the host rebooted on 2026-08-11 20:09.** The API, admin console, and AI server were registered as Scheduled Tasks under a normal user account, which yields Logon Mode "Interactive only" and **cannot fire an `ONSTART` trigger** — so none of them restarted. Kiosk Web and the Website (registered as `SYSTEM`) are still up, but they call an API tunnel hostname that no longer resolves, so they are reachable but non-functional. All five `trycloudflare.com` URLs recorded in Phase A are dead (NXDOMAIN). The fix (re-register the six tasks with `/RU SYSTEM`) is identified but not yet applied. Full detail: `memory.md`, 2026-08-12. **Treat every "verified live" claim dated 2026-08-11 or earlier as describing a system that is not currently running.**
+
+What's still in progress:
+
+- **Two firmware fixes** (a `SCANNING`-state timeout, a `CONFIRMING`-state bin-sensor re-check) — implemented in source, exact values from `docs/planning/11-audit-findings.md`, still awaiting the actual flash (needs physical hardware access + explicit sign-off, neither available remotely).
+- **Design revamp** — tokens and mandate defined (`docs/planning/02-design-mandate.md`); HeroUI has been dropped entirely from both Next.js apps (Mantine on the admin console, shadcn/ui on the kiosk), with a first real component/bug-fix pass done on both plus the new public website scaffolded — full current status, including what's still screenshot-unverified, in `docs/planning/08-master-checklist.md` Phase E.
 - **Testing infrastructure** — built 2026-08-11: `vitest` (backend), `pytest` (AI server), and a real integration suite against an isolated test database. See `docs/planning/08-master-checklist.md` Phase G.
 
 ## Running the system
@@ -56,7 +62,7 @@ The system now runs self-hosted on `desktop-gklhcri`, not Render/Aiven — see `
 # API server
 cd server/server_main && npm install && npm run dev
 
-# AI inference server (separate venv — see SELF_HOSTING.md)
+# AI inference server (separate venv — see docs/planning/12-self-hosting-guide.md)
 cd server/server_AI && .venv\Scripts\activate && uvicorn app.main:app --reload
 
 # Kiosk web / Admin console / public website
@@ -68,4 +74,4 @@ cd client/web && npm install && npm run dev
 cd client/flutter_app && flutter pub get && flutter run
 ```
 
-Local dev's `DATABASE_URL` needs either an SSH tunnel to `desktop-gklhcri`'s MySQL or a separate local instance — the live `.env` points at `127.0.0.1:13306`, which is only correct when running on that host itself (`docs/planning/08-master-checklist.md` Phase A, open item). `SELF_HOSTING.md` predates this migration (dated 2026-03-31, describes a Render/RunPod/NSSM-based setup) — it's kept for the from-scratch model-training walkthrough (still generally accurate) but its hosting/deployment sections describe a superseded approach; see that file's own correction banner.
+Local dev's `DATABASE_URL` needs either an SSH tunnel to `desktop-gklhcri`'s MySQL or a separate local instance — the live `.env` points at `127.0.0.1:13306`, which is only correct when running on that host itself (`docs/planning/08-master-checklist.md` Phase A, open item). `docs/planning/12-self-hosting-guide.md` predates this migration (dated 2026-03-31, describes a Render/RunPod/NSSM-based setup) — it's kept for the from-scratch model-training walkthrough (still generally accurate) but its hosting/deployment sections describe a superseded approach; see that file's own correction banner.

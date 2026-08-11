@@ -8,9 +8,9 @@ Next.js 15 (App Router), HeroUI, Tailwind CSS v4, Recharts. Auth is a JWT in `se
 
 ## Real pages, not a template
 
-All under `/dashboard`: overview (live SSE stats), kiosks (CRUD + device API key) and per-kiosk detail (live telemetry, relay/conveyor/bottle remote controls, command audit log), sessions, deposits, charging, credits (transaction ledger), users, alerts (kiosk offline / bin fullness), ml-review (low-confidence AI detections), analytics (kWh/credits/cost charts), settings (the tunable economics — credit tiers, energy budget, rate limits). Full endpoint-level detail in `analyzation.md` §10.
+All under `/dashboard`: overview (live SSE stats), kiosks (CRUD + device API key) and per-kiosk detail (live telemetry, relay/conveyor/bottle remote controls, command audit log), sessions, deposits, charging, credits (transaction ledger), users, alerts (kiosk offline / bin fullness), ml-review (low-confidence AI detections), analytics (kWh/credits/cost charts), settings (the tunable economics — credit tiers, energy budget, rate limits). Full endpoint-level detail in `../../docs/planning/09-system-analysis.md` §10.
 
-The kiosk remote-control channel (`POST /api/admin/kiosks/:id/command` — activate/deactivate a port, open/close/reverse the conveyor, approve/reject a bottle, ping) is real, working infrastructure — the strongest "admin can unstick a physical problem" capability in the whole system. See `docs/planning/06-must-have-app-features.md`'s appendix for why this is worth calling out specifically.
+The kiosk remote-control channel (`POST /api/admin/kiosks/:id/command` — activate/deactivate a port, open/close/reverse the conveyor, approve/reject a bottle, ping) is real, working infrastructure — the strongest "admin can unstick a physical problem" capability in the whole system. See `../../docs/planning/06-must-have-app-features.md`'s appendix for why this is worth calling out specifically.
 
 ## Running
 

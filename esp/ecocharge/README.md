@@ -1,6 +1,6 @@
 # EcoCharge ESP32 Kiosk Controller
 
-**Rewritten 2026-08-10 — the previous version of this README described an older firmware revision** (a servo-based conveyor gate, ACS712 + ADS1115 I2C sensing, no ultrasonic sensors, no bottle FSM, no Raspberry Pi Pico bridge). That's not what's actually running. This version is corrected against `analyzation.md` §11, verified directly from the real v2.0.0 source in `src/`/`include/` — if this ever drifts from the code again, treat the code and `analyzation.md` as authoritative, not this file.
+**Rewritten 2026-08-10 — the previous version of this README described an older firmware revision** (a servo-based conveyor gate, ACS712 + ADS1115 I2C sensing, no ultrasonic sensors, no bottle FSM, no Raspberry Pi Pico bridge). That's not what's actually running. This version is corrected against `../../docs/planning/09-system-analysis.md` §11, verified directly from the real v2.0.0 source in `src/`/`include/` — if this ever drifts from the code again, treat the code and `../../docs/planning/09-system-analysis.md` as authoritative, not this file.
 
 This folder contains the ESP-IDF firmware for the EcoCharge kiosk hardware controller. It runs on an ESP32 dev board (PlatformIO, `framework = espidf`, target `esp32dev`, huge_app partition) and manages every physical subsystem: the bottle conveyor, four charging-port relays, three ultrasonic sensors, and per-port current/voltage sensing (partly via a companion Raspberry Pi Pico — see `../pico_sensors`).
 
@@ -22,7 +22,7 @@ The ESP32 executes; it does not decide. It polls `GET /api/devices/commands` eve
 
 `src/bottle_fsm.c` runs `IDLE → SCANNING → DROPPING → CONFIRMING → (IDLE)`, with a `REJECTING` branch. The entrance ultrasonic sensor triggers entry into `SCANNING`; the conveyor nudges the bottle every 2s (`BOTTLE_SCAN_INTERVAL_MS`) for fresh camera angles while the kiosk web app runs AI detection. On accept, `DROPPING` fast-forwards the bottle into the bin (8s cap); `CONFIRMING` waits on the bin ultrasonic sensor to independently confirm the drop.
 
-**Two known gaps, not yet fixed, exact proposed values in `../../AUDIT.md`:** `SCANNING` currently has no timeout at all (can nudge indefinitely under specific failure conditions), and `CONFIRMING` doesn't re-sample the bin sensor before finalizing a reject on the `DROPPING` timeout. Both are firmware-level fixes awaiting explicit sign-off before flashing — see `../../docs/planning/03-revamp-master.md` §3.2–§3.3. **A third, separate issue** (bottles not reliably detected while in motion on the conveyor, a capture-timing problem on the kiosk-web side rather than firmware) is diagnosed in `../../docs/planning/07-ai-detection-improvements.md`.
+**Two known gaps, not yet fixed, exact proposed values in `../../docs/planning/11-audit-findings.md`:** `SCANNING` currently has no timeout at all (can nudge indefinitely under specific failure conditions), and `CONFIRMING` doesn't re-sample the bin sensor before finalizing a reject on the `DROPPING` timeout. Both are firmware-level fixes awaiting explicit sign-off before flashing — see `../../docs/planning/03-revamp-master.md` §3.2–§3.3. **A third, separate issue** (bottles not reliably detected while in motion on the conveyor, a capture-timing problem on the kiosk-web side rather than firmware) is diagnosed in `../../docs/planning/07-ai-detection-improvements.md`.
 
 ## Boot modes
 
@@ -92,7 +92,7 @@ Before flashing, set the server/device identity in `include/config.h`:
 #define AI_API_KEY        "your-ai-secret"
 ```
 
-**These are currently compile-time constants, and are treated as compromised since they're committed in git history** — key rotation (moving device/AI keys into NVS via the provisioning portal, the same pattern already used for WiFi credentials) is planned but not yet done. See `../../AUDIT.md` and `../../docs/planning/03-revamp-master.md` §2 item 3 before reflashing with new keys — this needs to happen as one coordinated change, not piecemeal.
+**These are currently compile-time constants, and are treated as compromised since they're committed in git history** — key rotation (moving device/AI keys into NVS via the provisioning portal, the same pattern already used for WiFi credentials) is planned but not yet done. See `../../docs/planning/11-audit-findings.md` and `../../docs/planning/03-revamp-master.md` §2 item 3 before reflashing with new keys — this needs to happen as one coordinated change, not piecemeal.
 
 WiFi credentials are entered at runtime via the provisioning page and stored in NVS — `WIFI_SSID_DEFAULT`/`WIFI_PASS_DEFAULT` in `config.h` are only a fallback for development, skipping the provisioning step.
 

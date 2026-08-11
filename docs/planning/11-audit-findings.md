@@ -28,7 +28,7 @@ Findings: **2 Critical, 4 High, 6 Medium, 4 Low.** Section 4 inventory (Knip on 
 
 ### [Critical] Device + AI API keys committed to git (firmware `config.h`)
 - **Where:** `esp/ecocharge/include/config.h` — `DEVICE_API_KEY`, `AI_API_KEY`, `RENDER_BASE_URL` as compile-time constants; the file is tracked and the keys are in history.
-- **What's wrong / correction to the prompt:** the keys must be treated as compromised (git history). However, the prompt's companion claim that "`.env` files with live DB credentials" are committed is **wrong** — verified via `git ls-files` and `git log --all`: no `.env`/`.env.local` file is tracked or ever was; only `.env.example` files are. The live-credential exposure is limited to the firmware header. (`analyzation.md` overstated this too.)
+- **What's wrong / correction to the prompt:** the keys must be treated as compromised (git history). However, the prompt's companion claim that "`.env` files with live DB credentials" are committed is **wrong** — verified via `git ls-files` and `git log --all`: no `.env`/`.env.local` file is tracked or ever was; only `.env.example` files are. The live-credential exposure is limited to the firmware header. (`docs/planning/09-system-analysis.md` overstated this too.)
 - **Fix:** needs your input — rotation and the code change must land together, and rotation happens outside this repo: (1) regenerate the kiosk's device key (admin console kiosk record) and the AI server's `AI_API_KEY`, (2) extend the existing NVS pattern (`nvs_config.c` currently stores only WiFi SSID/pass) to hold device/AI keys set via the provisioning portal, (3) reflash. Doing step 2 alone without coordinated rotation leaves the leaked keys valid; tell me when you're ready to rotate and I'll implement the NVS + portal changes in the same pass.
 
 ### [High] `SCANNING` has no timeout — conveyor can nudge forever
@@ -79,7 +79,7 @@ Findings: **2 Critical, 4 High, 6 Medium, 4 Low.** Section 4 inventory (Knip on 
   - `client/flutter_app/lib/models/mock_data.dart` — zero importers (verified by grep; `flutter` CLI not on this machine's PATH, so `flutter analyze` could not run — manual pass only). **Deleted.**
   - Knip, web_console — 7 unused files (`components/admin/DataTable.tsx`, `components/icons.tsx`, `components/primitives.ts`, `config/site.ts`, `lib/modal-styles.ts`, `lib/toast.ts`, `types/index.ts`). **Deleted.**
   - Knip, kiosk_web — 10 unused files (`components/icons.tsx`, `components/kiosk/FallingLeaves.tsx`, `components/kiosk/StatusCard.tsx`, `components/primitives.ts`, `config/fonts.ts`, `config/site.ts`, `hooks/useIdle.ts`, `lib/modal-styles.ts`, `lib/toast.ts`, `types/index.ts`). **Deleted.**
-  - `server/server_main/dist/` — **correction to the prompt/analyzation.md:** *not* tracked in git (verified `git ls-files`), just local build output. Nothing to delete from the repo.
+  - `server/server_main/dist/` — **correction to the audit prompt and `docs/planning/09-system-analysis.md`:** *not* tracked in git (verified `git ls-files`), just local build output. Nothing to delete from the repo.
 - **Note on `knip --fix`:** file deletions were applied manually after verifying each report line (HeroUI usage cross-checked by grep: only `@heroui/system` and `@heroui/toast` are genuinely imported). The full diff is in git for the PR-style review the prompt asks for.
 
 ### [Low] ~40 unused `@heroui/*` dependencies in each Next.js app (+ 6–7 unused devDeps, 2 unlisted eslint deps)

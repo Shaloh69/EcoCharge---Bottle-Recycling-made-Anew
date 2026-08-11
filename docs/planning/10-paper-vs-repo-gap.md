@@ -2,14 +2,14 @@
 
 **Update, 2026-08-11: the "Hosting" and "Testing" weaknesses this document's Executive Summary and Overall Maturity Assessment call out below are both resolved as of this date — self-hosting migration is done (Docker MySQL + Node API + admin console + AI server all live on `desktop-gklhcri`, Aiven/Supabase/Render decommissioned) and real test infrastructure now exists (`vitest`/`pytest`/an E2E integration suite). Left inline below rather than rewritten, since this document's own convention is dated refresh notes, not silent edits — see `docs/planning/08-master-checklist.md` Phases A and G for the live, current status of both.**
 
-**Refreshed 2026-08-10.** The original version of this document (2026-03-15) was written when `server/server_main` and `server/server_AI` were empty scaffolds and both client web apps were unmodified templates. That's no longer true — a real backend, a real AI inference service, and real firmware have existed and been independently verified since (`analyzation.md`, 2026-07-22; `AUDIT.md`, 2026-08-10). This refresh keeps the paper-vs-repo framing that made the original useful, but replaces the "what the repository actually contains" section and the gap table with current, code-verified status. Where the original document is quoted or referenced below, it's marked as historical.
+**Refreshed 2026-08-10.** The original version of this document (2026-03-15) was written when `server/server_main` and `server/server_AI` were empty scaffolds and both client web apps were unmodified templates. That's no longer true — a real backend, a real AI inference service, and real firmware have existed and been independently verified since (`docs/planning/09-system-analysis.md`, 2026-07-22; `docs/planning/11-audit-findings.md`, 2026-08-10). This refresh keeps the paper-vs-repo framing that made the original useful, but replaces the "what the repository actually contains" section and the gap table with current, code-verified status. Where the original document is quoted or referenced below, it's marked as historical.
 
 ## Purpose
 
 This document analyzes the EcoCharge project against two sources:
 
 1. The thesis paper `d:\Projects-Shem\Thesis\EcoCharge-Final-2.0.pdf`
-2. The current repository state — grounded in `analyzation.md` (verified against real code 2026-07-22) and `AUDIT.md` (a later, narrower pass, 2026-08-10), not re-derived from scratch here.
+2. The current repository state — grounded in `docs/planning/09-system-analysis.md` (verified against real code 2026-07-22) and `docs/planning/11-audit-findings.md` (a later, narrower pass, 2026-08-10), not re-derived from scratch here.
 
 The goal is unchanged from the original: show what the paper says EcoCharge should be, what's actually implemented, where the project is strong, where it's incomplete, and what still needs aligning before it's a complete thesis-grade product.
 
@@ -22,14 +22,14 @@ EcoCharge is described in the paper as a machine-learning-based bottle detection
 - A real, integrated backend (Node.js/Express/TypeScript/Prisma, not the Flask originally planned) implements auth, kiosk sessions, bottle deposits, credits, charging, device commands, telemetry, and admin operations — all verified against real routes and a real Prisma schema.
 - The ESP32 firmware implements the full hardware role the paper describes: conveyor control, 4-port relay charging, entrance/bin ultrasonic sensing, current/voltage sensing, and a real bottle-deposit finite state machine — not just the motor-control prototype the original analysis found.
 - The AI pipeline (YOLO26 detector → EfficientNet-B0 multi-head classifier) is a real, deployed inference service, not just training scripts.
-- The full bottle-to-credit-to-charge user journey is implemented end-to-end in code, verified step by step in `analyzation.md` §6–§7.
+- The full bottle-to-credit-to-charge user journey is implemented end-to-end in code, verified step by step in `docs/planning/09-system-analysis.md` §6–§7.
 
 **What's still genuinely incomplete, verified this session, not assumed:**
 
 - **Hosting**: the system still runs on Render + Aiven MySQL + Supabase Storage + a rotating Cloudflare quick-tunnel for the AI server — the self-hosting migration the team decided on (`docs/planning/03-revamp-master.md` §1) hasn't started.
 - **Design**: both web apps carry a custom color-token layer, but neither has been rebuilt against the actual design mandate (`docs/planning/02-design-mandate.md`) yet — no typography swap, no kiosk step-wizard flow, no animation stack on the Flutter app.
 - **Testing**: no automated tests exist anywhere in the repo — backend, AI server, or Flutter app.
-- **Two firmware fixes and a key rotation** are proposed with exact values (`AUDIT.md`) but deliberately not yet flashed, pending explicit sign-off.
+- **Two firmware fixes and a key rotation** are proposed with exact values (`docs/planning/11-audit-findings.md`) but deliberately not yet flashed, pending explicit sign-off.
 - **Thesis evidence pack** (formal architecture diagram, model evaluation report, pilot findings) has not been assembled.
 
 In plain terms: the paper-to-repo gap this document originally found — "a strong ML prototype, a separate motor-control firmware prototype, and placeholder client applications that have not yet been integrated" — is **closed**. The system is integrated and functionally real. What remains is hosting migration, visual design execution, hardware validation, and the evidence/testing work needed for a defense — which is a materially different, much narrower gap than the original analysis found.
@@ -76,7 +76,7 @@ Computer, camera bottle detector, touchscreen monitor, ESP32, servo motor, curre
 |---|---|---|
 | Python Flask | **Node.js + Express + TypeScript + Prisma** | Deliberate divergence — the team built the backend in a different stack than the paper specifies. This needs a thesis-narrative decision the same way the YOLO version did (see below): update the paper to describe the real stack, or document the divergence explicitly as a design decision. Not yet resolved either way as of this refresh. |
 | OpenCV, NumPy | Used within the AI service (`server/server_AI`) | Consistent |
-| MySQL | MySQL (Aiven-hosted currently, self-hosting migration planned) | Consistent |
+| MySQL | MySQL — **self-hosted in Docker on `desktop-gklhcri` (port 13306) since 2026-08-11**; Aiven decommissioned | Consistent (**row corrected 2026-08-12** — previously still said "Aiven-hosted currently, self-hosting migration planned") |
 | Flutter + Dart | Real Flutter app, calling the real API (`ApiService`) | Consistent, and further along than the paper's own description implies — this isn't a planned nice-to-have, it's built and functional |
 | Next.js | Two real Next.js 15 apps (kiosk web, admin console) | Consistent |
 | Tailwind CSS v4 | In use (`@theme` tokens in `styles/globals.css`) | Consistent |
@@ -91,7 +91,7 @@ Unchanged — the paper's survey data (78.8% supported a reward-based recycling 
 
 ### Repository Overview
 
-Top-level areas, current real structure per `analyzation.md` §2: `client/kiosk_web`, `client/web_console`, `client/flutter_app`, `server/server_main`, `server/server_AI`, `esp/ecocharge`, `esp/pico_sensors`, `scripts/`, `runs/`.
+Top-level areas, current real structure per `docs/planning/09-system-analysis.md` §2: `client/kiosk_web`, `client/web_console`, `client/flutter_app`, `server/server_main`, `server/server_AI`, `esp/ecocharge`, `esp/pico_sensors`, `scripts/`, `runs/`.
 
 ### `scripts/` and `runs/` — still the most mature, unchanged assessment
 
@@ -99,17 +99,17 @@ Training pipeline (`train_yolo.py`, `train_bottle_classifier.py`, `predict.py`, 
 
 ### `server/server_main` — real backend, not a Flask skeleton
 
-Node/Express/TypeScript/Prisma. Auth (JWT + guest), kiosk sessions, bottle-deposit FSM integration, credits ledger, charging sessions, device command queue + telemetry, admin CRUD + analytics + real-time SSE. Full endpoint inventory in `analyzation.md` §8. Security fixes (kiosk endpoint auth, bin-full guard) and operational fixes (guest rate limiting, stale-session sweep) landed 2026-08-10 — see `AUDIT.md` and `memory.md`.
+Node/Express/TypeScript/Prisma. Auth (JWT + guest), kiosk sessions, bottle-deposit FSM integration, credits ledger, charging sessions, device command queue + telemetry, admin CRUD + analytics + real-time SSE. Full endpoint inventory in `docs/planning/09-system-analysis.md` §8. Security fixes (kiosk endpoint auth, bin-full guard) and operational fixes (guest rate limiting, stale-session sweep) landed 2026-08-10 — see `docs/planning/11-audit-findings.md` and `memory.md`.
 
 ### `server/server_AI` — real inference service, not just training scripts
 
-FastAPI, two-stage pipeline (YOLO26 detector → `BottleAttributeNet` EfficientNet-B0, three heads: brand/volume/condition), `X-Api-Key` auth, `GET /health`. Hosted on a local PC behind a Cloudflare **quick** tunnel — the rotating-URL problem `analyzation.md` flagged is still unresolved (fix: `docs/planning/03-revamp-master.md` §1.2, move to Tailscale Serve).
+FastAPI, two-stage pipeline (YOLO26 detector → `BottleAttributeNet` EfficientNet-B0, three heads: brand/volume/condition), `X-Api-Key` auth, `GET /health`. Hosted on a local PC behind a Cloudflare **quick** tunnel — the rotating-URL problem `docs/planning/09-system-analysis.md` flagged is still unresolved (fix: `docs/planning/03-revamp-master.md` §1.2, move to Tailscale Serve).
 
 ### `esp/ecocharge` — real kiosk controller firmware, not a motor-control prototype
 
-The original analysis found "motor movement, AP mode networking, simple web control" and explicitly noted this was *not yet* the thesis kiosk controller — no relay control, no current sensing, no bin monitoring, no bottle-credit logic. **All of that gap is now closed**: v2.0.0 implements the full 5-state bottle FSM, 4-port relay charging with an independent 3600s watchdog, 3× HC-SR04 ultrasonic sensing (entrance + bin-top + bin-bottom), current/voltage sensing (including a Raspberry Pi Pico ADC bridge for the channels the ESP32's own ADC can't cover while WiFi is active), and a WiFi provisioning captive portal. Full hardware map in `analyzation.md` §11.
+The original analysis found "motor movement, AP mode networking, simple web control" and explicitly noted this was *not yet* the thesis kiosk controller — no relay control, no current sensing, no bin monitoring, no bottle-credit logic. **All of that gap is now closed**: v2.0.0 implements the full 5-state bottle FSM, 4-port relay charging with an independent 3600s watchdog, 3× HC-SR04 ultrasonic sensing (entrance + bin-top + bin-bottom), current/voltage sensing (including a Raspberry Pi Pico ADC bridge for the channels the ESP32's own ADC can't cover while WiFi is active), and a WiFi provisioning captive portal. Full hardware map in `docs/planning/09-system-analysis.md` §11.
 
-**Two known gaps, precisely scoped, not vague:** `SCANNING` has no timeout (can nudge a bottle indefinitely under specific failure conditions) and `CONFIRMING` doesn't re-check the bin sensor before finalizing a reject. Both have exact proposed fixes in `AUDIT.md`, deliberately not yet flashed pending review — see `docs/planning/03-revamp-master.md` §3.2–§3.3.
+**Two known gaps, precisely scoped, not vague:** `SCANNING` has no timeout (can nudge a bottle indefinitely under specific failure conditions) and `CONFIRMING` doesn't re-check the bin sensor before finalizing a reject. Both have exact proposed fixes in `docs/planning/11-audit-findings.md`, deliberately not yet flashed pending review — see `docs/planning/03-revamp-master.md` §3.2–§3.3.
 
 ### `client/kiosk_web` and `client/web_console` — real, functional, not yet visually redesigned
 
@@ -117,7 +117,7 @@ Both build and run real EcoCharge flows against the live API — this is a funda
 
 ### `client/flutter_app` — real, API-integrated, not a default scaffold
 
-The original analysis's "Hello World, no EcoCharge logic, no auth, no API integration" finding is fully superseded. Real screens (splash/onboarding, login/register, home, kiosk-QR scan, credit balance/transactions, deposit history, charging view/stop, profile) call the real API (`analyzation.md` §13). `lib/models/mock_data.dart`, the last leftover from the scaffold era, has been deleted (confirmed zero importers before removal). **Still open**: no visual redesign yet, no automated tests, no crash reporting found.
+The original analysis's "Hello World, no EcoCharge logic, no auth, no API integration" finding is fully superseded. Real screens (splash/onboarding, login/register, home, kiosk-QR scan, credit balance/transactions, deposit history, charging view/stop, profile) call the real API (`docs/planning/09-system-analysis.md` §13). `lib/models/mock_data.dart`, the last leftover from the scaffold era, has been deleted (confirmed zero importers before removal). **Still open**: no visual redesign yet, no automated tests, no crash reporting found.
 
 ## Paper-To-Repository Gap Analysis (refreshed)
 
@@ -125,9 +125,9 @@ The original analysis's "Hello World, no EcoCharge logic, no auth, no API integr
 | --- | --- | --- | --- |
 | ML bottle detection | YOLO-based detection integrated into kiosk | Real, deployed two-stage pipeline, live weights in `server/server_AI/models/` | **Done** |
 | Bottle attribute logic | Bottle validation and classification | Brand/volume/condition classifier, in production use via `/api/detect` | **Done** |
-| Full kiosk workflow | Bottle → credit → user session → charging | Implemented end to end in code, traced step-by-step in `analyzation.md` §6–§7 | **Done** (two firmware edge cases still open, see `AUDIT.md`) |
+| Full kiosk workflow | Bottle → credit → user session → charging | Implemented end to end in code, traced step-by-step in `docs/planning/09-system-analysis.md` §6–§7 | **Done** (two firmware edge cases still open, see `docs/planning/11-audit-findings.md`) |
 | Backend | Storage, dashboard, system data flow | Real Node/Express/Prisma API, all major route groups implemented | **Done** — stack differs from the paper (Node, not Flask); needs a thesis-narrative decision, not more code |
-| Database | MySQL, account/transaction storage | Real Prisma schema, 9+ tables, auto-migrated at startup | **Done** — still hosted on Aiven, not yet self-hosted |
+| Database | MySQL, account/transaction storage | Real Prisma schema, 9+ tables, auto-migrated at startup | **Done** — self-hosted in Docker on `desktop-gklhcri` since 2026-08-11 (**row corrected 2026-08-12** — previously still said "still hosted on Aiven, not yet self-hosted") |
 | User accounts | Register/login/account balance | Real JWT auth (registered + guest), credit balance tracked | **Done** |
 | Charging control | Four charging ports, relay/current monitoring | Real relay control + current/voltage sensing + independent safety watchdog | **Done** |
 | Sensor integration | Ultrasonic, current sensor, relay, servo | All implemented; 3× ultrasonic, current/voltage sensing (incl. Pico bridge), 4× relay, conveyor (not a servo trapdoor — a conveyor-belt design instead) | **Done**, with the design substituting a conveyor for the paper's servo/trapdoor concept — worth naming explicitly in the thesis write-up as an implementation decision |
@@ -171,7 +171,7 @@ The Flask prototype (`server_main/app/`) and 27 Knip-verified unused files acros
 
 ## Recommended Target Architecture — achieved
 
-The five-layer architecture the original analysis recommended (detection, device control, local orchestrator, backend, client) is now real: the kiosk web app itself is the local orchestrator (confirmed in `analyzation.md` — there's no separate orchestrator process; the browser calls the AI server and the Node API directly), sitting alongside the other four layers exactly as originally recommended.
+The five-layer architecture the original analysis recommended (detection, device control, local orchestrator, backend, client) is now real: the kiosk web app itself is the local orchestrator (confirmed in `docs/planning/09-system-analysis.md` — there's no separate orchestrator process; the browser calls the AI server and the Node API directly), sitting alongside the other four layers exactly as originally recommended.
 
 ## Overall Maturity Assessment (refreshed)
 
