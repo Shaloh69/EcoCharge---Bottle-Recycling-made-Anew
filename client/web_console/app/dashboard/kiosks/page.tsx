@@ -1,24 +1,33 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  Button,
+  Card,
+  Group,
+  Skeleton,
+  Stack,
+  Text,
+  TextInput,
+  Title,
+} from "@mantine/core";
+import { ChevronRight, Plus } from "lucide-react";
 
 import { addToast } from "@/lib/toast";
 import { admin, type Kiosk } from "@/lib/api";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { BinGauge } from "@/components/admin/BinGauge";
 
-const glass = {
-  background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(20,184,166,0.18)",
-  backdropFilter: "blur(18px)",
-  WebkitBackdropFilter: "blur(18px)",
-  boxShadow: "0 4px 24px rgba(20,184,166,0.06)",
-};
-const dimText = (op: number) => ({ color: `rgba(255,255,255,${op})` });
-
+// A card-per-kiosk layout, not the shared DataTable, is deliberate here —
+// unlike the flat data pages (deposits/charging/credits/...), a kiosk needs
+// room for its bin gauge + status + location together, which a table row
+// doesn't showcase well. Real Mantine primitives throughout, no
+// glassmorphism/backdrop-blur (the pre-Mantine-rebuild version of this page
+// had both).
 export default function KiosksPage() {
   const router = useRouter();
   const [kiosks, setKiosks] = useState<Kiosk[]>([]);
+  const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newLocation, setNewLocation] = useState("");
@@ -30,7 +39,8 @@ export default function KiosksPage() {
       .then(setKiosks)
       .catch(() =>
         addToast({ title: "Failed to load kiosks", color: "danger" }),
-      );
+      )
+      .finally(() => setLoading(false));
   }, []);
 
   const createKiosk = async () => {
@@ -52,183 +62,141 @@ export default function KiosksPage() {
   };
 
   return (
-    <div className="p-6 md:p-8 space-y-6">
-      <div className="flex items-start justify-between">
+    <Stack gap="lg" p={{ base: "md", md: "xl" }}>
+      <Group align="flex-start" justify="space-between">
         <div>
-          <h1
-            className="text-2xl font-extrabold tracking-tight"
-            style={dimText(0.92)}
-          >
-            Kiosks
-          </h1>
-          <p className="text-sm mt-0.5" style={dimText(0.38)}>
+          <Title order={2}>Kiosks</Title>
+          <Text c="dimmed" size="sm">
             All registered kiosk units
-          </p>
+          </Text>
         </div>
-        <button
-          className="rounded-xl px-4 py-2 text-sm font-semibold"
-          style={{
-            background: "rgba(20,184,166,0.18)",
-            border: "1px solid rgba(20,184,166,0.45)",
-            color: "rgba(255,255,255,0.85)",
-          }}
+        <Button
+          color="voltTeal"
+          leftSection={<Plus size={16} />}
           onClick={() => {
             setCreating(true);
             setNewApiKey(null);
           }}
         >
-          + New Kiosk
-        </button>
-      </div>
+          New Kiosk
+        </Button>
+      </Group>
 
-      {/* Create form */}
       {creating && (
-        <div className="rounded-2xl p-5 space-y-3" style={glass}>
-          <p className="text-sm font-semibold" style={dimText(0.7)}>
+        <Card withBorder p="lg" radius="md">
+          <Text fw={600} mb="sm" size="sm">
             Create New Kiosk
-          </p>
+          </Text>
           {newApiKey ? (
-            <div className="space-y-3">
-              <p className="text-xs" style={dimText(0.65)}>
+            <Stack gap="sm">
+              <Text c="dimmed" size="xs">
                 Kiosk created! Copy this API key and flash it as{" "}
-                <code style={{ color: "#14b8a6" }}>DEVICE_API_KEY</code> in the
-                ESP firmware. It will not be shown again.
-              </p>
-              <p
-                className="text-xs font-mono break-all rounded-xl px-3 py-2"
+                <Text c="voltTeal" component="code">
+                  DEVICE_API_KEY
+                </Text>{" "}
+                in the ESP firmware. It will not be shown again.
+              </Text>
+              <Text
+                ff="monospace"
+                p="xs"
+                size="xs"
                 style={{
-                  background: "rgba(20,184,166,0.08)",
-                  color: "rgba(20,184,166,0.90)",
+                  wordBreak: "break-all",
+                  background: "var(--mantine-color-default)",
+                  borderRadius: 8,
                 }}
               >
                 {newApiKey}
-              </p>
-              <button
-                className="rounded-xl px-4 py-2 text-xs font-semibold"
-                style={{
-                  background: "rgba(255,255,255,0.07)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  color: "rgba(255,255,255,0.65)",
-                }}
+              </Text>
+              <Button
+                color="gray"
+                size="xs"
+                variant="default"
                 onClick={() => {
                   setCreating(false);
                   setNewApiKey(null);
                 }}
               >
                 Done
-              </button>
-            </div>
+              </Button>
+            </Stack>
           ) : (
-            <>
-              <input
+            <Stack gap="sm">
+              <TextInput
                 placeholder="Kiosk name (e.g. Kiosk-002)"
-                style={{
-                  width: "100%",
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  color: "rgba(255,255,255,0.85)",
-                  borderRadius: 10,
-                  padding: "8px 12px",
-                  fontSize: 13,
-                }}
                 value={newName}
-                onChange={(e) => setNewName(e.target.value)}
+                onChange={(e) => setNewName(e.currentTarget.value)}
               />
-              <input
+              <TextInput
                 placeholder="Location (e.g. Building B Lobby)"
-                style={{
-                  width: "100%",
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  color: "rgba(255,255,255,0.85)",
-                  borderRadius: 10,
-                  padding: "8px 12px",
-                  fontSize: 13,
-                }}
                 value={newLocation}
-                onChange={(e) => setNewLocation(e.target.value)}
+                onChange={(e) => setNewLocation(e.currentTarget.value)}
               />
-              <div className="flex gap-2">
-                <button
-                  className="rounded-xl px-4 py-2 text-xs font-semibold"
-                  style={{
-                    background: "rgba(20,184,166,0.18)",
-                    border: "1px solid rgba(20,184,166,0.45)",
-                    color: "rgba(255,255,255,0.85)",
-                  }}
-                  onClick={createKiosk}
-                >
+              <Group gap="xs">
+                <Button color="voltTeal" size="xs" onClick={createKiosk}>
                   Create
-                </button>
-                <button
-                  className="rounded-xl px-4 py-2 text-xs font-semibold"
-                  style={{
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.10)",
-                    color: "rgba(255,255,255,0.50)",
-                  }}
+                </Button>
+                <Button
+                  color="gray"
+                  size="xs"
+                  variant="default"
                   onClick={() => setCreating(false)}
                 >
                   Cancel
-                </button>
-              </div>
-            </>
+                </Button>
+              </Group>
+            </Stack>
           )}
-        </div>
+        </Card>
       )}
 
-      {/* Kiosk list */}
-      <div className="grid gap-4">
-        {kiosks.length === 0 && (
-          <div
-            className="rounded-2xl p-8 text-center text-sm"
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.07)",
-              color: "rgba(255,255,255,0.25)",
-            }}
-          >
-            No kiosks found. Create one above.
-          </div>
-        )}
-        {kiosks.map((k) => (
-          <button
-            key={k.id}
-            className="rounded-2xl p-5 w-full text-left cursor-pointer hover:border-teal-400/40 transition-all"
-            style={glass}
-            type="button"
-            onClick={() => router.push(`/dashboard/kiosks/${k.id}`)}
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="font-bold text-base" style={dimText(0.9)}>
-                  {k.name}
-                </h3>
-                <p className="text-xs mt-0.5" style={dimText(0.42)}>
-                  {"📍 "}
-                  {k.location}
-                </p>
-                <p className="text-[10px] mt-1" style={dimText(0.28)}>
-                  Last seen:{" "}
-                  {k.last_seen_at
-                    ? new Date(k.last_seen_at).toLocaleString()
-                    : "Never"}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <StatusBadge status={k.status} />
-                <span className="text-xs" style={dimText(0.35)}>
-                  →
-                </span>
-              </div>
-            </div>
-            <BinGauge level={k.bin_level ?? 0} />
-            <p className="text-[10px] mt-2 text-right" style={dimText(0.28)}>
-              Click to manage →
-            </p>
-          </button>
-        ))}
-      </div>
-    </div>
+      <Skeleton radius="md" visible={loading}>
+        <Stack gap="md">
+          {kiosks.length === 0 && !loading && (
+            <Card withBorder p="xl" radius="md">
+              <Text c="dimmed" size="sm" ta="center">
+                No kiosks found. Create one above.
+              </Text>
+            </Card>
+          )}
+          {kiosks.map((k) => (
+            <Card
+              key={k.id}
+              withBorder
+              component="button"
+              p="lg"
+              radius="md"
+              style={{ cursor: "pointer", textAlign: "left" }}
+              onClick={() => router.push(`/dashboard/kiosks/${k.id}`)}
+            >
+              <Group align="flex-start" justify="space-between" mb="md">
+                <div>
+                  <Text fw={700} size="md">
+                    {k.name}
+                  </Text>
+                  <Text c="dimmed" mt={2} size="xs">
+                    📍 {k.location}
+                  </Text>
+                  <Text c="dimmed" mt={4} size="10px">
+                    Last seen:{" "}
+                    {k.last_seen_at
+                      ? new Date(k.last_seen_at).toLocaleString()
+                      : "Never"}
+                  </Text>
+                </div>
+                <Group gap="xs">
+                  <StatusBadge status={k.status} />
+                  <ChevronRight color="var(--mantine-color-dimmed)" size={16} />
+                </Group>
+              </Group>
+              <BinGauge level={k.bin_level ?? 0} />
+              <Text c="dimmed" mt="xs" size="10px" ta="right">
+                Click to manage →
+              </Text>
+            </Card>
+          ))}
+        </Stack>
+      </Skeleton>
+    </Stack>
   );
 }

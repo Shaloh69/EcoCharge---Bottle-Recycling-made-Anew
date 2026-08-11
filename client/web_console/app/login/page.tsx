@@ -80,7 +80,7 @@ export default function LoginPage() {
           <ThemeIcon color="ecoGreen" radius="md" size={48} variant="light">
             <Leaf size={26} />
           </ThemeIcon>
-          <Title order={2} ta="center" fw={700}>
+          <Title fw={700} order={2} ta="center">
             EcoCharge
           </Title>
           <Text

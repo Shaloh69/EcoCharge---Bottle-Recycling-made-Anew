@@ -1,5 +1,16 @@
 "use client";
 import { useEffect, useState } from "react";
+import {
+  Button,
+  Card,
+  Divider,
+  Group,
+  NumberInput,
+  Skeleton,
+  Stack,
+  Text,
+  Title,
+} from "@mantine/core";
 
 import { addToast } from "@/lib/toast";
 import { admin } from "@/lib/api";
@@ -28,19 +39,49 @@ const DEFAULTS: Settings = {
   electricity_rate_php_per_kwh: "11.0",
 };
 
-const GLASS = {
-  background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(255,255,255,0.09)",
-  backdropFilter: "blur(18px)",
-  WebkitBackdropFilter: "blur(18px)",
-} as const;
-
-const inputStyle: React.CSSProperties = {
-  background: "rgba(255,255,255,0.06)",
-  border: "1px solid rgba(255,255,255,0.12)",
-  color: "rgba(255,255,255,0.88)",
-  outline: "none",
-};
+function SettingRow({
+  label,
+  sub,
+  value,
+  onChange,
+  unit,
+  min,
+  step,
+}: {
+  label: string;
+  sub: string;
+  value: string;
+  onChange: (v: string) => void;
+  unit: string;
+  min: number;
+  step: number;
+}) {
+  return (
+    <Group justify="space-between" py="sm" wrap="nowrap">
+      <div>
+        <Text fw={500} size="sm">
+          {label}
+        </Text>
+        <Text c="dimmed" size="xs">
+          {sub}
+        </Text>
+      </div>
+      <NumberInput
+        min={min}
+        rightSection={
+          <Text c="dimmed" pr={4} size="xs">
+            {unit}
+          </Text>
+        }
+        rightSectionWidth={44}
+        step={step}
+        value={value}
+        w={110}
+        onChange={(v) => onChange(String(v))}
+      />
+    </Group>
+  );
+}
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
@@ -50,18 +91,15 @@ export default function SettingsPage() {
   useEffect(() => {
     admin
       .settings()
-      .then((s) => {
-        setSettings({ ...DEFAULTS, ...(s as Settings) });
-        setLoading(false);
-      })
-      .catch(() => {
-        setLoading(false);
+      .then((s) => setSettings({ ...DEFAULTS, ...(s as Settings) }))
+      .catch(() =>
         addToast({
           title: "Failed to load settings",
           description: "Could not fetch settings from server.",
           color: "danger",
-        });
-      });
+        }),
+      )
+      .finally(() => setLoading(false));
   }, []);
 
   const set = (key: keyof Settings, val: string) =>
@@ -91,360 +129,153 @@ export default function SettingsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="p-6 md:p-8 space-y-6">
-        <div>
-          <h1
-            className="text-2xl font-extrabold tracking-tight"
-            style={{ color: "rgba(255,255,255,0.92)" }}
-          >
-            Settings
-          </h1>
-        </div>
-        <div className="animate-pulse space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-40 rounded-2xl"
-              style={{ background: "rgba(255,255,255,0.04)" }}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-6 md:p-8 space-y-6">
+    <Stack gap="lg" maw={640} p={{ base: "md", md: "xl" }}>
       <div>
-        <h1
-          className="text-2xl font-extrabold tracking-tight"
-          style={{ color: "rgba(255,255,255,0.92)" }}
-        >
-          Settings
-        </h1>
-        <p
-          className="text-sm mt-0.5"
-          style={{ color: "rgba(255,255,255,0.38)" }}
-        >
+        <Title order={2}>Settings</Title>
+        <Text c="dimmed" size="sm">
           System configuration and credit tiers
-        </p>
+        </Text>
       </div>
 
-      <div className="space-y-5 max-w-2xl">
-        {/* Credit Tiers */}
-        <div className="rounded-2xl p-6" style={GLASS}>
-          <h2
-            className="text-sm font-bold mb-0.5"
-            style={{ color: "rgba(255,255,255,0.80)" }}
-          >
-            Credit Tiers (by volume)
-          </h2>
-          <p
-            className="text-xs mb-5"
-            style={{ color: "rgba(255,255,255,0.35)" }}
-          >
-            Credits awarded when a bottle is deposited, based on volume.
-          </p>
-          <div className="space-y-1">
-            {[
-              {
-                label: `Small bottle (≤${settings.credit_tier_s_max_ml}ml)`,
-                key: "credit_tier_s_credits" as keyof Settings,
-              },
-              {
-                label: `Medium bottle (${settings.credit_tier_s_max_ml}–${settings.credit_tier_m_max_ml}ml)`,
-                key: "credit_tier_m_credits" as keyof Settings,
-              },
-              {
-                label: `Large bottle (>${settings.credit_tier_m_max_ml}ml)`,
-                key: "credit_tier_l_credits" as keyof Settings,
-              },
-            ].map(({ label, key }) => (
-              <div
-                key={key}
-                className="flex items-center justify-between py-3"
-                style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-              >
-                <div>
-                  <p
-                    className="text-sm font-medium"
-                    style={{ color: "rgba(255,255,255,0.78)" }}
-                  >
-                    {label}
-                  </p>
-                  <p
-                    className="text-xs"
-                    style={{ color: "rgba(255,255,255,0.35)" }}
-                  >
-                    Credits per deposit
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    className="w-16 rounded-xl px-3 py-1.5 text-sm text-center"
-                    min="1"
-                    step="1"
-                    style={inputStyle}
-                    type="number"
-                    value={settings[key]}
-                    onBlur={(e) => {
-                      e.target.style.border =
-                        "1px solid rgba(255,255,255,0.12)";
-                      e.target.style.boxShadow = "none";
-                    }}
-                    onChange={(e) => set(key, e.target.value)}
-                    onFocus={(e) => {
-                      e.target.style.border =
-                        "1px solid rgba(148,163,184,0.50)";
-                      e.target.style.boxShadow =
-                        "0 0 0 3px rgba(148,163,184,0.10)";
-                    }}
-                  />
-                  <span
-                    className="text-xs"
-                    style={{ color: "rgba(255,255,255,0.40)" }}
-                  >
-                    credits
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      <Skeleton radius="md" visible={loading}>
+        <Stack gap="md">
+          <Card withBorder p="lg" radius="md">
+            <Text fw={700} size="sm">
+              Credit Tiers (by volume)
+            </Text>
+            <Text c="dimmed" mb="xs" size="xs">
+              Credits awarded when a bottle is deposited, based on volume.
+            </Text>
+            <Divider />
+            <SettingRow
+              label={`Small bottle (≤${settings.credit_tier_s_max_ml}ml)`}
+              min={1}
+              step={1}
+              sub="Credits per deposit"
+              unit="cr"
+              value={settings.credit_tier_s_credits}
+              onChange={(v) => set("credit_tier_s_credits", v)}
+            />
+            <Divider />
+            <SettingRow
+              label={`Medium bottle (${settings.credit_tier_s_max_ml}–${settings.credit_tier_m_max_ml}ml)`}
+              min={1}
+              step={1}
+              sub="Credits per deposit"
+              unit="cr"
+              value={settings.credit_tier_m_credits}
+              onChange={(v) => set("credit_tier_m_credits", v)}
+            />
+            <Divider />
+            <SettingRow
+              label={`Large bottle (>${settings.credit_tier_m_max_ml}ml)`}
+              min={1}
+              step={1}
+              sub="Credits per deposit"
+              unit="cr"
+              value={settings.credit_tier_l_credits}
+              onChange={(v) => set("credit_tier_l_credits", v)}
+            />
+          </Card>
 
-        {/* Volume Thresholds */}
-        <div className="rounded-2xl p-6" style={GLASS}>
-          <h2
-            className="text-sm font-bold mb-0.5"
-            style={{ color: "rgba(255,255,255,0.80)" }}
-          >
-            Volume Thresholds (ml)
-          </h2>
-          <p
-            className="text-xs mb-5"
-            style={{ color: "rgba(255,255,255,0.35)" }}
-          >
-            Define where S/M/L boundaries fall.
-          </p>
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              {
-                id: "tier-s-max",
-                label: "S/M boundary (max ml for Small)",
-                key: "credit_tier_s_max_ml" as keyof Settings,
-                min: 100,
-                step: 50,
-              },
-              {
-                id: "tier-m-max",
-                label: "M/L boundary (max ml for Medium)",
-                key: "credit_tier_m_max_ml" as keyof Settings,
-                min: 200,
-                step: 50,
-              },
-            ].map(({ id, label, key, min, step }) => (
-              <div key={id}>
-                <label
-                  className="text-xs block mb-1.5"
-                  htmlFor={id}
-                  style={{ color: "rgba(255,255,255,0.42)" }}
-                >
-                  {label}
-                </label>
-                <input
-                  className="w-full rounded-xl px-3 py-2 text-sm"
-                  id={id}
-                  min={min}
-                  step={step}
-                  style={inputStyle}
-                  type="number"
-                  value={settings[key]}
-                  onBlur={(e) => {
-                    e.target.style.border = "1px solid rgba(255,255,255,0.12)";
-                    e.target.style.boxShadow = "none";
-                  }}
-                  onChange={(e) => set(key, e.target.value)}
-                  onFocus={(e) => {
-                    e.target.style.border = "1px solid rgba(148,163,184,0.50)";
-                    e.target.style.boxShadow =
-                      "0 0 0 3px rgba(148,163,184,0.10)";
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
+          <Card withBorder p="lg" radius="md">
+            <Text fw={700} size="sm">
+              Volume Thresholds (ml)
+            </Text>
+            <Text c="dimmed" mb="xs" size="xs">
+              Define where S/M/L boundaries fall.
+            </Text>
+            <Divider />
+            <SettingRow
+              label="S/M boundary"
+              min={100}
+              step={50}
+              sub="Max ml for Small"
+              unit="ml"
+              value={settings.credit_tier_s_max_ml}
+              onChange={(v) => set("credit_tier_s_max_ml", v)}
+            />
+            <Divider />
+            <SettingRow
+              label="M/L boundary"
+              min={200}
+              step={50}
+              sub="Max ml for Medium"
+              unit="ml"
+              value={settings.credit_tier_m_max_ml}
+              onChange={(v) => set("credit_tier_m_max_ml", v)}
+            />
+          </Card>
 
-        {/* Charging Settings */}
-        <div className="rounded-2xl p-6" style={GLASS}>
-          <h2
-            className="text-sm font-bold mb-0.5"
-            style={{ color: "rgba(255,255,255,0.80)" }}
-          >
-            Charging Settings
-          </h2>
-          <p
-            className="text-xs mb-5"
-            style={{ color: "rgba(255,255,255,0.35)" }}
-          >
-            Controls how long each credit lasts and energy budget per credit.
-          </p>
-          <div className="space-y-1">
-            {[
-              {
-                label: "Energy budget per credit (Wh)",
-                sub: "Actual Wh allocated; dynamic duration based on real draw",
-                key: "energy_budget_wh_per_credit" as keyof Settings,
-                unit: "Wh",
-                w: "w-20",
-                min: 1,
-                step: 0.5,
-              },
-              {
-                label: "Base minutes per credit",
-                sub: "Fallback when no telemetry available",
-                key: "base_minutes_per_credit" as keyof Settings,
-                unit: "min",
-                w: "w-20",
-                min: 1,
-                step: 1,
-              },
-              {
-                label: "Max charging duration",
-                sub: "Hard cap regardless of credits",
-                key: "max_charging_seconds" as keyof Settings,
-                unit: "sec",
-                w: "w-24",
-                min: 60,
-                step: 60,
-              },
-            ].map(({ label, sub, key, unit, w, min, step }) => (
-              <div
-                key={key}
-                className="flex items-center justify-between py-3"
-                style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-              >
-                <div>
-                  <p
-                    className="text-sm font-medium"
-                    style={{ color: "rgba(255,255,255,0.78)" }}
-                  >
-                    {label}
-                  </p>
-                  <p
-                    className="text-xs"
-                    style={{ color: "rgba(255,255,255,0.35)" }}
-                  >
-                    {sub}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    className={`${w} rounded-xl px-3 py-1.5 text-sm text-center`}
-                    min={min}
-                    step={step}
-                    style={inputStyle}
-                    type="number"
-                    value={settings[key]}
-                    onBlur={(e) => {
-                      e.target.style.border =
-                        "1px solid rgba(255,255,255,0.12)";
-                      e.target.style.boxShadow = "none";
-                    }}
-                    onChange={(e) => set(key, e.target.value)}
-                    onFocus={(e) => {
-                      e.target.style.border =
-                        "1px solid rgba(148,163,184,0.50)";
-                      e.target.style.boxShadow =
-                        "0 0 0 3px rgba(148,163,184,0.10)";
-                    }}
-                  />
-                  <span
-                    className="text-xs"
-                    style={{ color: "rgba(255,255,255,0.40)" }}
-                  >
-                    {unit}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+          <Card withBorder p="lg" radius="md">
+            <Text fw={700} size="sm">
+              Charging Settings
+            </Text>
+            <Text c="dimmed" mb="xs" size="xs">
+              Controls how long each credit lasts and energy budget per credit.
+            </Text>
+            <Divider />
+            <SettingRow
+              label="Energy budget per credit"
+              min={1}
+              step={0.5}
+              sub="Actual Wh allocated; dynamic duration based on real draw"
+              unit="Wh"
+              value={settings.energy_budget_wh_per_credit}
+              onChange={(v) => set("energy_budget_wh_per_credit", v)}
+            />
+            <Divider />
+            <SettingRow
+              label="Base minutes per credit"
+              min={1}
+              step={1}
+              sub="Fallback when no telemetry available"
+              unit="min"
+              value={settings.base_minutes_per_credit}
+              onChange={(v) => set("base_minutes_per_credit", v)}
+            />
+            <Divider />
+            <SettingRow
+              label="Max charging duration"
+              min={60}
+              step={60}
+              sub="Hard cap regardless of credits"
+              unit="sec"
+              value={settings.max_charging_seconds}
+              onChange={(v) => set("max_charging_seconds", v)}
+            />
+          </Card>
 
-        {/* Economics */}
-        <div className="rounded-2xl p-6" style={GLASS}>
-          <h2
-            className="text-sm font-bold mb-0.5"
-            style={{ color: "rgba(255,255,255,0.80)" }}
-          >
-            Economics
-          </h2>
-          <p
-            className="text-xs mb-5"
-            style={{ color: "rgba(255,255,255,0.35)" }}
-          >
-            Used to calculate gain/loss in analytics.
-          </p>
-          <div className="flex items-center justify-between py-3">
-            <div>
-              <p
-                className="text-sm font-medium"
-                style={{ color: "rgba(255,255,255,0.78)" }}
-              >
-                Electricity rate (PHP/kWh)
-              </p>
-              <p
-                className="text-xs"
-                style={{ color: "rgba(255,255,255,0.35)" }}
-              >
-                Meralco / local utility rate
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                className="w-24 rounded-xl px-3 py-1.5 text-sm text-center"
-                min="1"
-                step="0.1"
-                style={inputStyle}
-                type="number"
-                value={settings.electricity_rate_php_per_kwh}
-                onBlur={(e) => {
-                  e.target.style.border = "1px solid rgba(255,255,255,0.12)";
-                  e.target.style.boxShadow = "none";
-                }}
-                onChange={(e) =>
-                  set("electricity_rate_php_per_kwh", e.target.value)
-                }
-                onFocus={(e) => {
-                  e.target.style.border = "1px solid rgba(148,163,184,0.50)";
-                  e.target.style.boxShadow = "0 0 0 3px rgba(148,163,184,0.10)";
-                }}
-              />
-              <span
-                className="text-xs"
-                style={{ color: "rgba(255,255,255,0.40)" }}
-              >
-                ₱/kWh
-              </span>
-            </div>
-          </div>
-        </div>
+          <Card withBorder p="lg" radius="md">
+            <Text fw={700} size="sm">
+              Economics
+            </Text>
+            <Text c="dimmed" mb="xs" size="xs">
+              Used to calculate gain/loss in analytics.
+            </Text>
+            <Divider />
+            <SettingRow
+              label="Electricity rate"
+              min={1}
+              step={0.1}
+              sub="Meralco / local utility rate"
+              unit="₱/kWh"
+              value={settings.electricity_rate_php_per_kwh}
+              onChange={(v) => set("electricity_rate_php_per_kwh", v)}
+            />
+          </Card>
 
-        <button
-          className="px-6 py-3.5 rounded-xl font-bold text-sm transition-all duration-200 active:scale-[0.97] disabled:opacity-50"
-          disabled={saving}
-          style={{
-            background: "linear-gradient(135deg, #4CAF50, #16A34A)",
-            color: "#fff",
-            boxShadow: "0 8px 24px rgba(76,175,80,0.28)",
-          }}
-          onClick={handleSave}
-        >
-          {saving ? "Saving…" : "Save Settings"}
-        </button>
-      </div>
-    </div>
+          <Button
+            color="ecoGreen"
+            loading={saving}
+            size="md"
+            onClick={handleSave}
+          >
+            Save Settings
+          </Button>
+        </Stack>
+      </Skeleton>
+    </Stack>
   );
 }

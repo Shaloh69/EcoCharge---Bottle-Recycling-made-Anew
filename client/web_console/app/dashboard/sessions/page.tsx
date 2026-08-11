@@ -1,164 +1,72 @@
 "use client";
+import { useEffect, useState } from "react";
+import { Skeleton, Stack, Text, Title } from "@mantine/core";
+
+import { addToast } from "@/lib/toast";
+import { admin, type KioskSession } from "@/lib/api";
+import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 
-const sessions = [
+// Real gap found and fixed 2026-08-11: this page rendered entirely
+// hardcoded mock rows ("Taylor S.", "S001", fixed 10:30 AM timestamps) and
+// never called the real admin.sessions() endpoint that already existed in
+// lib/api.ts. KioskSession only tracks id/user_id/kiosk_id/started_at/
+// ended_at (a session is just "a user's visit," separate from
+// BottleDeposit/ChargingSession) - the mock's bottles/credits/port columns
+// don't correspond to real fields on this model, so they're dropped rather
+// than faked.
+const columns: DataTableColumn<KioskSession>[] = [
+  { key: "id", label: "ID", mono: true, render: (s) => `#${s.id}` },
+  { key: "user", label: "User", render: (s) => `User #${s.user_id}` },
+  { key: "kiosk", label: "Kiosk", render: (s) => `Kiosk #${s.kiosk_id}` },
   {
-    id: "S001",
-    user: "Taylor S.",
-    kiosk: "Kiosk-001",
-    start: "10:30 AM",
-    end: "10:32 AM",
-    bottles: 1,
-    credits: "1 min",
-    port: "Station 2",
-    status: "completed" as const,
+    key: "started",
+    label: "Started",
+    render: (s) => new Date(s.started_at).toLocaleString(),
   },
   {
-    id: "S002",
-    user: "Guest",
-    kiosk: "Kiosk-002",
-    start: "10:25 AM",
-    end: "—",
-    bottles: 2,
-    credits: "2 min",
-    port: "Station 1",
-    status: "active" as const,
+    key: "ended",
+    label: "Ended",
+    render: (s) => (s.ended_at ? new Date(s.ended_at).toLocaleString() : "—"),
   },
   {
-    id: "S003",
-    user: "John D.",
-    kiosk: "Kiosk-001",
-    start: "10:10 AM",
-    end: "10:15 AM",
-    bottles: 0,
-    credits: "0 min",
-    port: "—",
-    status: "idle" as const,
+    key: "status",
+    label: "Status",
+    render: (s) => <StatusBadge status={s.ended_at ? "completed" : "active"} />,
   },
 ];
 
 export default function SessionsPage() {
+  const [sessions, setSessions] = useState<KioskSession[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    admin
+      .sessions()
+      .then((r) => setSessions(r.sessions ?? []))
+      .catch(() =>
+        addToast({ title: "Failed to load sessions", color: "danger" }),
+      )
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
-    <div className="p-6 md:p-8 space-y-6">
+    <Stack gap="lg" p={{ base: "md", md: "xl" }}>
       <div>
-        <h1
-          className="text-2xl font-extrabold tracking-tight"
-          style={{ color: "rgba(255,255,255,0.92)" }}
-        >
-          Sessions
-        </h1>
-        <p
-          className="text-sm mt-0.5"
-          style={{ color: "rgba(255,255,255,0.38)" }}
-        >
-          Kiosk interaction sessions overview
-        </p>
+        <Title order={2}>Sessions</Title>
+        <Text c="dimmed" size="sm">
+          Kiosk interaction sessions
+        </Text>
       </div>
 
-      <div
-        className="rounded-2xl overflow-hidden"
-        style={{
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(255,255,255,0.09)",
-          backdropFilter: "blur(18px)",
-          WebkitBackdropFilter: "blur(18px)",
-        }}
-      >
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-                {[
-                  "ID",
-                  "User",
-                  "Kiosk",
-                  "Start",
-                  "End",
-                  "Bottles",
-                  "Credits",
-                  "Port",
-                  "Status",
-                ].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left py-3.5 px-5 text-[10px] font-semibold tracking-widest uppercase"
-                    style={{ color: "rgba(255,255,255,0.32)" }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {sessions.map((s) => (
-                <tr
-                  key={s.id}
-                  className="transition-colors duration-150"
-                  style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = "rgba(132,204,22,0.06)")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "transparent")
-                  }
-                >
-                  <td
-                    className="py-3.5 px-5 text-xs font-mono"
-                    style={{ color: "rgba(255,255,255,0.30)" }}
-                  >
-                    {s.id}
-                  </td>
-                  <td
-                    className="py-3.5 px-5 font-semibold"
-                    style={{ color: "rgba(255,255,255,0.85)" }}
-                  >
-                    {s.user}
-                  </td>
-                  <td
-                    className="py-3.5 px-5"
-                    style={{ color: "rgba(255,255,255,0.60)" }}
-                  >
-                    {s.kiosk}
-                  </td>
-                  <td
-                    className="py-3.5 px-5"
-                    style={{ color: "rgba(255,255,255,0.55)" }}
-                  >
-                    {s.start}
-                  </td>
-                  <td
-                    className="py-3.5 px-5"
-                    style={{ color: "rgba(255,255,255,0.45)" }}
-                  >
-                    {s.end}
-                  </td>
-                  <td
-                    className="py-3.5 px-5 font-bold"
-                    style={{ color: "rgba(255,255,255,0.80)" }}
-                  >
-                    {s.bottles}
-                  </td>
-                  <td
-                    className="py-3.5 px-5 font-bold"
-                    style={{ color: "#84CC16" }}
-                  >
-                    {s.credits}
-                  </td>
-                  <td
-                    className="py-3.5 px-5"
-                    style={{ color: "rgba(255,255,255,0.55)" }}
-                  >
-                    {s.port}
-                  </td>
-                  <td className="py-3.5 px-5">
-                    <StatusBadge status={s.status} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+      <Skeleton radius="md" visible={loading}>
+        <DataTable
+          columns={columns}
+          data={sessions}
+          emptyMessage="No sessions yet"
+          getRowKey={(s) => s.id}
+        />
+      </Skeleton>
+    </Stack>
   );
 }

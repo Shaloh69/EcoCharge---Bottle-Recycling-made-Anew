@@ -1,13 +1,65 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Skeleton, Stack, Text, Title } from "@mantine/core";
 
 import { addToast } from "@/lib/toast";
 import { admin, type Deposit } from "@/lib/api";
+import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
+import { StatusBadge } from "@/components/admin/StatusBadge";
 
-const ACCENT = "#0EA5E9";
+const columns: DataTableColumn<Deposit>[] = [
+  { key: "id", label: "ID", mono: true, render: (d) => `#${d.id}` },
+  {
+    key: "time",
+    label: "Time",
+    render: (d) => new Date(d.timestamp).toLocaleString(),
+  },
+  { key: "brand", label: "Brand", render: (d) => d.brand },
+  {
+    key: "volume",
+    label: "Volume",
+    mono: true,
+    render: (d) => `${d.volume_ml}ml`,
+  },
+  {
+    key: "condition",
+    label: "Condition",
+    render: (d) => (
+      <StatusBadge
+        label={d.condition}
+        status={d.condition === "perfect" ? "confirmed" : "warning"}
+      />
+    ),
+  },
+  {
+    key: "confidence",
+    label: "Confidence",
+    mono: true,
+    render: (d) => (
+      <Text
+        c={d.confidence >= 0.8 ? "successLime" : "warningAmber"}
+        fw={700}
+        size="xs"
+      >
+        {Math.round(d.confidence * 100)}%
+      </Text>
+    ),
+  },
+  {
+    key: "credits",
+    label: "Credits",
+    mono: true,
+    render: (d) => (
+      <Text c="voltTeal" fw={700} size="xs">
+        +{d.credits_awarded} min
+      </Text>
+    ),
+  },
+];
 
 export default function DepositsPage() {
   const [deposits, setDeposits] = useState<Deposit[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     admin
@@ -15,150 +67,27 @@ export default function DepositsPage() {
       .then((r) => setDeposits(r.deposits ?? []))
       .catch(() =>
         addToast({ title: "Failed to load deposits", color: "danger" }),
-      );
+      )
+      .finally(() => setLoading(false));
   }, []);
 
   return (
-    <div className="p-6 md:p-8 space-y-6">
+    <Stack gap="lg" p={{ base: "md", md: "xl" }}>
       <div>
-        <h1
-          className="text-2xl font-extrabold tracking-tight"
-          style={{ color: "rgba(255,255,255,0.92)" }}
-        >
-          Bottle Deposits
-        </h1>
-        <p
-          className="text-sm mt-0.5"
-          style={{ color: "rgba(255,255,255,0.38)" }}
-        >
+        <Title order={2}>Bottle Deposits</Title>
+        <Text c="dimmed" size="sm">
           All bottle deposits processed through the kiosk
-        </p>
+        </Text>
       </div>
 
-      <div
-        className="rounded-2xl overflow-hidden"
-        style={{
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(255,255,255,0.09)",
-          backdropFilter: "blur(18px)",
-          WebkitBackdropFilter: "blur(18px)",
-        }}
-      >
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-                {[
-                  "ID",
-                  "Time",
-                  "Brand",
-                  "Volume",
-                  "Condition",
-                  "Confidence",
-                  "Credits",
-                ].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left py-3.5 px-5 text-[10px] font-semibold tracking-widest uppercase"
-                    style={{ color: "rgba(255,255,255,0.32)" }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {deposits.length === 0 ? (
-                <tr>
-                  <td
-                    className="text-center py-14 text-sm"
-                    colSpan={7}
-                    style={{ color: "rgba(255,255,255,0.25)" }}
-                  >
-                    No deposits yet
-                  </td>
-                </tr>
-              ) : (
-                deposits.map((d) => (
-                  <tr
-                    key={d.id}
-                    className="transition-colors duration-150"
-                    style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background =
-                        "rgba(14,165,233,0.06)")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "transparent")
-                    }
-                  >
-                    <td
-                      className="py-3.5 px-5 text-xs font-mono"
-                      style={{ color: "rgba(255,255,255,0.30)" }}
-                    >
-                      #{d.id}
-                    </td>
-                    <td
-                      className="py-3.5 px-5"
-                      style={{ color: "rgba(255,255,255,0.55)" }}
-                    >
-                      {new Date(d.timestamp).toLocaleString()}
-                    </td>
-                    <td
-                      className="py-3.5 px-5 font-semibold"
-                      style={{ color: "rgba(255,255,255,0.85)" }}
-                    >
-                      {d.brand}
-                    </td>
-                    <td
-                      className="py-3.5 px-5"
-                      style={{ color: "rgba(255,255,255,0.60)" }}
-                    >
-                      {d.volume_ml}ml
-                    </td>
-                    <td className="py-3.5 px-5">
-                      <span
-                        className="px-2.5 py-1 rounded-full text-xs font-semibold"
-                        style={
-                          d.condition === "perfect"
-                            ? {
-                                background: "rgba(74,222,128,0.12)",
-                                color: "#4ADE80",
-                                border: "1px solid rgba(74,222,128,0.25)",
-                              }
-                            : {
-                                background: "rgba(251,191,36,0.12)",
-                                color: "#FBBF24",
-                                border: "1px solid rgba(251,191,36,0.25)",
-                              }
-                        }
-                      >
-                        {d.condition}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-5">
-                      <span
-                        className="font-bold text-xs"
-                        style={{
-                          color: d.confidence >= 0.8 ? "#4ADE80" : "#FBBF24",
-                        }}
-                      >
-                        {Math.round(d.confidence * 100)}%
-                      </span>
-                    </td>
-                    <td
-                      className="py-3.5 px-5 font-bold"
-                      style={{ color: ACCENT }}
-                    >
-                      +{d.credits_awarded} min
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+      <Skeleton radius="md" visible={loading}>
+        <DataTable
+          columns={columns}
+          data={deposits}
+          emptyMessage="No deposits yet"
+          getRowKey={(d) => d.id}
+        />
+      </Skeleton>
+    </Stack>
   );
 }

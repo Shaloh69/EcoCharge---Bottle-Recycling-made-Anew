@@ -1,6 +1,21 @@
 "use client";
 import { useEffect, useState, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
+import {
+  Alert,
+  Button,
+  Card,
+  Center,
+  Group,
+  Loader,
+  NativeSelect,
+  SimpleGrid,
+  Stack,
+  Text,
+  TextInput,
+  Title,
+} from "@mantine/core";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 
 import { addToast } from "@/lib/toast";
 import {
@@ -14,62 +29,22 @@ import { BinGauge } from "@/components/admin/BinGauge";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "";
 
-const glass = {
-  background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(20,184,166,0.18)",
-  backdropFilter: "blur(18px)",
-  WebkitBackdropFilter: "blur(18px)",
-};
-
-const dimText = (op: number) => ({ color: `rgba(255,255,255,${op})` });
-
-function Btn({
-  label,
-  color = "teal",
-  onClick,
-  disabled,
-  small,
-}: {
-  label: string;
-  color?: "teal" | "red" | "amber" | "gray";
-  onClick: () => void;
-  disabled?: boolean;
-  small?: boolean;
-}) {
-  const bg: Record<string, string> = {
-    teal: "rgba(20,184,166,0.18)",
-    red: "rgba(239,68,68,0.18)",
-    amber: "rgba(245,158,11,0.18)",
-    gray: "rgba(255,255,255,0.08)",
-  };
-  const border: Record<string, string> = {
-    teal: "rgba(20,184,166,0.45)",
-    red: "rgba(239,68,68,0.45)",
-    amber: "rgba(245,158,11,0.45)",
-    gray: "rgba(255,255,255,0.15)",
-  };
-
-  return (
-    <button
-      disabled={disabled}
-      style={{
-        background: disabled ? "rgba(255,255,255,0.04)" : bg[color],
-        border: `1px solid ${disabled ? "rgba(255,255,255,0.08)" : border[color]}`,
-        color: disabled ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.85)",
-        borderRadius: 10,
-        padding: small ? "5px 12px" : "8px 16px",
-        fontSize: small ? 11 : 12,
-        fontWeight: 600,
-        cursor: disabled ? "not-allowed" : "pointer",
-        transition: "all 0.15s",
-        whiteSpace: "nowrap",
-      }}
-      type="button"
-      onClick={onClick}
-    >
-      {label}
-    </button>
-  );
+// Real command status -> StatusBadge mapping, per docs/planning/02-design-mandate.md
+// SS3: "command PENDING (amber) / ACKED (green) / FAILED/EXPIRED (red)".
+// This never existed before 2026-08-11 - the prior version of this page
+// only distinguished ACKED (teal) from "anything else" (amber), so FAILED
+// and EXPIRED commands rendered as if they were still pending.
+function commandStatus(status: KioskCommand["status"]) {
+  switch (status) {
+    case "ACKED":
+      return "acked" as const;
+    case "FAILED":
+      return "failed" as const;
+    case "EXPIRED":
+      return "expired" as const;
+    default:
+      return "pending" as const;
+  }
 }
 
 function PortCard({
@@ -89,30 +64,35 @@ function PortCard({
   const on = data?.relay_on ?? false;
 
   return (
-    <div
-      className="rounded-2xl p-4 space-y-3"
-      style={{
-        background: on ? "rgba(20,184,166,0.10)" : "rgba(255,255,255,0.04)",
-        border: `1px solid ${on ? "rgba(20,184,166,0.40)" : "rgba(255,255,255,0.08)"}`,
-      }}
+    <Card
+      withBorder
+      bg={on ? "var(--mantine-color-voltTeal-light)" : undefined}
+      p="md"
+      radius="md"
     >
-      <div className="flex items-center justify-between">
+      <Group justify="space-between" mb="sm">
         <div>
-          <p className="font-bold text-sm" style={dimText(0.85)}>
+          <Text fw={700} size="sm">
             Port {port}
-          </p>
-          <p className="text-[10px] mt-0.5" style={dimText(0.38)}>
+          </Text>
+          <Text c={on ? "voltTeal" : "dimmed"} mt={2} size="10px">
             {on ? "CHARGING" : "IDLE"}
-          </p>
+          </Text>
         </div>
         <div
-          className="w-2.5 h-2.5 rounded-full"
-          style={{ background: on ? "#14b8a6" : "rgba(255,255,255,0.18)" }}
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            background: on
+              ? "var(--mantine-color-voltTeal-6)"
+              : "var(--mantine-color-default-border)",
+          }}
         />
-      </div>
+      </Group>
 
       {data && (
-        <div className="grid grid-cols-3 gap-2 text-center">
+        <SimpleGrid cols={3} mb="sm" spacing={6}>
           {[
             { label: "V", value: data.voltage_v?.toFixed(1) ?? "—" },
             { label: "A", value: data.current_a?.toFixed(2) ?? "—" },
@@ -124,62 +104,56 @@ function PortCard({
                   : "—",
             },
           ].map(({ label, value }) => (
-            <div
+            <Card
               key={label}
-              className="rounded-lg p-2"
-              style={{ background: "rgba(255,255,255,0.04)" }}
+              bg="var(--mantine-color-default)"
+              p={6}
+              radius="sm"
             >
-              <p className="text-xs font-bold" style={dimText(0.75)}>
+              <Text ff="monospace" fw={700} size="xs" ta="center">
                 {value}
-              </p>
-              <p className="text-[9px]" style={dimText(0.3)}>
+              </Text>
+              <Text c="dimmed" size="9px" ta="center">
                 {label}
-              </p>
-            </div>
+              </Text>
+            </Card>
           ))}
-        </div>
+        </SimpleGrid>
       )}
 
-      <div className="flex items-center gap-2">
-        <select
+      <Group gap="xs" wrap="nowrap">
+        <NativeSelect
+          data={[15, 30, 60, 120, 300, 600, 900, 1800, 3600].map((s) => ({
+            value: String(s),
+            label: s < 60 ? `${s}s` : `${s / 60}m`,
+          }))}
           disabled={on || busy}
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.12)",
-            color: "rgba(255,255,255,0.65)",
-            borderRadius: 8,
-            padding: "4px 8px",
-            fontSize: 11,
-            flex: 1,
-          }}
+          size="xs"
+          style={{ flex: 1 }}
           value={duration}
-          onChange={(e) => setDuration(Number(e.target.value))}
-        >
-          {[15, 30, 60, 120, 300, 600, 900, 1800, 3600].map((s) => (
-            <option key={s} style={{ background: "#1a1a2e" }} value={s}>
-              {s < 60 ? `${s}s` : `${s / 60}m`}
-            </option>
-          ))}
-        </select>
+          onChange={(e) => setDuration(Number(e.currentTarget.value))}
+        />
         {on ? (
-          <Btn
-            small
-            color="red"
+          <Button
+            color="dangerRed"
             disabled={busy}
-            label="Stop"
+            size="xs"
             onClick={() => onDeactivate(port)}
-          />
+          >
+            Stop
+          </Button>
         ) : (
-          <Btn
-            small
-            color="teal"
+          <Button
+            color="voltTeal"
             disabled={busy}
-            label="Activate"
+            size="xs"
             onClick={() => onActivate(port, duration)}
-          />
+          >
+            Activate
+          </Button>
         )}
-      </div>
-    </div>
+      </Group>
+    </Card>
   );
 }
 
@@ -300,129 +274,108 @@ export default function KioskDetailPage({
 
   if (!kiosk) {
     return (
-      <div
-        className="p-8 flex items-center justify-center"
-        style={dimText(0.35)}
-      >
-        Loading…
-      </div>
+      <Center p="xl">
+        <Loader color="ecoGreen" />
+      </Center>
     );
   }
 
   return (
-    <div className="p-6 md:p-8 space-y-6 max-w-5xl">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <button
-            className="text-xs mb-2 flex items-center gap-1"
-            style={dimText(0.38)}
-            type="button"
+    <Stack gap="lg" maw={960} p={{ base: "md", md: "xl" }}>
+      <Group align="flex-start" justify="space-between" wrap="nowrap">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Button
+            color="gray"
+            leftSection={<ArrowLeft size={14} />}
+            mb="xs"
+            size="xs"
+            variant="subtle"
             onClick={() => router.push("/dashboard/kiosks")}
           >
-            ← Back to kiosks
-          </button>
+            Back to kiosks
+          </Button>
           {editing ? (
-            <div className="space-y-2">
-              <input
+            <Stack gap="xs">
+              <TextInput
                 placeholder="Kiosk name"
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  color: "rgba(255,255,255,0.85)",
-                  borderRadius: 10,
-                  padding: "6px 12px",
-                  fontSize: 16,
-                  fontWeight: 700,
-                  width: "100%",
-                }}
                 value={editName}
-                onChange={(e) => setEditName(e.target.value)}
+                onChange={(e) => setEditName(e.currentTarget.value)}
               />
-              <input
+              <TextInput
                 placeholder="Location"
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  color: "rgba(255,255,255,0.65)",
-                  borderRadius: 10,
-                  padding: "6px 12px",
-                  fontSize: 13,
-                  width: "100%",
-                }}
                 value={editLocation}
-                onChange={(e) => setEditLocation(e.target.value)}
+                onChange={(e) => setEditLocation(e.currentTarget.value)}
               />
-              <div className="flex gap-2">
-                <Btn color="teal" label="Save" onClick={saveEdit} />
-                <Btn
+              <Group gap="xs">
+                <Button color="voltTeal" size="xs" onClick={saveEdit}>
+                  Save
+                </Button>
+                <Button
                   color="gray"
-                  label="Cancel"
+                  size="xs"
+                  variant="default"
                   onClick={() => setEditing(false)}
-                />
-              </div>
-            </div>
+                >
+                  Cancel
+                </Button>
+              </Group>
+            </Stack>
           ) : (
             <>
-              <h1
-                className="text-2xl font-extrabold tracking-tight"
-                style={dimText(0.92)}
-              >
-                {kiosk.name}
-              </h1>
-              <p className="text-sm mt-0.5" style={dimText(0.42)}>
+              <Title order={2}>{kiosk.name}</Title>
+              <Text c="dimmed" size="sm">
                 📍 {kiosk.location}
-              </p>
+              </Text>
             </>
           )}
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <StatusBadge status={kiosk.status} />
-          {!editing && (
-            <>
-              <Btn
-                small
-                color="gray"
-                label="Edit"
-                onClick={() => setEditing(true)}
-              />
-              <Btn
-                small
-                color="red"
-                label="Delete"
-                onClick={() => setShowDeleteConfirm(true)}
-              />
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Delete confirm */}
-      {showDeleteConfirm && (
-        <div
-          className="rounded-2xl p-4 flex items-center justify-between gap-4"
-          style={{
-            background: "rgba(239,68,68,0.12)",
-            border: "1px solid rgba(239,68,68,0.35)",
-          }}
-        >
-          <p className="text-sm" style={dimText(0.8)}>
-            Delete <strong>{kiosk.name}</strong>? This cannot be undone.
-          </p>
-          <div className="flex gap-2">
-            <Btn small color="red" label="Yes, delete" onClick={deleteKiosk} />
-            <Btn
-              small
+        {!editing && (
+          <Group gap="xs" wrap="nowrap">
+            <StatusBadge status={kiosk.status} />
+            <Button
               color="gray"
-              label="Cancel"
-              onClick={() => setShowDeleteConfirm(false)}
-            />
-          </div>
-        </div>
+              size="xs"
+              variant="default"
+              onClick={() => setEditing(true)}
+            >
+              Edit
+            </Button>
+            <Button
+              color="dangerRed"
+              size="xs"
+              variant="light"
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              Delete
+            </Button>
+          </Group>
+        )}
+      </Group>
+
+      {showDeleteConfirm && (
+        <Alert color="red" title="Confirm delete" variant="light">
+          <Group justify="space-between">
+            <Text size="sm">
+              Delete <strong>{kiosk.name}</strong>? This cannot be undone.
+            </Text>
+            <Group gap="xs">
+              <Button color="dangerRed" size="xs" onClick={deleteKiosk}>
+                Yes, delete
+              </Button>
+              <Button
+                color="gray"
+                size="xs"
+                variant="default"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </Button>
+            </Group>
+          </Group>
+        </Alert>
       )}
 
-      {/* Live status row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <SimpleGrid cols={{ base: 2, md: 4 }} spacing="sm">
         {[
           { label: "Kiosk ID", value: `#${kiosk.id}` },
           { label: "FSM State", value: fsmState },
@@ -437,42 +390,51 @@ export default function KioskDetailPage({
               : "Never",
           },
         ].map(({ label, value }) => (
-          <div key={label} className="rounded-xl p-3" style={glass}>
-            <p
-              className="text-[10px] uppercase tracking-widest font-semibold mb-1"
-              style={dimText(0.32)}
+          <Card key={label} withBorder p="sm" radius="md">
+            <Text
+              c="dimmed"
+              fw={600}
+              size="10px"
+              style={{ letterSpacing: "0.06em" }}
+              tt="uppercase"
             >
               {label}
-            </p>
-            <p className="text-sm font-bold" style={dimText(0.8)}>
+            </Text>
+            <Text ff="monospace" fw={700} mt={4} size="sm">
               {value}
-            </p>
-          </div>
+            </Text>
+          </Card>
         ))}
-      </div>
+      </SimpleGrid>
 
-      {/* Bin level */}
-      <div className="rounded-2xl p-5" style={glass}>
-        <div className="flex justify-between items-center mb-3">
-          <p className="text-sm font-semibold" style={dimText(0.75)}>
+      <Card withBorder p="lg" radius="md">
+        <Group justify="space-between" mb="sm">
+          <Text fw={600} size="sm">
             Bin Level
-          </p>
-          <p
-            className="text-xs font-bold"
-            style={{ color: binLevel >= 80 ? "#ef4444" : "#14b8a6" }}
+          </Text>
+          <Text
+            c={
+              binLevel >= 95
+                ? "dangerRed"
+                : binLevel >= 80
+                  ? "warningAmber"
+                  : "successLime"
+            }
+            ff="monospace"
+            fw={700}
+            size="xs"
           >
             {binLevel}%
-          </p>
-        </div>
+          </Text>
+        </Group>
         <BinGauge level={binLevel} />
-      </div>
+      </Card>
 
-      {/* Port controls */}
       <div>
-        <p className="text-sm font-semibold mb-3" style={dimText(0.6)}>
+        <Text c="dimmed" fw={600} mb="sm" size="sm">
           Charging Ports
-        </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        </Text>
+        <SimpleGrid cols={{ base: 2, md: 4 }} spacing="sm">
           {[1, 2, 3, 4].map((port) => (
             <PortCard
               key={port}
@@ -485,148 +447,151 @@ export default function KioskDetailPage({
               onDeactivate={(p) => send("deactivate_port", { port: p })}
             />
           ))}
-        </div>
+        </SimpleGrid>
       </div>
 
-      {/* Conveyor & bottle controls */}
-      <div className="rounded-2xl p-5 space-y-4" style={glass}>
-        <p className="text-sm font-semibold" style={dimText(0.6)}>
+      <Card withBorder p="lg" radius="md">
+        <Text c="dimmed" fw={600} mb="md" size="sm">
           Conveyor & Bottle Controls
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Btn
-            color="teal"
+        </Text>
+        <Group gap="xs" mb="sm">
+          <Button
+            color="voltTeal"
             disabled={busy}
-            label="▶ Conveyor Forward"
+            size="xs"
             onClick={() => send("open_conveyor")}
-          />
-          <Btn
-            color="amber"
+          >
+            ▶ Conveyor Forward
+          </Button>
+          <Button
+            color="warningAmber"
             disabled={busy}
-            label="■ Conveyor Stop"
+            size="xs"
             onClick={() => send("close_conveyor")}
-          />
-          <Btn
+          >
+            ■ Conveyor Stop
+          </Button>
+          <Button
             color="gray"
             disabled={busy}
-            label="◀ Conveyor Reverse"
+            size="xs"
+            variant="default"
             onClick={() => send("reverse_conveyor")}
-          />
-        </div>
-        <div
-          className="flex flex-wrap gap-2 pt-1"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
+          >
+            ◀ Conveyor Reverse
+          </Button>
+        </Group>
+        <Group
+          gap="xs"
+          pt="sm"
+          style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}
         >
-          <Btn
-            color="teal"
+          <Button
+            color="voltTeal"
             disabled={busy}
-            label="✓ Approve Bottle"
+            size="xs"
             onClick={() => send("approve_bottle")}
-          />
-          <Btn
-            color="red"
+          >
+            ✓ Approve Bottle
+          </Button>
+          <Button
+            color="dangerRed"
             disabled={busy}
-            label="✕ Reject Bottle"
+            size="xs"
             onClick={() => send("reject_bottle")}
-          />
-          <Btn
+          >
+            ✕ Reject Bottle
+          </Button>
+          <Button
             color="gray"
             disabled={busy}
-            label="⟳ Ping"
+            size="xs"
+            variant="default"
             onClick={() => send("ping")}
-          />
-        </div>
-      </div>
+          >
+            ⟳ Ping
+          </Button>
+        </Group>
+      </Card>
 
-      {/* API Key */}
-      <div className="rounded-2xl p-5" style={glass}>
-        <p className="text-sm font-semibold mb-2" style={dimText(0.6)}>
+      <Card withBorder p="lg" radius="md">
+        <Text fw={600} mb="sm" size="sm">
           Device API Key
-        </p>
-        <p
-          className="text-xs font-mono break-all"
+        </Text>
+        <Text
+          ff="monospace"
+          p="xs"
+          size="xs"
           style={{
-            color: "rgba(20,184,166,0.80)",
-            background: "rgba(20,184,166,0.06)",
+            wordBreak: "break-all",
+            background: "var(--mantine-color-default)",
             borderRadius: 8,
-            padding: "8px 12px",
           }}
         >
           {(kiosk as Kiosk & { api_key?: string }).api_key ??
             "Hidden — reload to see"}
-        </p>
-        <p className="text-[10px] mt-2" style={dimText(0.28)}>
+        </Text>
+        <Text c="dimmed" mt="xs" size="10px">
           Flash this key as DEVICE_API_KEY in the ESP firmware.
-        </p>
-      </div>
+        </Text>
+      </Card>
 
-      {/* Command history */}
-      <div className="rounded-2xl p-5" style={glass}>
-        <div className="flex justify-between items-center mb-4">
-          <p className="text-sm font-semibold" style={dimText(0.6)}>
+      <Card withBorder p="lg" radius="md">
+        <Group justify="space-between" mb="md">
+          <Text fw={600} size="sm">
             Command Log
-          </p>
-          <button
-            style={{ fontSize: 11, ...dimText(0.38) }}
-            type="button"
+          </Text>
+          <Button
+            color="gray"
+            leftSection={<RefreshCw size={12} />}
+            size="xs"
+            variant="subtle"
             onClick={refresh}
           >
-            ⟳ Refresh
-          </button>
-        </div>
+            Refresh
+          </Button>
+        </Group>
         {commands.length === 0 ? (
-          <p className="text-xs text-center py-4" style={dimText(0.25)}>
+          <Text c="dimmed" py="md" size="xs" ta="center">
             No commands sent yet
-          </p>
+          </Text>
         ) : (
-          <div className="space-y-2 max-h-72 overflow-y-auto">
+          <Stack gap={6} mah={300} style={{ overflowY: "auto" }}>
             {commands.map((cmd) => (
-              <div
+              <Group
                 key={cmd.id}
-                className="flex items-center justify-between gap-3 rounded-xl px-3 py-2"
+                justify="space-between"
+                p="xs"
                 style={{
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  borderRadius: 10,
+                  background: "var(--mantine-color-default)",
                 }}
+                wrap="nowrap"
               >
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold" style={dimText(0.75)}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Text fw={600} size="xs">
                     {cmd.command_type}
-                  </p>
+                  </Text>
                   {Object.keys(cmd.payload ?? {}).length > 0 && (
-                    <p
-                      className="text-[10px] truncate mt-0.5"
-                      style={dimText(0.35)}
-                    >
+                    <Text truncate c="dimmed" mt={2} size="10px">
                       {JSON.stringify(cmd.payload)}
-                    </p>
+                    </Text>
                   )}
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <span
-                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                    style={{
-                      background:
-                        cmd.status === "ACKED"
-                          ? "rgba(20,184,166,0.15)"
-                          : "rgba(245,158,11,0.15)",
-                      color:
-                        cmd.status === "ACKED"
-                          ? "rgba(20,184,166,0.85)"
-                          : "rgba(245,158,11,0.85)",
-                    }}
-                  >
-                    {cmd.status}
-                  </span>
-                  <p className="text-[9px] mt-1" style={dimText(0.28)}>
+                <Stack align="flex-end" gap={2}>
+                  <StatusBadge
+                    label={cmd.status}
+                    status={commandStatus(cmd.status)}
+                  />
+                  <Text c="dimmed" size="9px">
                     {new Date(cmd.created_at).toLocaleTimeString()}
-                  </p>
-                </div>
-              </div>
+                  </Text>
+                </Stack>
+              </Group>
             ))}
-          </div>
+          </Stack>
         )}
-      </div>
-    </div>
+      </Card>
+    </Stack>
   );
 }

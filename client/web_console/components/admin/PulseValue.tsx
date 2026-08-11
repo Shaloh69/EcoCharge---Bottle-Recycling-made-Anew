@@ -34,8 +34,13 @@ export function PulseValue({
     <Box
       style={{
         transition: "background-color 150ms ease-out",
+        // Real bug, fixed 2026-08-11: this referenced --mantine-color-voltAmber-4,
+        // but mantineTheme.ts has no "voltAmber" color (only "voltTeal" and
+        // "warningAmber" separately) - the pulse has never actually been
+        // visible. warningAmber[4] (#FBBF24) is the mandate's real
+        // volt-amber-400 token.
         backgroundColor: pulsing
-          ? "color-mix(in srgb, var(--mantine-color-voltAmber-4) 15%, transparent)"
+          ? "color-mix(in srgb, var(--mantine-color-warningAmber-4) 15%, transparent)"
           : "transparent",
         borderRadius: "var(--mantine-radius-sm)",
       }}

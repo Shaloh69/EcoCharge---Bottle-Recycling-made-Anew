@@ -216,7 +216,10 @@ export interface KioskCommand {
   id: number;
   command_type: string;
   payload: Record<string, unknown>;
-  status: "PENDING" | "ACKED";
+  // Real vocabulary per analyzation.md SS4 (DeviceCommand.status) - this type
+  // was missing FAILED/EXPIRED entirely until 2026-08-11, so the command
+  // audit log's badge logic could never have matched those two real states.
+  status: "PENDING" | "ACKED" | "FAILED" | "EXPIRED";
   created_at: string;
   acked_at?: string;
 }

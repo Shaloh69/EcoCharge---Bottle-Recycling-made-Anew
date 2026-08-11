@@ -21,13 +21,24 @@ type StatusType =
   | "completed"
   | "pending"
   | "confirmed"
-  | "rejected";
+  | "rejected"
+  // Device command lifecycle (analyzation.md SS4: DeviceCommand.status is
+  // PENDING/ACKED/FAILED/EXPIRED) - added 2026-08-11, the command audit log
+  // never had real badge treatment for any of these before.
+  | "acked"
+  | "failed"
+  | "expired"
+  // Credit-ledger transaction direction
+  | "earn"
+  | "spend";
 
 const STATUS_CONFIG: Record<StatusType, { color: string; label: string }> = {
   online: { color: "successLime", label: "Online" },
   confirmed: { color: "successLime", label: "Confirmed" },
   completed: { color: "successLime", label: "Completed" },
   low: { color: "successLime", label: "Low" },
+  acked: { color: "successLime", label: "Acked" },
+  earn: { color: "successLime", label: "Earn" },
   active: { color: "voltTeal", label: "Active" },
   warning: { color: "warningAmber", label: "Warning" },
   pending: { color: "warningAmber", label: "Pending" },
@@ -37,6 +48,9 @@ const STATUS_CONFIG: Record<StatusType, { color: string; label: string }> = {
   error: { color: "dangerRed", label: "Error" },
   full: { color: "dangerRed", label: "Full" },
   rejected: { color: "dangerRed", label: "Rejected" },
+  failed: { color: "dangerRed", label: "Failed" },
+  expired: { color: "dangerRed", label: "Expired" },
+  spend: { color: "dangerRed", label: "Spend" },
 };
 
 export function StatusBadge({
