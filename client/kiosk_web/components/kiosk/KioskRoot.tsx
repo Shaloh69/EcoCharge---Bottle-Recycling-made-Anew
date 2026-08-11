@@ -112,14 +112,26 @@ function KioskRootInner({ children }: { children: React.ReactNode }) {
     <>
       {/*
        * Portrait shell — fixed to viewport height, centred, scrollable inside.
-       * 600 px keeps kiosk UI focused on a 15.6" landscape touchscreen.
+       *
+       * Real mismatch found and fixed 2026-08-11, on a screenshot taken at the
+       * kiosk's actual resolution: this was capped at 600px, justified by a
+       * comment about "a 15.6-inch landscape touchscreen". The real target is
+       * 1080x1920 portrait — that is what the hardware is, and every page of
+       * the design reference deck is exported at exactly that size. The 600px
+       * cap meant every kiosk screen rendered as a narrow column with large
+       * dead bands either side, which is the single biggest reason the kiosk
+       * read as "a phone page on a big display" rather than a kiosk UI.
+       *
+       * 1080 is the real device width, so on the kiosk itself this is now a
+       * no-op (full bleed) while still keeping the layout sane if someone opens
+       * it on a wide desktop monitor during development.
        */}
       <div
         style={{
           position: "relative",
           flex: 1,
           height: "100%",
-          maxWidth: 600,
+          maxWidth: 1080,
           width: "100%",
           margin: "0 auto",
           display: "flex",

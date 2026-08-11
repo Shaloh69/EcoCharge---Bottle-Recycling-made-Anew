@@ -21,7 +21,9 @@ honest, evidence-qualified per-item breakdown — most items are `[~]`
 confirmed working (2026-08-11, after two prior sessions that couldn't get it
 loaded — see `memory.md`), so the actual screenshot-verification pass this
 file's `[~]` items are waiting on can now proceed for real. Work order for
-resuming: `docs/planning/04-continue-design-redo.md`.
+resuming: `docs/planning/08-master-checklist.md` Phase E (the old
+`04-continue-design-redo.md` was retired 2026-08-11 — every status claim in it
+had gone false, and its work order is now carried by Phase E directly).
 
 ---
 

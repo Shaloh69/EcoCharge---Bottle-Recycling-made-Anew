@@ -110,7 +110,7 @@ function PortCard({
               p={6}
               radius="sm"
             >
-              <Text ff="monospace" fw={700} size="xs" ta="center">
+              <Text ff="var(--font-mono)" fw={700} size="xs" ta="center">
                 {value}
               </Text>
               <Text c="dimmed" size="9px" ta="center">
@@ -400,7 +400,7 @@ export default function KioskDetailPage({
             >
               {label}
             </Text>
-            <Text ff="monospace" fw={700} mt={4} size="sm">
+            <Text ff="var(--font-mono)" fw={700} mt={4} size="sm">
               {value}
             </Text>
           </Card>
@@ -420,7 +420,7 @@ export default function KioskDetailPage({
                   ? "warningAmber"
                   : "successLime"
             }
-            ff="monospace"
+            ff="var(--font-mono)"
             fw={700}
             size="xs"
           >
@@ -519,7 +519,7 @@ export default function KioskDetailPage({
           Device API Key
         </Text>
         <Text
-          ff="monospace"
+          ff="var(--font-mono)"
           p="xs"
           size="xs"
           style={{

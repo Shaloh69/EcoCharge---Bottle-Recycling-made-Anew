@@ -286,3 +286,7 @@ scripts/extract_frames/**
 # docs/planning/02-design-mandate.md SS4.6.
 /EcoCharge.pdf
 .playwright-mcp/
+
+# local env backups (may contain live keys)
+*.env.local.bak
+.env.local.bak

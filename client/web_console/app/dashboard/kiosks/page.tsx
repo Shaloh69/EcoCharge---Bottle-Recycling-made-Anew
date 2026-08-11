@@ -97,7 +97,7 @@ export default function KiosksPage() {
                 in the ESP firmware. It will not be shown again.
               </Text>
               <Text
-                ff="monospace"
+                ff="var(--font-mono)"
                 p="xs"
                 size="xs"
                 style={{

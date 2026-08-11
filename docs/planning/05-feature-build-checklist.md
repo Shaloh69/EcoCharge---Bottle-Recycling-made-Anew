@@ -54,7 +54,7 @@ The rework prompt (`03-revamp-master.md`) covers migration, security, and design
 
 ## Stage 2 — Design revamp execution
 
-Tracked in `DESIGN.md` (as-built) against `02-design-mandate.md` (spec) — see `04-continue-design-redo.md` for the work order. Not duplicated here to avoid two documents drifting out of sync on the same status.
+Tracked in `DESIGN.md` (as-built) against `02-design-mandate.md` (spec), with the live per-item work order in `08-master-checklist.md` Phase E. Not duplicated here to avoid two documents drifting out of sync on the same status. (`04-continue-design-redo.md`, previously named here as the work order, was retired 2026-08-11 — fully superseded.)
 
 ## Stage 1.5 — AI detection reliability (conveyor detection problem)
 

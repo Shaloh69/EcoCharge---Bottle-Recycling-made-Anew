@@ -29,7 +29,7 @@ export function BinGauge({ level }: { level: number }) {
         striped={level >= 95}
         value={level}
       />
-      <Text c={color} ff="monospace" fw={700} size="xs" ta="right" w={40}>
+      <Text c={color} ff="var(--font-mono)" fw={700} size="xs" ta="right" w={40}>
         {level}%
       </Text>
     </Group>

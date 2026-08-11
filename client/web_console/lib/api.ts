@@ -47,6 +47,34 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+// ── public probes ────────────────────────────────────────────────────────────
+/**
+ * Unauthenticated reachability probe against the real API's `/health`.
+ * Used by the login screen's status rail — an operations console should tell
+ * you whether the backend is actually up *before* you spend a login attempt
+ * on it. Deliberately does not go through `req()`: that redirects to /login on
+ * 401, which would be a redirect loop here, and this endpoint takes no token.
+ */
+export async function probeApiHealth(): Promise<{
+  ok: boolean;
+  ms: number;
+  ts?: string;
+}> {
+  const t0 = performance.now();
+
+  try {
+    const res = await fetch(`${API}/health`, { cache: "no-store" });
+    const ms = Math.round(performance.now() - t0);
+
+    if (!res.ok) return { ok: false, ms };
+    const body = (await res.json()) as { status?: string; ts?: string };
+
+    return { ok: body.status === "ok", ms, ts: body.ts };
+  } catch {
+    return { ok: false, ms: Math.round(performance.now() - t0) };
+  }
+}
+
 // ── auth ─────────────────────────────────────────────────────────────────────
 export const adminAuth = {
   login: (email: string, password: string) =>
@@ -240,10 +268,20 @@ export interface SseEvent {
 export function openAdminSSE(
   onEvent: (event: SseEvent) => void,
   onError?: () => void,
+  onOpen?: () => void,
 ): () => void {
   const token = auth.getToken();
   const API = process.env.NEXT_PUBLIC_API_URL ?? "";
   const es = new EventSource(`${API}/api/admin/sse?token=${token ?? ""}`);
+
+  /**
+   * Real bug found 2026-08-11 on a live screenshot: the dashboard's connection
+   * badge was driven off the first *message*, not the connection itself. With
+   * an idle fleet the server legitimately sends nothing, so a perfectly healthy
+   * stream sat on "Connecting…" forever and looked broken. `onopen` is the
+   * signal that actually means "connected".
+   */
+  es.onopen = () => onOpen?.();
 
   es.onmessage = (e) => {
     try {

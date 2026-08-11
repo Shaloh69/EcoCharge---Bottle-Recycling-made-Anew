@@ -10,6 +10,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
+import { CreditCard, MapPin, Recycle, Server, Zap } from "lucide-react";
 
 import { addToast } from "@/lib/toast";
 import { StatsCard } from "@/components/admin/StatsCard";
@@ -39,6 +40,7 @@ export default function DashboardPage() {
   );
   const [live, setLive] = useState(false);
   const closeRef = useRef<(() => void) | null>(null);
+  const totalKiosks = kiosks.length;
 
   useEffect(() => {
     Promise.all([
@@ -87,6 +89,8 @@ export default function DashboardPage() {
           color: "warning",
         });
       },
+      // Connected — independent of whether any telemetry has arrived yet.
+      () => setLive(true),
     );
 
     return () => closeRef.current?.();
@@ -126,17 +130,28 @@ export default function DashboardPage() {
         <SimpleGrid cols={{ base: 2, lg: 4 }} spacing="md">
           <PulseValue value={overview?.kiosks_online ?? "—"}>
             <StatsCard
-              color="ecoGreen"
-              icon="🏧"
-              subtitle="active now"
+              icon={<Server size={13} />}
+              subtitle={
+                totalKiosks > 0 ? `of ${totalKiosks} in fleet` : "active now"
+              }
               title="Kiosks Online"
+              // Real semantics, not decoration: a fleet with nothing online is
+              // a critical condition, not a green one.
+              tone={
+                overview == null
+                  ? "neutral"
+                  : overview.kiosks_online === 0
+                    ? "critical"
+                    : overview.kiosks_online < totalKiosks
+                      ? "warning"
+                      : "good"
+              }
               value={overview?.kiosks_online ?? "—"}
             />
           </PulseValue>
           <PulseValue value={overview?.total_deposits ?? "—"}>
             <StatsCard
-              color="voltTeal"
-              icon="🍶"
+              icon={<Recycle size={13} />}
               subtitle="all time"
               title="Total Deposits"
               value={overview?.total_deposits ?? "—"}
@@ -144,8 +159,7 @@ export default function DashboardPage() {
           </PulseValue>
           <PulseValue value={overview?.total_credits_earned ?? "—"}>
             <StatsCard
-              color="successLime"
-              icon="💳"
+              icon={<CreditCard size={13} />}
               subtitle="minutes earned"
               title="Credits Issued"
               value={overview?.total_credits_earned ?? "—"}
@@ -153,10 +167,16 @@ export default function DashboardPage() {
           </PulseValue>
           <PulseValue value={overview?.active_charging ?? "—"}>
             <StatsCard
-              color="warningAmber"
-              icon="⚡"
+              icon={<Zap size={13} />}
               subtitle="charging now"
               title="Active Charging"
+              // Amber is this product's "live power" accent (SS2) and is
+              // genuinely meaningful here: ports are drawing current right now.
+              tone={
+                overview != null && overview.active_charging > 0
+                  ? "warning"
+                  : "neutral"
+              }
               value={overview?.active_charging ?? "—"}
             />
           </PulseValue>
@@ -195,9 +215,12 @@ export default function DashboardPage() {
                         <Text fw={700} size="md">
                           {k.name}
                         </Text>
-                        <Text c="dimmed" mt={2} size="xs">
-                          📍 {k.location}
-                        </Text>
+                        <Group gap={4} mt={3}>
+                          <MapPin color="#5C7268" size={11} />
+                          <Text c="dimmed" size="xs">
+                            {k.location}
+                          </Text>
+                        </Group>
                       </div>
                       <StatusBadge status={k.status} />
                     </Group>
@@ -244,7 +267,7 @@ export default function DashboardPage() {
                                 </Group>
                                 <Text
                                   c={p.relay_on ? "successLime" : "dimmed"}
-                                  ff="monospace"
+                                  ff="var(--font-mono)"
                                   fw={700}
                                   size="md"
                                 >
@@ -252,7 +275,7 @@ export default function DashboardPage() {
                                 </Text>
                                 <Text
                                   c="dimmed"
-                                  ff="monospace"
+                                  ff="var(--font-mono)"
                                   mt={2}
                                   size="10px"
                                 >
@@ -267,7 +290,7 @@ export default function DashboardPage() {
                           <Text c="dimmed" size="10px">
                             Bin Level
                           </Text>
-                          <Text c="dimmed" ff="monospace" size="10px">
+                          <Text c="dimmed" ff="var(--font-mono)" size="10px">
                             {tel.binLevel}%
                           </Text>
                         </Group>
@@ -292,34 +315,46 @@ export default function DashboardPage() {
                 Summary
               </Text>
               <Stack gap="sm">
+                {/* Values wear the primary *text* token, not a per-row hue.
+                    The previous version painted each row a different colour
+                    (violet / teal / lime / amber) purely to differentiate rows
+                    — decoration wearing the status palette, which SS2 forbids
+                    and the `dataviz` skill calls out explicitly ("text wears
+                    text tokens, never the series color"). Amber stays on
+                    Active Charging only, where it genuinely means live power. */}
                 {[
                   {
                     label: "Total Users",
                     value: overview?.total_users ?? "—",
-                    color: "bloomViolet",
+                    live: false,
                   },
                   {
                     label: "Total Deposits",
                     value: overview?.total_deposits ?? "—",
-                    color: "voltTeal",
+                    live: false,
                   },
                   {
                     label: "Credits Earned",
                     value: overview?.total_credits_earned ?? "—",
-                    color: "successLime",
+                    live: false,
                   },
                   {
                     label: "Active Charging",
                     value: overview?.active_charging ?? "—",
-                    color: "warningAmber",
+                    live: (overview?.active_charging ?? 0) > 0,
                   },
-                ].map(({ label, value, color }) => (
+                ].map(({ label, value, live: isLive }) => (
                   <Group key={label} justify="space-between">
                     <Text c="dimmed" size="xs">
                       {label}
                     </Text>
                     <PulseValue value={value}>
-                      <Text c={color} ff="monospace" fw={700} size="sm">
+                      <Text
+                        ff="var(--font-mono)"
+                        fw={700}
+                        size="sm"
+                        style={{ color: isLive ? "#FBBF24" : "#E7F0EB" }}
+                      >
                         {value}
                       </Text>
                     </PulseValue>

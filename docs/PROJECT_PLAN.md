@@ -67,7 +67,7 @@ This phase assumed a separate orchestrator service. **Confirmed in `analyzation.
 
 ## Phase 6: Kiosk UI And Admin Dashboard — **functional, not yet visually redesigned**
 
-Both apps are real, live, and wired to the real backend — the original phase's "replace placeholder UIs" framing is obsolete, since neither is a placeholder anymore. What's actually left is the visual design execution now specified in `docs/planning/02-design-mandate.md` ("Operations Console" for the admin dashboard, "Clean Energy Reward" for the kiosk) — confirmed not yet started via dependency grep this session (no typography swap, no step-wizard, no idle-timeout on the kiosk). Track this work in `docs/planning/04-continue-design-redo.md`, not here.
+Both apps are real, live, and wired to the real backend — the original phase's "replace placeholder UIs" framing is obsolete, since neither is a placeholder anymore. What was left is the visual design execution specified in `docs/planning/02-design-mandate.md` ("Operations Console" for the admin dashboard, "Clean Energy Reward" for the kiosk). **Update 2026-08-11: that execution has now largely landed on both surfaces** — real typography swap (Baloo 2 / Space Grotesk / IBM Plex families wired via `next/font`, Inter gone), Mantine rebuild across all 11 admin pages, a systemic light-identity fix plus a real component catalog on the kiosk, and an FSM-aware idle timeout. Track the live per-item status in `docs/planning/08-master-checklist.md` Phase E, not here.
 
 ## Phase 7: Mobile App Decision And Delivery — **resolved: kept, and built**
 
@@ -106,7 +106,7 @@ The original 10-step order (scope freeze → backend → orchestrator → firmwa
 1. Self-hosting migration (`docs/planning/03-revamp-master.md` §1) — blocks a real pilot deployment.
 2. Key rotation + the two firmware fixes (same document, §2–§3) — blocks safely reflashing hardware.
 3. The `ml-review` gate product decision (§3.1) — blocks writing the "low-confidence detection flow" test in Phase 8.
-4. Design revamp execution (`docs/planning/02-design-mandate.md`, `docs/planning/04-continue-design-redo.md`) — blocks taking the UI screenshots the thesis evidence pack needs.
+4. Design revamp execution (`docs/planning/02-design-mandate.md`, tracked live in `docs/planning/08-master-checklist.md` Phase E) — blocks taking the UI screenshots the thesis evidence pack needs.
 5. Testing infrastructure (`docs/planning/05-feature-build-checklist.md` Stage 1) — blocks a defensible "the system works reliably" claim.
 6. Thesis evidence packaging (same document, Stage 3) — the actual final deliverable.
 7. Pilot validation — depends on 1 and 2 being done first; a pilot on unmigrated, unvalidated hardware would produce findings about the wrong system.

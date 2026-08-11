@@ -1,80 +1,93 @@
 "use client";
 
-import { Card, Group, Text, Badge, ThemeIcon } from "@mantine/core";
+import { Card, Group, Text } from "@mantine/core";
 
 interface StatsCardProps {
   title: string;
   value: string | number;
   subtitle?: string;
   icon: React.ReactNode;
-  color?: string;
-  trend?: { value: string; up: boolean };
+  /**
+   * Semantic accent. Drives the left rule and the value colour.
+   * `neutral` means "this number has no health meaning" — it renders in the
+   * primary text token instead of a hue.
+   */
+  tone?: "neutral" | "good" | "warning" | "critical";
 }
 
+const TONE: Record<string, { rule: string; value: string }> = {
+  neutral: { rule: "#1A2420", value: "#E7F0EB" },
+  good: { rule: "#16A34A", value: "#4ADE80" },
+  warning: { rule: "#FBBF24", value: "#FBBF24" },
+  critical: { rule: "#EF4444", value: "#F87171" },
+};
+
 /**
- * "Operations Console" StatsCard — a real 1px palette-tinted border, no
- * backdrop blur (docs/planning/02-design-mandate.md SS1's banned-pattern
- * list: "reflexive glassmorphism (blur panels without a functional
- * reason)" — a stats tile has no functional reason, the earlier version
- * used one anyway). Value is set in the mono family since it's the one
- * number on the card someone actually needs to read precisely.
+ * "Operations Console" StatsCard.
+ *
+ * Rebuilt 2026-08-11 (full redo). Three real problems with the previous
+ * version, all found on a real screenshot of the live dashboard:
+ *
+ * 1. It rendered the icon in a `ThemeIcon` chip — literally SS1's banned
+ *    "icon-in-rounded-square feature tile". The icons were also emoji
+ *    (🏧/🍶/💳/⚡), not the lucide set the rest of the console uses.
+ * 2. Every card carried a full 1px border in its own hue, so four cards meant
+ *    four competing colours with no semantic content — exactly the
+ *    "never repurpose these hues for decoration" rule in SS2. Replaced with a
+ *    single left rule that is only coloured when the number actually means
+ *    something (good/warning/critical).
+ * 3. The value took the card's decorative colour, so "0 kiosks online" rendered
+ *    in *green* — actively wrong under SS2's convention, where green means
+ *    healthy. Tone is now passed by the caller from the real value.
+ *
+ * The icon stays, but as a plain muted glyph beside the label, carrying no
+ * box of its own.
  */
 export function StatsCard({
   title,
   value,
   subtitle,
   icon,
-  color = "ecoGreen",
-  trend,
+  tone = "neutral",
 }: StatsCardProps) {
+  const t = TONE[tone] ?? TONE.neutral;
+
   return (
     <Card
       withBorder
       p="lg"
-      radius="md"
-      style={{ borderColor: `var(--mantine-color-${color}-6)` }}
+      radius="sm"
+      style={{
+        borderLeft: `3px solid ${t.rule}`,
+      }}
     >
-      <Group align="flex-start" justify="space-between">
+      <Group align="center" gap={8}>
+        <span style={{ color: "#5C7268", display: "flex" }}>{icon}</span>
         <Text
           c="dimmed"
           fw={600}
-          size="xs"
-          style={{ letterSpacing: 0.4 }}
+          size="10px"
+          style={{ letterSpacing: "0.16em" }}
           tt="uppercase"
         >
           {title}
         </Text>
-        <ThemeIcon color={color} radius="md" size="lg" variant="light">
-          {icon}
-        </ThemeIcon>
       </Group>
 
       <Text
-        c={color}
-        ff="monospace"
-        fw={800}
-        mt="sm"
-        size="2rem"
-        style={{ lineHeight: 1 }}
+        ff="var(--font-mono)"
+        fw={700}
+        mt="md"
+        size="2.25rem"
+        style={{ lineHeight: 1, color: t.value, letterSpacing: "-0.02em" }}
       >
         {value}
       </Text>
 
       {subtitle && (
-        <Text c="dimmed" mt={4} size="xs">
+        <Text c="dimmed" mt={6} size="xs">
           {subtitle}
         </Text>
-      )}
-
-      {trend && (
-        <Badge
-          color={trend.up ? "successLime" : "dangerRed"}
-          mt="sm"
-          size="sm"
-          variant="light"
-        >
-          {trend.up ? "↑" : "↓"} {trend.value}
-        </Badge>
       )}
     </Card>
   );

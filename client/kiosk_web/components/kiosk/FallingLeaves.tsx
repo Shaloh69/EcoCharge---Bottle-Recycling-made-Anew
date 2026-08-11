@@ -61,7 +61,13 @@ export function FallingLeaves() {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none fixed inset-0 overflow-hidden"
+      // `absolute`, not `fixed`: fixed positioning pinned the leaves to the
+      // viewport, so on the attract screen they drifted down across the white
+      // action band and over the primary CTA — motion behind body copy and a
+      // touch target, which SS1 rules out. Absolute confines them to whichever
+      // relatively-positioned band renders them (the green hero here, the
+      // full-screen idle overlay on IdleScreen).
+      className="pointer-events-none absolute inset-0 overflow-hidden"
       style={{ zIndex: 0 }}
     >
       {leaves.map((leaf) => (
