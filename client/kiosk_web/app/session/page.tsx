@@ -1,28 +1,41 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { ArrowLeft, ChevronRight, CreditCard, Recycle, Zap } from "lucide-react";
 
-import { BackButton } from "@/components/kiosk/BackButton";
 import { KioskHeader } from "@/components/kiosk/KioskHeader";
 
+/**
+ * Mode select — full redo, 2026-08-11.
+ *
+ * Screenshotted at the real 1080x1920 after the shell width fix. Problems, all
+ * real: the two option tiles carried emoji inside white rounded squares (SS1's
+ * banned icon-in-rounded-square, and emoji rather than the lucide set used
+ * everywhere else on this surface), the content occupied a band in the middle
+ * with roughly 1300px of dead space above and below it, and the back control
+ * had fallen below the fold entirely — on a kiosk, "back" being unreachable is
+ * a dead end, which SS4 rules out ("zero dead ends").
+ */
 const OPTIONS = [
   {
     href: "/session/deposit?mode=charge",
-    icon: "⚡",
+    icon: Zap,
     label: "Charge",
-    sub: "Use credits to charge your phone",
+    sub: "Use your credits to charge your phone",
     bg: "#FFFBEB",
     border: "#FDE68A",
-    accent: "#D97706",
+    accent: "#B45309",
+    iconBg: "#FDE68A",
   },
   {
     href: "/session/deposit?mode=credit",
-    icon: "💳",
+    icon: CreditCard,
     label: "Credits",
-    sub: "Check or top-up your balance",
+    sub: "Check your balance or add more",
     bg: "#DCFCE7",
     border: "#BBF7D0",
     accent: "#15803D",
+    iconBg: "#BBF7D0",
   },
 ];
 
@@ -35,86 +48,169 @@ export default function SessionPage() {
   const router = useRouter();
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1" style={{ background: "#F6FBF7" }}>
       <KioskHeader showAccount />
 
       <motion.div
         animate="animate"
-        className="flex-1 flex flex-col items-center justify-center px-8 gap-8 py-10"
+        className="flex-1 flex flex-col px-12 pt-10 pb-10"
         initial="initial"
-        transition={{ staggerChildren: 0.1 }}
+        style={{ gap: 28 }}
+        transition={{ staggerChildren: 0.09 }}
       >
-        {/* heading */}
-        <motion.div
-          className="text-center"
-          transition={{ duration: 0.3 }}
-          variants={item}
-        >
-          <p className="text-[#7C9587] text-xs uppercase tracking-widest mb-2">
+        <motion.div transition={{ duration: 0.3 }} variants={item}>
+          <p
+            className="uppercase"
+            style={{
+              color: "#7C9587",
+              fontSize: 19,
+              letterSpacing: "0.2em",
+              marginBottom: 10,
+            }}
+          >
             What would you like to do?
           </p>
-          <h2 className="text-[#14231B] text-5xl font-extrabold tracking-tight">
+          <h1
+            className="font-extrabold"
+            style={{
+              color: "#14231B",
+              fontSize: 68,
+              letterSpacing: "-0.03em",
+              lineHeight: 1.02,
+            }}
+          >
             Select Mode
-          </h2>
+          </h1>
         </motion.div>
 
-        {/* option buttons */}
+        {/* Options — tall enough to be unmissable across a room */}
         <motion.div
-          className="w-full space-y-4"
+          className="flex flex-col"
+          style={{ gap: 22 }}
           transition={{ duration: 0.35, type: "spring", bounce: 0.2 }}
           variants={item}
         >
-          {OPTIONS.map((opt) => (
-            <button
-              key={opt.href}
-              className="w-full rounded-3xl p-7 flex items-center gap-6 text-left transition-all active:scale-95"
-              style={{
-                background: opt.bg,
-                border: `2px solid ${opt.border}`,
-                boxShadow: "0 4px 20px rgba(20,35,27,0.06)",
-              }}
-              onClick={() => router.push(opt.href)}
-            >
-              <div
-                className="w-20 h-20 rounded-2xl flex items-center justify-center text-5xl flex-shrink-0"
+          {OPTIONS.map((opt) => {
+            const Icon = opt.icon;
+
+            return (
+              <button
+                key={opt.href}
+                className="w-full flex items-center text-left transition-transform active:scale-[0.98]"
                 style={{
-                  background: "#FFFFFF",
-                  border: `1.5px solid ${opt.border}`,
+                  background: opt.bg,
+                  border: `3px solid ${opt.border}`,
+                  borderRadius: 34,
+                  padding: "38px 34px",
+                  gap: 30,
+                  minHeight: 196,
                 }}
+                onClick={() => router.push(opt.href)}
               >
-                {opt.icon}
-              </div>
-              <div className="flex-1">
-                <p className="text-[#14231B] text-3xl font-bold leading-tight">
-                  {opt.label}
-                </p>
-                <p className="text-[#4A6B58] text-base mt-1">{opt.sub}</p>
-              </div>
-              <span className="text-3xl" style={{ color: opt.accent }}>
-                ›
-              </span>
-            </button>
-          ))}
+                {/* Icon sits on a soft disc, not a bordered white square tile */}
+                <span
+                  className="flex items-center justify-center rounded-full"
+                  style={{
+                    width: 104,
+                    height: 104,
+                    background: opt.iconBg,
+                    color: opt.accent,
+                    flexShrink: 0,
+                  }}
+                >
+                  <Icon size={50} strokeWidth={2.5} />
+                </span>
+                <span className="flex-1">
+                  <span
+                    className="block font-extrabold"
+                    style={{
+                      color: "#14231B",
+                      fontSize: 52,
+                      lineHeight: 1.05,
+                      letterSpacing: "-0.02em",
+                    }}
+                  >
+                    {opt.label}
+                  </span>
+                  <span
+                    className="block"
+                    style={{ color: "#4A6B58", fontSize: 24, marginTop: 8 }}
+                  >
+                    {opt.sub}
+                  </span>
+                </span>
+                <ChevronRight
+                  color={opt.accent}
+                  size={44}
+                  strokeWidth={3}
+                  style={{ flexShrink: 0 }}
+                />
+              </button>
+            );
+          })}
         </motion.div>
 
-        {/* recycle prompt */}
+        {/* Bottle prompt — real instruction, not a decorative tile */}
         <motion.div
-          className="w-full rounded-3xl p-6 text-center"
-          style={{ background: "#FFFFFF", border: "1px solid #E5EFE8" }}
+          className="flex items-center"
+          style={{
+            background: "#FFFFFF",
+            border: "2px solid #E5EFE8",
+            borderRadius: 30,
+            padding: "28px 32px",
+            gap: 24,
+          }}
           transition={{ duration: 0.3 }}
           variants={item}
         >
-          <p className="text-5xl mb-3">🍶</p>
-          <p className="text-[#14231B] font-bold text-xl">Have a bottle?</p>
-          <p className="text-[#7C9587] text-base mt-1">
-            Drop it in the slot above to earn credits.
-          </p>
+          <span
+            className="flex items-center justify-center rounded-full"
+            style={{
+              width: 82,
+              height: 82,
+              background: "#DCFCE7",
+              color: "#15803D",
+              flexShrink: 0,
+            }}
+          >
+            <Recycle size={40} strokeWidth={2.5} />
+          </span>
+          <span>
+            <span
+              className="block font-bold"
+              style={{ color: "#14231B", fontSize: 32 }}
+            >
+              Have a bottle?
+            </span>
+            <span
+              className="block"
+              style={{ color: "#4A6B58", fontSize: 23, marginTop: 4 }}
+            >
+              Drop it in the slot above to earn credits.
+            </span>
+          </span>
         </motion.div>
-      </motion.div>
 
-      <div className="px-8 pb-8">
-        <BackButton href="/auth/linked" />
-      </div>
+        <motion.button
+          className="flex items-center justify-center transition-transform active:scale-[0.98]"
+          style={{
+            marginTop: "auto",
+            gap: 12,
+            height: 76,
+            borderRadius: 38,
+            border: "2px solid #D6E7DC",
+            color: "#4A6B58",
+            fontSize: 24,
+            fontWeight: 600,
+          }}
+          transition={{ duration: 0.3 }}
+          variants={item}
+          onClick={() => router.push("/auth/linked")}
+        >
+          <ArrowLeft size={26} strokeWidth={2.5} />
+          Back
+        </motion.button>
+      </motion.div>
     </div>
   );
 }

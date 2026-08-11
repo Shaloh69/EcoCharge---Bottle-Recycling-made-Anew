@@ -273,6 +273,33 @@ Same palette/meaning as the kiosk; native rewards-app ergonomics.
 
 ---
 
+## 7a. Shipping to live is part of "done" — added 2026-08-11 by explicit user instruction
+
+**"Also remember to push to live also / for cloudfare always / make sure that works always."** A screen is not finished when it renders on `localhost:4312`. It is finished when the real, publicly-tunneled instance serves it and that has been checked from outside the tailnet. This closes the exact gap §0 already warns about — a local dev screenshot is not evidence about the deployed instance — and it is now a standing rule for every surface, not a per-session decision.
+
+**The deploy loop, per surface, every time UI changes land:**
+
+1. `npm run build` locally first. A broken build must never reach the server.
+2. Copy the build output to `desktop-gklhcri` under `D:\EcoCharge\app\<surface>\`.
+3. Restart that surface's scheduled task (`schtasks /End` then `/Run` — the `.bat` crash-restart loop picks it back up).
+4. **Verify through the public Cloudflare hostname, not `localhost` and not the tailnet address** — a real `curl` for status, then a real screenshot of the tunneled URL for anything visual.
+5. If the URL rotated, repoint every consumer (see below) before calling it done.
+
+**The port/task/tunnel map — the real one, verified 2026-08-11:**
+
+| Surface | Port | Task | Tunnel task |
+|---|---|---|---|
+| Node API | 30010 | `EcoChargeAPI` | `EcoChargeTunnelAPI` |
+| Admin Console | 30011 | `EcoChargeAdminConsole` | `EcoChargeTunnelAdmin` |
+| AI server | 30012 | `EcoChargeAIServer` | `EcoChargeTunnelAI` |
+| Kiosk Web | 30013 | `EcoChargeKioskWeb` | `EcoChargeTunnelKiosk` |
+| Website | 30014 | `EcoChargeWeb` | `EcoChargeTunnelWeb` |
+
+**Cloudflare quick tunnels rotate their hostname on every restart** — this is the accepted tradeoff of the free path (Phase A, explicitly chosen). Two consequences that have already bitten this project and will again:
+
+- **The live URL is never trustworthy from a document.** Read it from `D:\EcoCharge\logs\cloudflared\<surface>-err.log` on the server (cloudflared writes the assigned hostname to stderr), never from a checklist or from memory.
+- **A rotated API hostname breaks every consumer at once**, and two of them bake it in at *build* time: `web_console` and the Website inline `NEXT_PUBLIC_API_URL`, so they need a rebuild, not just a restart. `kiosk_web`'s `.env.local`, `esp/ecocharge/include/config.h`, and the Flutter default all carry it too. **A new origin also has to be added to the API's `ALLOWED_ORIGINS` and the API restarted** — this has already caused one real outage (kiosk QR-auth polling died the moment kiosk_web got its own tunnel origin) and one dev-loop failure (the login status rail read `UNREACHABLE` from `localhost:4311` until the origin was allowlisted). Verify with a real CORS preflight, not by assuming.
+
 ## 8. Sequencing
 
 Component inventory (Knip sweep, nav catalog) is done — confirmed clean, no consolidation needed before starting on the three existing surfaces (it obviously doesn't apply to the new Surface 4, which has no existing components to inventory). Do the visual rebuild in this order: Admin Console first (dense, highest-value telemetry surface, and the one furthest from done), then Kiosk Web (needs the idle-timeout and step-wizard built from scratch, not just restyled — and is blocked on the Figma-designs and mascot questions in §4.5 for anything beyond structural/functional work), then the Mobile App, then the new Public Website (§6) — it's independent of the other three and could in principle move earlier if the Figma/mascot blockers on the Kiosk drag on, but is placed last here since it has no existing user-facing gap the way the other three do. Update `DESIGN.md`'s execution-status checklist and `memory.md` as each surface actually ships, with screenshots — not before.

@@ -260,7 +260,24 @@ function DepositContent() {
             result.condition ?? null,
             result.confidence,
           );
-        } catch {
+        } catch (err) {
+          /**
+           * Real gap closed 2026-08-11: the server has refused deposits at bin
+           * level >= 95% with `409 {error:"bin_full"}` since the security pass,
+           * but nothing in this app had ever looked at that response — a grep
+           * for `bin_full` across client/kiosk_web returned nothing. A user at
+           * a full kiosk therefore saw a generic "Failed to contact server",
+           * which is both wrong (the server answered fine) and a dead end.
+           * SS4.4 specifies a real screen for this; route to it.
+           */
+          const msg = (err as Error)?.message ?? "";
+
+          if (msg.includes("bin_full")) {
+            scanActive.current = false;
+            router.push("/session/bin-full");
+
+            return;
+          }
           setPhase("error");
           setStatusMsg("Failed to contact server");
         }
