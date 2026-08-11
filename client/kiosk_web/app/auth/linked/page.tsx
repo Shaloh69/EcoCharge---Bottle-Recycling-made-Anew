@@ -55,8 +55,8 @@ export default function LinkedPage() {
           <div
             className="w-24 h-24 rounded-full flex items-center justify-center text-5xl"
             style={{
-              background: "linear-gradient(135deg, #4ADE80, #16A34A)",
-              boxShadow: "0 0 28px rgba(76,175,80,0.4)",
+              background: "#16A34A",
+              boxShadow: "0 8px 24px rgba(22,163,74,0.30)",
             }}
           >
             👤
@@ -90,12 +90,12 @@ export default function LinkedPage() {
           transition={{ duration: 0.3 }}
           variants={item}
         >
-          <h2 className="text-white text-5xl font-extrabold tracking-tight">
+          <h2 className="text-[#14231B] text-5xl font-extrabold tracking-tight">
             Welcome back,
             <br />
-            <span style={{ color: "#4ADE80" }}>{firstName}!</span>
+            <span style={{ color: "#16A34A" }}>{firstName}!</span>
           </h2>
-          <p className="text-white/40 text-base mt-3">
+          <p className="text-[#7C9587] text-base mt-3">
             Auto-continues in {countdown}s…
           </p>
         </motion.div>

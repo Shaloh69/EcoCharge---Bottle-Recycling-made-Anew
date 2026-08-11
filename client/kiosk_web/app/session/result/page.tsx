@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 
 import { BackButton } from "@/components/kiosk/BackButton";
 import { KioskHeader } from "@/components/kiosk/KioskHeader";
-import { MascotFull } from "@/components/kiosk/MascotDisplay";
+import { HaloBadge } from "@/components/kiosk/HaloBadge";
 
 const item = {
   initial: { opacity: 0, y: 16 },
@@ -28,27 +28,34 @@ function ResultContent() {
         initial="initial"
         transition={{ staggerChildren: 0.1 }}
       >
+        {/* Real deck component (SS4.6): pulsing halo-ring badge,
+            icon-differentiated, red (not green) for the reject state per
+            the mandate's reasoned deviation from the source deck. */}
         <motion.div
           transition={{ duration: 0.4, type: "spring", bounce: 0.35 }}
           variants={item}
         >
-          <MascotFull mood={accepted ? "happy" : "sad"} />
+          <HaloBadge success={accepted} />
         </motion.div>
 
         {/* Result card */}
         <motion.div
-          className="glass-white rounded-3xl p-9 w-full shadow-2xl text-center"
+          className="rounded-3xl p-9 w-full text-center"
+          style={{
+            background: "#FFFFFF",
+            border: "1px solid #E5EFE8",
+            boxShadow: "0 8px 32px rgba(20,35,27,0.08)",
+          }}
           transition={{ duration: 0.4, type: "spring", bounce: 0.25 }}
           variants={item}
         >
-          <div className="text-7xl mb-4">{accepted ? "✅" : "❌"}</div>
           <h2
             className="text-3xl font-extrabold mb-3"
             style={{ color: accepted ? "#16A34A" : "#DC2626" }}
           >
             {accepted ? "Bottle Accepted!" : "Bottle Rejected"}
           </h2>
-          <p className="text-gray-500 text-lg leading-relaxed">
+          <p className="text-[#4A6B58] text-lg leading-relaxed">
             {accepted
               ? `Credits earned! Mode: ${mode}`
               : "Bottle does not meet requirements. Please try again."}
@@ -72,11 +79,7 @@ function ResultContent() {
         ) : (
           <motion.button
             className="w-full py-6 rounded-2xl text-2xl font-bold transition-all active:scale-95"
-            style={{
-              background: "linear-gradient(135deg, #DC2626, #991B1B)",
-              color: "white",
-              boxShadow: "0 8px 32px rgba(220,38,38,0.35)",
-            }}
+            style={{ background: "#DC2626", color: "white" }}
             transition={{ duration: 0.3 }}
             variants={item}
             onClick={() => router.push("/session/deposit")}

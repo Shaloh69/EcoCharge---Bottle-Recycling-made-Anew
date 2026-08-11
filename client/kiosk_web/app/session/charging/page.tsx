@@ -3,8 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
-import { BackButton } from "@/components/kiosk/BackButton";
 import { KioskHeader } from "@/components/kiosk/KioskHeader";
+import {
+  StationGrid,
+  StationConfirmBar,
+} from "@/components/kiosk/StationPicker";
 import { charging, openKioskSSE, type ChargingSession } from "@/lib/api";
 
 const KIOSK_ID = parseInt(process.env.NEXT_PUBLIC_KIOSK_ID ?? "1");
@@ -64,7 +67,7 @@ export default function ChargingPage() {
     return () => closeRef.current?.();
   }, []);
 
-  const ports = [1, 2, 3, 4].map((id) => ({
+  const stations = [1, 2, 3, 4].map((id) => ({
     id,
     type: PORT_TYPES[id],
     inUse: activePorts.includes(id),
@@ -94,21 +97,26 @@ export default function ChargingPage() {
 
       <motion.div
         animate="animate"
-        className="flex-1 flex flex-col items-center px-8 pt-7 gap-6"
+        className="flex-1 flex flex-col items-center px-8 pt-7 gap-6 pb-4"
         initial="initial"
         transition={{ staggerChildren: 0.09 }}
       >
         {/* Deposit summary card */}
         <motion.div
-          className="glass-white rounded-3xl p-7 w-full shadow-xl text-center"
+          className="rounded-3xl p-7 w-full text-center"
+          style={{
+            background: "#FFFFFF",
+            border: "1px solid #E5EFE8",
+            boxShadow: "0 4px 20px rgba(20,35,27,0.06)",
+          }}
           transition={{ duration: 0.4, type: "spring", bounce: 0.25 }}
           variants={item}
         >
-          <p className="text-gray-400 text-sm mb-1">Bottle Detected</p>
-          <p className="text-gray-800 text-2xl font-extrabold">
+          <p className="text-[#7C9587] text-sm mb-1">Bottle Detected</p>
+          <p className="text-[#14231B] text-2xl font-extrabold">
             {deposit.brand ?? "Bottle"} · {deposit.volume_ml ?? "?"}ml
           </p>
-          <p className="text-gray-400 text-sm mt-3">Credits Earned</p>
+          <p className="text-[#7C9587] text-sm mt-3">Credits Earned</p>
           <p
             className="text-4xl font-extrabold mt-1"
             style={{ color: "#16A34A" }}
@@ -124,22 +132,22 @@ export default function ChargingPage() {
           transition={{ duration: 0.3 }}
           variants={item}
         >
-          <h3 className="text-white text-2xl font-bold">
+          <h3 className="text-[#14231B] text-2xl font-bold">
             Select Charging Outlet
           </h3>
           {live && (
             <span
               className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-full"
               style={{
-                color: "#4ADE80",
-                background: "rgba(74,222,128,0.12)",
-                border: "1px solid rgba(74,222,128,0.3)",
+                color: "#15803D",
+                background: "#DCFCE7",
+                border: "1px solid #BBF7D0",
               }}
             >
               <span
                 className="w-2 h-2 rounded-full"
                 style={{
-                  background: "#4ADE80",
+                  background: "#16A34A",
                   animation: "ripple 1.5s ease-out infinite",
                 }}
               />
@@ -148,84 +156,39 @@ export default function ChargingPage() {
           )}
         </motion.div>
 
-        {/* Port grid */}
+        {/* Station grid — real deck component (SS4.6): numbered tiles,
+            wall-socket icon, green/dark-red "+" select button */}
         <motion.div
-          className="grid grid-cols-2 gap-4 w-full"
+          className="w-full"
           transition={{ duration: 0.35, type: "spring", bounce: 0.2 }}
           variants={item}
         >
-          {ports.map((port) => (
-            <button
-              key={port.id}
-              className="rounded-2xl p-6 flex flex-col items-center gap-3 transition-all active:scale-95"
-              disabled={port.inUse}
-              style={
-                port.inUse
-                  ? {
-                      background: "rgba(255,255,255,0.04)",
-                      opacity: 0.4,
-                      cursor: "not-allowed",
-                    }
-                  : selected === port.id
-                    ? {
-                        background:
-                          "linear-gradient(135deg, rgba(76,175,80,0.3), rgba(22,163,74,0.2))",
-                        border: "2px solid rgba(76,175,80,0.6)",
-                        boxShadow: "0 0 28px rgba(76,175,80,0.2)",
-                      }
-                    : {
-                        background: "rgba(255,255,255,0.08)",
-                        border: "1.5px solid rgba(255,255,255,0.12)",
-                      }
-              }
-              onClick={() => setSelected(port.id)}
-            >
-              <span className="text-4xl">
-                {port.type === "USB-C" ? "🔌" : "🔋"}
-              </span>
-              <span className="font-bold text-white text-lg">
-                Station {port.id}
-              </span>
-              <span className="text-sm text-white/50">{port.type}</span>
-              <span
-                className="text-sm px-3 py-1 rounded-full font-medium"
-                style={
-                  port.inUse
-                    ? { background: "rgba(220,38,38,0.2)", color: "#FCA5A5" }
-                    : { background: "rgba(74,222,128,0.15)", color: "#4ADE80" }
-                }
-              >
-                {port.inUse ? "In Use" : "Available"}
-              </span>
-            </button>
-          ))}
+          <StationGrid
+            selected={selected}
+            stations={stations}
+            onSelect={setSelected}
+          />
         </motion.div>
 
         {error && (
           <motion.p
             animate={{ opacity: 1 }}
-            className="text-red-300 text-base text-center"
+            className="text-red-600 text-base text-center"
             initial={{ opacity: 0 }}
           >
             {error}
           </motion.p>
         )}
-
-        {/* Confirm */}
-        <motion.button
-          className="glass-btn-primary w-full py-6 rounded-2xl text-2xl font-extrabold transition-all active:scale-95 disabled:opacity-30"
-          disabled={!selected || loading}
-          transition={{ duration: 0.3 }}
-          variants={item}
-          onClick={handleConfirm}
-        >
-          {loading ? "Starting…" : "Confirm →"}
-        </motion.button>
       </motion.div>
 
-      <div className="px-8 pb-8 pt-4">
-        <BackButton href="/session/result" />
-      </div>
+      {/* Persistent bottom confirm bar, per SS4.6 */}
+      <StationConfirmBar
+        disabled={!selected || loading}
+        loading={loading}
+        selected={selected}
+        onBack={() => router.push("/session/result")}
+        onConfirm={handleConfirm}
+      />
     </div>
   );
 }

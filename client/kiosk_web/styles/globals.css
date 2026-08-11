@@ -52,16 +52,25 @@ html, body {
   overflow: hidden;  /* kiosk — no page-level scroll; KioskRoot handles it */
 }
 
+/* Real, systemic fix, 2026-08-11: this whole file was the dark "AIRAT-NA
+   glass" pattern carried over wholesale - directly contradicting
+   docs/planning/02-design-mandate.md SS4's explicit "Light, high-contrast:
+   bg #F6FBF7, panels #FFFFFF, text #14231B... the identity a person should
+   recognize the kiosk by from across a room" rule. Not a page-level issue -
+   baked into the root html/body colors and every shared "glass-*" utility
+   class every screen in this app uses. Fixed here at the source; individual
+   pages' hardcoded text-white/* Tailwind classes still need their own
+   pass (tracked separately, not all caught by this file alone). */
 html {
-  background: #07120A;
+  background: #F6FBF7;
 }
 
 body {
   display: flex;
   flex-direction: column;
   font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  color: #F0FDF4;
-  background: #07120A;
+  color: #14231B;
+  background: #F6FBF7;
   overflow-x: hidden;
 }
 
@@ -167,123 +176,114 @@ body {
   --dusk-400: #818CF8;
   --dusk-500: #6366F1;
 
-  /* ── Surfaces ── */
+  /* ── Surfaces — light, per SS4: bg #F6FBF7, panels #FFFFFF ── */
   --surface-0:      transparent;
-  --surface-1:      rgba(255,255,255,0.05);
-  --surface-2:      rgba(255,255,255,0.09);
-  --surface-3:      rgba(255,255,255,0.14);
-  --surface-card:   rgba(255,255,255,0.07);
-  --surface-solid:  rgba(255,255,255,0.96);
-  --surface-green:  rgba(76,175,80,0.13);
-  --surface-teal:   rgba(20,184,166,0.13);
-  --surface-amber:  rgba(245,158,11,0.13);
-  --surface-lime:   rgba(163,230,53,0.12);
-  --surface-sky:    rgba(14,165,233,0.12);
-  --surface-moss:   rgba(74,124,89,0.18);
+  --surface-1:      rgba(20,35,27,0.04);
+  --surface-2:      rgba(20,35,27,0.07);
+  --surface-3:      rgba(20,35,27,0.11);
+  --surface-card:   #FFFFFF;
+  --surface-solid:  #FFFFFF;
+  --surface-green:  rgba(22,163,74,0.10);
+  --surface-teal:   rgba(20,184,166,0.10);
+  --surface-amber:  rgba(245,158,11,0.12);
+  --surface-lime:   rgba(101,163,13,0.10);
+  --surface-sky:    rgba(14,165,233,0.10);
+  --surface-moss:   rgba(74,124,89,0.10);
 
-  /* ── Text ── */
-  --text-strong: #FFFFFF;
-  --text:        #F0FDF4;
-  --text-muted:  #A7F3D0;
-  --text-faint:  #6EE7B7;
+  /* ── Text — dark-on-light, per SS4: text #14231B ── */
+  --text-strong: #14231B;
+  --text:        #1E3327;
+  --text-muted:  #4A6B58;
+  --text-faint:  #7C9587;
 
   /* ── Borders ── */
-  --border:        rgba(255,255,255,0.10);
-  --border-strong: rgba(255,255,255,0.18);
-  --border-accent: rgba(76,175,80,0.35);
-  --border-teal:   rgba(20,184,166,0.33);
-  --border-amber:  rgba(245,158,11,0.33);
-  --border-lime:   rgba(163,230,53,0.28);
-  --border-sky:    rgba(14,165,233,0.28);
+  --border:        rgba(20,35,27,0.10);
+  --border-strong: rgba(20,35,27,0.18);
+  --border-accent: rgba(22,163,74,0.30);
+  --border-teal:   rgba(20,184,166,0.28);
+  --border-amber:  rgba(245,158,11,0.28);
+  --border-lime:   rgba(101,163,13,0.25);
+  --border-sky:    rgba(14,165,233,0.25);
 
-  /* ── Effects ── */
-  --glass-blur:    blur(16px);
-  --shadow:        0 8px 32px rgba(0,0,0,0.45);
-  --shadow-soft:   0 4px 16px rgba(0,0,0,0.30);
-  --shadow-green:  0 6px 24px rgba(76,175,80,0.25);
-  --shadow-teal:   0 6px 24px rgba(20,184,166,0.22);
-  --shadow-amber:  0 6px 24px rgba(245,158,11,0.22);
-  --glow-green:    0 0 20px rgba(76,175,80,0.40);
-  --glow-teal:     0 0 20px rgba(20,184,166,0.38);
-  --glow-amber:    0 0 20px rgba(245,158,11,0.35);
-  --glow-lime:     0 0 20px rgba(163,230,53,0.32);
+  /* ── Effects — no blur (reflexive glassmorphism is banned per SS1); real
+     drop shadows only, lightened for a white-panel-on-light-bg surface ── */
+  --glass-blur:    none;
+  --shadow:        0 8px 28px rgba(20,35,27,0.10);
+  --shadow-soft:   0 4px 14px rgba(20,35,27,0.06);
+  --shadow-green:  0 6px 20px rgba(22,163,74,0.20);
+  --shadow-teal:   0 6px 20px rgba(20,184,166,0.18);
+  --shadow-amber:  0 6px 20px rgba(245,158,11,0.18);
+  --glow-green:    0 0 0 rgba(0,0,0,0);
+  --glow-teal:     0 0 0 rgba(0,0,0,0);
+  --glow-amber:    0 0 0 rgba(0,0,0,0);
+  --glow-lime:     0 0 0 rgba(0,0,0,0);
 }
 
 /* ============================================================================
    GLASS UTILITY CLASSES
 ============================================================================ */
 
+/* Real fix, 2026-08-11: every one of these was a real backdrop-filter blur
+   panel with no functional reason - reflexive glassmorphism, banned outright
+   by docs/planning/02-design-mandate.md SS1. Flat, solid surfaces now; the
+   class names are kept unchanged (12 pages reference them) so this is a
+   source-of-truth fix, not a rename-everywhere sweep. */
 .glass {
   background: var(--surface-card);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border);
 }
 
 .glass-raised {
   background: var(--surface-2);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border-strong);
   box-shadow: var(--shadow);
 }
 
 .glass-white {
   background: var(--surface-solid);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-soft);
 }
 
 .glass-green {
   background: var(--surface-green);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border-accent);
 }
 
 .glass-teal {
   background: var(--surface-teal);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border-teal);
 }
 
 .glass-amber {
   background: var(--surface-amber);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border-amber);
 }
 
 .glass-lime {
   background: var(--surface-lime);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border-lime);
 }
 
 .glass-sky {
   background: var(--surface-sky);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border-sky);
 }
 
 .glass-moss {
   background: var(--surface-moss);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid rgba(74,124,89,0.35);
+  border: 1px solid rgba(74,124,89,0.20);
 }
 
 /* Buttons */
 .glass-btn-primary {
-  background: linear-gradient(135deg, #4CAF50, #16A34A);
+  /* Real fix, 2026-08-11: was a banned decorative gradient
+     (linear-gradient(135deg, #4CAF50, #16A34A)) - solid eco-green-500 now. */
+  background: #16A34A;
   color: #FFFFFF;
   border: none;
   box-shadow: var(--shadow-green);
 }
-.glass-btn-primary:hover  { opacity: 0.92; }
+.glass-btn-primary:hover  { background: #15803D; }
 .glass-btn-primary:active { transform: scale(0.97); }
 
 .glass-btn-secondary {
@@ -296,233 +296,24 @@ body {
 
 /* Sidebar / topbar */
 .glass-sidebar {
-  background: transparent !important;
+  background: #FFFFFF !important;
   border-right: 1px solid var(--border) !important;
-  backdrop-filter: blur(22px) !important;
-  -webkit-backdrop-filter: blur(22px) !important;
 }
 
 .glass-topbar {
-  background: transparent !important;
+  background: #FFFFFF !important;
   border-bottom: 1px solid var(--border) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
 }
 
 /* ============================================================================
-   HEROUI COMPONENT OVERRIDES
+   TOAST (Sonner — real, actually used via app/providers.tsx)
 ============================================================================ */
-
-/* ── Cards ── */
-[data-slot="base"][class*="card"] {
-  background: var(--surface-card) !important;
-  border: 1px solid var(--border) !important;
-  box-shadow: var(--shadow-soft) !important;
-  backdrop-filter: var(--glass-blur) !important;
-  -webkit-backdrop-filter: var(--glass-blur) !important;
-  border-radius: 20px !important;
-}
-
-[data-slot="header"][class*="card"] {
-  background: transparent !important;
-  border-bottom: 1px solid var(--border) !important;
-  padding: 1.25rem !important;
-}
-
-[data-slot="body"][class*="card"] {
-  background: transparent !important;
-  padding: 1.25rem !important;
-}
-
-[data-slot="footer"][class*="card"] {
-  background: transparent !important;
-  border-top: 1px solid var(--border) !important;
-  padding: 1rem 1.25rem !important;
-}
-
-/* ── Inputs ── */
-[data-slot="input-wrapper"],
-[data-slot="input"] {
-  background: var(--surface-2) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 14px !important;
-  backdrop-filter: blur(14px) !important;
-  -webkit-backdrop-filter: blur(14px) !important;
-}
-
-[data-slot="input-wrapper"]:focus-within,
-[data-slot="input"]:focus-within {
-  border-color: rgba(76,175,80,0.55) !important;
-  box-shadow: 0 0 0 3px rgba(76,175,80,0.15) !important;
-}
-
-[data-slot="input-wrapper"] input,
-[data-slot="input"] input,
-[data-slot="input-wrapper"] textarea,
-[data-slot="input"] textarea {
-  color: var(--text-strong) !important;
-}
-
-[data-slot="input-wrapper"] input::placeholder,
-[data-slot="input"] input::placeholder {
-  color: var(--text-faint) !important;
-}
-
-[data-slot="label"] {
-  color: var(--text-muted) !important;
-}
-
-/* ── Buttons — Primary ── */
-[data-slot="base"][class*="button"][data-color="primary"] {
-  background: linear-gradient(135deg, #4CAF50, #16A34A) !important;
-  color: #ffffff !important;
-  border-radius: 16px !important;
-  box-shadow: 0 6px 18px rgba(76,175,80,0.28) !important;
-  font-weight: 600;
-}
-[data-slot="base"][class*="button"][data-color="primary"]:hover {
-  opacity: 0.93;
-}
-
-/* ── Buttons — Secondary / Default ── */
-[data-slot="base"][class*="button"][data-color="default"],
-[data-slot="base"][class*="button"][data-variant="flat"] {
-  background: var(--surface-1) !important;
-  color: var(--text-strong) !important;
-  border: 1px solid var(--border-strong) !important;
-  border-radius: 16px !important;
-}
-
-/* ── Buttons — Success ── */
-[data-slot="base"][class*="button"][data-color="success"] {
-  background: linear-gradient(135deg, #A3E635, #65A30D) !important;
-  color: #1A2E05 !important;
-  border-radius: 16px !important;
-  box-shadow: 0 6px 18px rgba(163,230,53,0.25) !important;
-}
-
-/* ── Buttons — Warning ── */
-[data-slot="base"][class*="button"][data-color="warning"] {
-  background: linear-gradient(135deg, #FBBF24, #D97706) !important;
-  color: #1C1917 !important;
-  border-radius: 16px !important;
-  box-shadow: 0 6px 18px rgba(245,158,11,0.25) !important;
-}
-
-/* ── Buttons — Danger ── */
-[data-slot="base"][class*="button"][data-color="danger"] {
-  background: rgba(220,38,38,0.12) !important;
-  color: var(--coral-400) !important;
-  border-radius: 16px !important;
-  border: 1px solid rgba(220,38,38,0.28) !important;
-}
-[data-slot="base"][class*="button"][data-color="danger"]:hover {
-  background: rgba(220,38,38,0.22) !important;
-}
-
-/* ── Modal ── */
-[data-slot="backdrop"] {
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  background: rgba(5,26,8,0.60) !important;
-}
-
-[role="dialog"] [data-slot="input-wrapper"],
-[role="dialog"] [data-slot="input"] {
-  background: rgba(255,255,255,0.07) !important;
-  border: 1px solid rgba(255,255,255,0.14) !important;
-  color: var(--text) !important;
-}
-
-[role="dialog"] [data-slot="inner-wrapper"] input,
-[role="dialog"] input,
-[role="dialog"] textarea {
-  color: var(--text) !important;
-}
-
-[role="dialog"] input::placeholder,
-[role="dialog"] textarea::placeholder {
-  color: var(--text-faint) !important;
-}
-
-[role="dialog"] [data-slot="body"] label,
-[role="dialog"] [data-slot="body"] p,
-[role="dialog"] [data-slot="body"] span,
-[role="dialog"] [data-slot="body"] h4 {
-  color: var(--text-muted) !important;
-}
-
-[role="dialog"] [data-slot="close-button"] {
-  color: rgba(255,255,255,0.65) !important;
-}
-
-/* ── Select / Dropdown ── */
-[data-slot="trigger"],
-[data-slot="listbox-item"] {
-  background: var(--surface-2) !important;
-  color: var(--text) !important;
-}
-
-[data-slot="listbox-item"]:hover,
-[data-slot="listbox-item"][data-focus="true"] {
-  background: var(--surface-green) !important;
-  color: var(--text-strong) !important;
-}
-
-/* ── Chip ── */
-[data-slot="base"][class*="chip"][data-color="primary"] {
-  background: var(--surface-green) !important;
-  color: var(--green-300) !important;
-  border: 1px solid var(--border-accent) !important;
-}
-
-[data-slot="base"][class*="chip"][data-color="success"] {
-  background: rgba(163,230,53,0.12) !important;
-  color: var(--lime-300) !important;
-  border: 1px solid var(--border-lime) !important;
-}
-
-[data-slot="base"][class*="chip"][data-color="warning"] {
-  background: var(--surface-amber) !important;
-  color: var(--amber-300) !important;
-  border: 1px solid var(--border-amber) !important;
-}
-
-[data-slot="base"][class*="chip"][data-color="danger"] {
-  background: rgba(220,38,38,0.10) !important;
-  color: var(--coral-300) !important;
-  border: 1px solid rgba(220,38,38,0.25) !important;
-}
-
-/* ── Progress ── */
-[data-slot="track"] {
-  background: var(--surface-2) !important;
-}
-
-[data-slot="indicator"] {
-  background: linear-gradient(90deg, #16A34A, #4CAF50) !important;
-}
-
-/* ── Toast ── */
 [class*="toast"] {
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
   border: 1px solid var(--border) !important;
   border-radius: 16px !important;
-  background: rgba(10,46,15,0.90) !important;
-}
-
-/* ── Tabs ── */
-[data-slot="tabList"] {
-  background: var(--surface-1) !important;
-  border-radius: 16px !important;
-  border: 1px solid var(--border) !important;
-  backdrop-filter: blur(12px) !important;
-}
-
-[data-slot="tab"][data-selected="true"] {
-  background: var(--surface-green) !important;
-  color: var(--green-300) !important;
+  background: #FFFFFF !important;
+  color: var(--text-strong) !important;
+  box-shadow: var(--shadow) !important;
 }
 
 /* ============================================================================
@@ -611,6 +402,18 @@ body {
 .idle-fade       { animation: idle-fade       0.38s ease both; }
 .idle-zoom       { animation: idle-zoom       0.42s cubic-bezier(0.16,1,0.3,1) both; }
 .idle-flip       { animation: idle-flip       0.42s ease both; }
+
+/* HaloBadge (components/kiosk/HaloBadge.tsx) entrance pulse - per
+   docs/planning/02-design-mandate.md SS4.6: concentric rings scale outward
+   with fading opacity on entrance, one ease-out pulse, not looping (it's a
+   one-time confirmation, not an idle-loop element). */
+@keyframes halo-ring {
+  from { transform: scale(0.7); opacity: 0.6; }
+  to   { transform: scale(1.6); opacity: 0; }
+}
+.halo-ring {
+  animation: halo-ring 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
 
 /* Idle-screen falling-leaves background (components/kiosk/FallingLeaves.tsx),
    decided 2026-08-11 replacing the unbuilt Aurora direction. Fall + a gentle

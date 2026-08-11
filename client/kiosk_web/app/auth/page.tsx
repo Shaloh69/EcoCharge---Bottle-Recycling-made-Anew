@@ -7,6 +7,7 @@ import QRCode from "react-qr-code";
 import { BackButton } from "@/components/kiosk/BackButton";
 import { KioskHeader } from "@/components/kiosk/KioskHeader";
 import { MascotAvatar } from "@/components/kiosk/MascotDisplay";
+import { WaveDivider } from "@/components/kiosk/WaveDivider";
 import { auth, session, token, userStore } from "@/lib/api";
 
 const KIOSK_ID = process.env.NEXT_PUBLIC_KIOSK_ID ?? "1";
@@ -104,34 +105,49 @@ export default function AuthPage() {
 
   return (
     <div className="flex flex-col flex-1">
-      <KioskHeader />
+      {/* Solid-color header region cut by the deck's signature wave divider,
+          per docs/planning/02-design-mandate.md SS4.6 — separates the
+          header from the white body below. */}
+      <div style={{ background: "#16A34A" }}>
+        <KioskHeader onDark />
+        <div className="px-8 pt-4 pb-2 text-center">
+          <motion.div
+            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: -8 }}
+          >
+            <MascotAvatar mood="idle" />
+          </motion.div>
+        </div>
+      </div>
+      <WaveDivider color="#16A34A" />
 
       <motion.div
         animate="animate"
-        className="flex-1 flex flex-col items-center px-8 py-8 gap-6"
+        className="flex-1 flex flex-col items-center px-8 pt-2 pb-8 gap-6"
         initial="initial"
         transition={{ staggerChildren: 0.09 }}
       >
-        <motion.div transition={{ duration: 0.3 }} variants={item}>
-          <MascotAvatar mood="idle" />
-        </motion.div>
-
         <motion.div
           className="text-center"
           transition={{ duration: 0.3 }}
           variants={item}
         >
-          <h2 className="text-white text-4xl font-extrabold tracking-tight">
+          <h2 className="text-[#14231B] text-4xl font-extrabold tracking-tight">
             Link your App
           </h2>
-          <p className="text-white/45 text-base mt-2">
+          <p className="text-[#4A6B58] text-base mt-2">
             Scan with the EcoCharge mobile app
           </p>
         </motion.div>
 
         {/* QR card */}
         <motion.div
-          className="glass-white rounded-3xl p-7 flex flex-col items-center gap-4 w-full shadow-2xl"
+          className="rounded-3xl p-7 flex flex-col items-center gap-4 w-full"
+          style={{
+            background: "#FFFFFF",
+            border: "1px solid #E5EFE8",
+            boxShadow: "0 8px 32px rgba(20,35,27,0.08)",
+          }}
           transition={{ duration: 0.35, type: "spring", bounce: 0.25 }}
           variants={item}
         >
@@ -150,12 +166,12 @@ export default function AuthPage() {
         </motion.div>
 
         <motion.p
-          className="text-white/55 text-center text-sm max-w-xs leading-relaxed"
+          className="text-[#4A6B58] text-center text-sm max-w-xs leading-relaxed"
           transition={{ duration: 0.3 }}
           variants={item}
         >
           Open EcoCharge and tap{" "}
-          <span className="text-white font-semibold">
+          <span className="text-[#14231B] font-semibold">
             &quot;Scan Kiosk&quot;
           </span>{" "}
           to link your account.

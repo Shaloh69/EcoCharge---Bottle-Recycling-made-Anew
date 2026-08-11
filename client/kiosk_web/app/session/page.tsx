@@ -11,20 +11,18 @@ const OPTIONS = [
     icon: "⚡",
     label: "Charge",
     sub: "Use credits to charge your phone",
-    bg: "rgba(245,158,11,0.14)",
-    border: "rgba(245,158,11,0.35)",
-    glow: "rgba(245,158,11,0.2)",
-    accent: "#FCD34D",
+    bg: "#FFFBEB",
+    border: "#FDE68A",
+    accent: "#D97706",
   },
   {
     href: "/session/deposit?mode=credit",
     icon: "💳",
     label: "Credits",
     sub: "Check or top-up your balance",
-    bg: "rgba(76,175,80,0.14)",
-    border: "rgba(76,175,80,0.35)",
-    glow: "rgba(76,175,80,0.2)",
-    accent: "#86EFAC",
+    bg: "#DCFCE7",
+    border: "#BBF7D0",
+    accent: "#15803D",
   },
 ];
 
@@ -52,10 +50,10 @@ export default function SessionPage() {
           transition={{ duration: 0.3 }}
           variants={item}
         >
-          <p className="text-white/40 text-xs uppercase tracking-widest mb-2">
+          <p className="text-[#7C9587] text-xs uppercase tracking-widest mb-2">
             What would you like to do?
           </p>
-          <h2 className="text-white text-5xl font-extrabold tracking-tight">
+          <h2 className="text-[#14231B] text-5xl font-extrabold tracking-tight">
             Select Mode
           </h2>
         </motion.div>
@@ -73,41 +71,42 @@ export default function SessionPage() {
               style={{
                 background: opt.bg,
                 border: `2px solid ${opt.border}`,
-                backdropFilter: "blur(14px)",
-                WebkitBackdropFilter: "blur(14px)",
-                boxShadow: `0 4px 28px ${opt.glow}`,
+                boxShadow: "0 4px 20px rgba(20,35,27,0.06)",
               }}
               onClick={() => router.push(opt.href)}
             >
               <div
                 className="w-20 h-20 rounded-2xl flex items-center justify-center text-5xl flex-shrink-0"
                 style={{
-                  background: opt.bg,
+                  background: "#FFFFFF",
                   border: `1.5px solid ${opt.border}`,
                 }}
               >
                 {opt.icon}
               </div>
               <div className="flex-1">
-                <p className="text-white text-3xl font-bold leading-tight">
+                <p className="text-[#14231B] text-3xl font-bold leading-tight">
                   {opt.label}
                 </p>
-                <p className="text-white/50 text-base mt-1">{opt.sub}</p>
+                <p className="text-[#4A6B58] text-base mt-1">{opt.sub}</p>
               </div>
-              <span className="text-white/30 text-3xl">›</span>
+              <span className="text-3xl" style={{ color: opt.accent }}>
+                ›
+              </span>
             </button>
           ))}
         </motion.div>
 
         {/* recycle prompt */}
         <motion.div
-          className="w-full glass rounded-3xl p-6 text-center"
+          className="w-full rounded-3xl p-6 text-center"
+          style={{ background: "#FFFFFF", border: "1px solid #E5EFE8" }}
           transition={{ duration: 0.3 }}
           variants={item}
         >
           <p className="text-5xl mb-3">🍶</p>
-          <p className="text-white font-bold text-xl">Have a bottle?</p>
-          <p className="text-white/40 text-base mt-1">
+          <p className="text-[#14231B] font-bold text-xl">Have a bottle?</p>
+          <p className="text-[#7C9587] text-base mt-1">
             Drop it in the slot above to earn credits.
           </p>
         </motion.div>

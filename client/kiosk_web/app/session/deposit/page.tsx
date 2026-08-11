@@ -13,6 +13,7 @@ import {
   type KioskSSEEvent,
 } from "@/lib/api";
 import { useSuspendIdle } from "@/lib/idle-suspend";
+import { BinBatteryGauge } from "@/components/kiosk/BinBatteryGauge";
 
 const KIOSK_ID = parseInt(process.env.NEXT_PUBLIC_KIOSK_ID ?? "1");
 const MAX_RETRIES = 6;
@@ -45,6 +46,7 @@ function DepositContent() {
   const [statusMsg, setStatusMsg] = useState("Waiting for bottle…");
   const [credits, setCredits] = useState(0);
   const [binPending, setBinPending] = useState(false);
+  const [binLevel, setBinLevel] = useState<number | null>(null);
 
   // Suspend the kiosk-wide idle timer during SCANNING and bin-confirmation
   // (approved, while binPending is true) — docs/planning/02-design-mandate.md
@@ -290,6 +292,8 @@ function DepositContent() {
   // events to be missed during the brief reconnect window).
   useEffect(() => {
     const unsubscribe = openKioskSSE(KIOSK_ID, (event: KioskSSEEvent) => {
+      if (event.binLevel !== undefined) setBinLevel(event.binLevel);
+
       // bottleAtEntrance — auto-trigger scan when ESP32 detects bottle
       if (event.bottleAtEntrance === true && phaseRef.current === "waiting") {
         setPhase("scanning");
@@ -438,6 +442,15 @@ function DepositContent() {
             </p>
             <p className="text-gray-400 text-sm mt-1">{statusMsg}</p>
           </div>
+
+          {/* Explicit bin-confirmation wait state, per
+              docs/planning/02-design-mandate.md SS4.1 step 5: "its own
+              explicit shorter wait state, not folded silently into the
+              result screen" — shown with the real kiosk battery-style
+              gauge while binPending, using real telemetry when available. */}
+          {phase === "approved" && binPending && (
+            <BinBatteryGauge level={binLevel ?? 0} />
+          )}
         </div>
 
         {/* Mode badge */}

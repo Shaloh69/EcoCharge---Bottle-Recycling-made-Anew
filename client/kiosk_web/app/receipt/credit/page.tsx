@@ -33,8 +33,8 @@ export default function CreditReceiptPage() {
           <div
             className="w-24 h-24 rounded-full flex items-center justify-center text-5xl"
             style={{
-              background: "linear-gradient(135deg, #4ADE80, #16A34A)",
-              boxShadow: "0 0 36px rgba(76,175,80,0.4)",
+              background: "#16A34A",
+              boxShadow: "0 8px 28px rgba(22,163,74,0.30)",
             }}
           >
             💳
@@ -83,7 +83,7 @@ export default function CreditReceiptPage() {
         </motion.div>
 
         <motion.p
-          className="text-white/50 text-base text-center max-w-xs leading-relaxed"
+          className="text-[#4A6B58] text-base text-center max-w-xs leading-relaxed"
           transition={{ duration: 0.3 }}
           variants={item}
         >
