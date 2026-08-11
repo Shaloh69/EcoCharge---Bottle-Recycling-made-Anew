@@ -6,6 +6,24 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-08-12 (5th session, later still) — Both keys rotated and purged from git history; the force-push did NOT remove them from GitHub, one manual step remains
+
+**The repository is PUBLIC** — `github.com/Shaloh69/EcoCharge`, confirmed via the unauthenticated GitHub API (`visibility: public`), **0 forks, 0 watchers**, created 2026-01-26. Both hardcoded keys in `esp/ecocharge/include/config.h` were therefore world-readable from **2026-04-21** (commit `acedb00`) until today — roughly four months. No `.env` file was ever committed (verified across all history), so the exposure was limited to that one file.
+
+**Device key rotation exposed a real misconception worth keeping.** The `DEVICE_API_KEY` declared in `server/server_main/src/config.ts` is **read by nothing in the server source** — grepped directly. Real device auth validates `Kiosk.apiKey` from the **database** (`src/middleware/deviceAuth.ts`, `prisma.kiosk.findUnique({ where: { apiKey: token } })`). So rotating the env var would have accomplished nothing; the meaningful rotation was a DB update. Rotated Kiosk-001's `apiKey` via a one-off Prisma script run on the host, and **verified the old exposed value now returns 401, identical to a garbage key**. The new value is retrievable from the Admin Console's kiosk detail page — it is deliberately not written down here.
+
+**Both secrets removed from `config.h` at HEAD**, replaced with `#ifndef`-guarded `SET_AT_BUILD_TIME` placeholders so a real value can come from a gitignored `secrets.h` or a PlatformIO `-D` flag. The NVS/provisioning-portal path remains the proper fix.
+
+**History rewritten with `git filter-repo --replace-text`, on explicit user approval** (this is exactly the hard-to-reverse class of action that needed a go-ahead, and it got one — it was not done unilaterally). A full `git bundle --all` backup (1.3GB) was taken first and lives in the session scratchpad. Result: all 156 commits preserved, **both key strings verified absent from every commit tree** (`git log -S` and a `git grep` across `git rev-list --all` both return nothing). Force-pushed `d8e5054...be4d823`.
+
+**The part that did NOT work, verified rather than assumed — and this is the standing action item.** GitHub still serves the pre-rewrite commits by direct SHA. `api.github.com/.../commits/acedb00…` returns **200**, and `raw.githubusercontent.com/.../acedb00…/esp/ecocharge/include/config.h` **still returns both keys in plaintext right now**. A force-push does not delete unreachable objects; GitHub keeps them until it garbage-collects, which is neither scheduled nor guaranteed. **Only a GitHub Support request can purge them** — that needs the account owner, so it is the user's to do.
+
+**Security impact of that residue is nil** — both leaked values are dead (AI key → 401, device key → 401). **The reason to still file the ticket is the non-security one the user raised**: the AI key's plaintext begins with a racial slur, and it remains publicly fetchable from a repo an examining panel may read. Also worth knowing: Software Heritage systematically archives public GitHub repos, so a copy may exist beyond GitHub's reach entirely; the rewrite cannot do anything about that.
+
+**How to apply:** never put a real credential in `config.h` again — the placeholders and the note now in that file exist to make the intended path obvious. And when a secret leaks in a public repo, treat rotation as the fix and history-rewriting as cosmetic cleanup, not the other way around: the rotation is what actually ended the exposure here, within one session; the rewrite left a publicly-readable copy behind that needs a support ticket to finish.
+
+---
+
 ## 2026-08-12 (5th session, later) — Leak shipped closed, AI key rotated, all clients re-pointed; a PowerShell BOM bug nearly hid a failed rotation
 
 **The `/api/health-ai` key leak is now actually closed on the live public endpoint, verified by curling the public tunnel** — `{"online":true,"auth":true,"keyConfigured":true}`, no key material. Deploying it needed a workaround worth recording: **`npm run build` fails on `desktop-gklhcri` because `next/font` cannot reach `fonts.gstatic.com` from that machine** (`Failed to fetch 'IBM Plex Sans' from Google Fonts`). The host can reach the internet generally (cloudflared works), so this is specific to Google Fonts. **Pattern that works: build locally, `tar` the `.next` directory, `scp` it over, swap it in with a `.next.bak` rollback, restart the task.** Used for both `kiosk_web` (23MB) and `web_console` (146MB). Don't try to build either Next.js app on the host.
