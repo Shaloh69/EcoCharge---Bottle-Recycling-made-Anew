@@ -135,7 +135,7 @@
 // on that machine for the current "Your quick Tunnel has been created" URL,
 // or move to a named tunnel (docs/planning/03-revamp-master.md §1.1) for a
 // stable hostname if this needs to survive an actual restart.
-#define RENDER_BASE_URL     "https://lap-trace-reach-forwarding.trycloudflare.com"
+#define RENDER_BASE_URL     "https://packages-towns-essex-houses.trycloudflare.com"
 #define DEVICE_API_KEY      "SET_AT_BUILD_TIME"
 #define KIOSK_ID            1
 
@@ -144,7 +144,7 @@
 // ----------------------------------------------------------------------------
 // Self-hosted on desktop-gklhcri via its own free Cloudflare quick tunnel —
 // same rotation caveat as RENDER_BASE_URL above.
-#define AI_SERVER_URL       "https://recipient-beliefs-landscapes-established.trycloudflare.com"
+#define AI_SERVER_URL       "https://coins-behalf-maple-basic.trycloudflare.com"
 #define AI_API_KEY          "SET_AT_BUILD_TIME"
 
 // ----------------------------------------------------------------------------

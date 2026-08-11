@@ -46,7 +46,9 @@ Also present: [`docs/planning/10-paper-vs-repo-gap.md`](docs/planning/10-paper-v
 
 The full bottle-to-credit-to-charge journey is implemented end to end — a functionally complete, integrated system, not a set of disconnected prototypes. Aiven, Supabase, and Render are all fully decommissioned; the system is self-hosted on `desktop-gklhcri`.
 
-> **⚠️ The backend is currently DOWN and has been since the host rebooted on 2026-08-11 20:09.** The API, admin console, and AI server were registered as Scheduled Tasks under a normal user account, which yields Logon Mode "Interactive only" and **cannot fire an `ONSTART` trigger** — so none of them restarted. Kiosk Web and the Website (registered as `SYSTEM`) are still up, but they call an API tunnel hostname that no longer resolves, so they are reachable but non-functional. All five `trycloudflare.com` URLs recorded in Phase A are dead (NXDOMAIN). The fix (re-register the six tasks with `/RU SYSTEM`) is identified but not yet applied. Full detail: `memory.md`, 2026-08-12. **Treat every "verified live" claim dated 2026-08-11 or earlier as describing a system that is not currently running.**
+> **All services are up as of 2026-08-12 03:5x**, after an outage that began when the host rebooted on 2026-08-11 20:09 and lasted ~7 hours. Cause: the API, admin console, AI server and their three tunnels were registered as Scheduled Tasks under a normal user account, giving them Logon Mode "Interactive only", which **cannot fire an `ONSTART` trigger**. Fixed by re-registering all six with `/RU SYSTEM /RL HIGHEST`; every service verified back up and all five tunnels verified 200 from the public internet. Current URLs are in `docs/planning/08-master-checklist.md` Phase A (they rotate on every tunnel restart).
+>
+> **Three host-side config edits are still outstanding**, and Kiosk Web and the Admin Console will still fail against the API until they land: the API's `ALLOWED_ORIGINS`, `kiosk_web/.env.local`, and `web_console`'s build-time `NEXT_PUBLIC_API_URL` (needs a rebuild) all still reference the previous tunnel URLs. Full detail: `memory.md`, 2026-08-12.
 
 What's still in progress:
 

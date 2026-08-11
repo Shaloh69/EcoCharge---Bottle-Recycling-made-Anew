@@ -8,7 +8,28 @@ Every actionable item across `docs/planning/00-07`, in the order `00-start-here.
 
 ## Phase A — Self-hosting migration (`03-revamp-master.md` §1)
 
-> ### ⚠️ RE-VERIFIED 2026-08-12 AGAINST THE LIVE SYSTEM — MOST OF THIS PHASE IS CURRENTLY FALSE
+> ### ✅ RESOLVED 2026-08-12 — read the incident below, then these current URLs
+>
+> The outage described below was found, root-caused, and **fixed the same session**. All six tasks re-registered with `/RU SYSTEM /RL HIGHEST` and confirmed reading Logon Mode `Interactive/Background`; all services verified back up; all five tunnels verified 200 **from the public internet**.
+>
+> | Service | Current URL (rotates on tunnel restart) | Verified |
+> |---|---|---|
+> | API | `https://packages-towns-essex-houses.trycloudflare.com` | `/health` 200 |
+> | Admin Console | `https://macro-instead-bundle-continuously.trycloudflare.com` | `/login` 200 |
+> | AI server | `https://coins-behalf-maple-basic.trycloudflare.com` | `/health` 200 |
+> | Kiosk Web | `https://column-sequences-interference-healthy.trycloudflare.com` | `/` 200 |
+> | Website | `https://mother-newman-urls-performances.trycloudflare.com` | `/` 200 |
+>
+> **Three host-side config edits are still outstanding and the system is not fully functional without them** (blocked this session — reading the host `.env` is denied by the auto-mode classifier, correctly, since it holds secrets):
+> - [ ] API `ALLOWED_ORIGINS` — still lists the *old* kiosk/website tunnel origins; CORS will reject the new ones.
+> - [ ] `D:\EcoCharge\app\kiosk_web\.env.local` — still points at the old API and AI URLs.
+> - [ ] `web_console`'s build-time `NEXT_PUBLIC_API_URL` — still bakes in the old API URL; needs an edit **and a rebuild**.
+>
+> Repo-side re-pointing is already done and committed: `esp/ecocharge/include/config.h` (both URLs) and `client/flutter_app/lib/services/api_service.dart`.
+>
+> **Decision confirmed 2026-08-12, asked explicitly in light of this outage: stay on free quick tunnels and re-point configs each time.** The rotation chore is accepted; a named tunnel on a free domain was offered and declined.
+>
+> ### ⚠️ THE INCIDENT (kept in full — this is the reset's first real payoff)
 >
 > This is the ground-zero reset working as intended: the first phase re-checked against reality did not hold up. Measured, not assumed:
 >
@@ -66,7 +87,8 @@ Every actionable item across `docs/planning/00-07`, in the order `00-start-here.
 
 ## Phase D — Product decisions
 
-- [!] **The `ml-review` gate question — should a low-confidence AI detection hold credits pending human review, or stay the current retrospective audit trail? A real product decision, not a code question. Not answered yet.** (`03-revamp-master.md` §3.1.) Worth framing when presenting it: this is structurally the same failure class as EngiRent's "verification flag not enforced at the write path" bug — a flag that records a concern without gating the action it concerns.
+- [x] **DECIDED 2026-08-12: neither hold-for-review nor retrospective-only — auto-reject below the confidence threshold.** Below the floor the bottle is rejected outright with a retry prompt; the user gets immediate, honest feedback at the machine instead of an unresolved wait, and no admin approval queue has to exist. Accepted tradeoff, stated plainly: genuine bottles below the floor get turned away, so the threshold value is now a user-facing decision, not a tuning detail — see the coupled Phase F item on the 0.40-vs-0.5 mismatch, which must be settled before this ships.
+- [ ] **Implement the auto-reject behaviour.** Not built yet — this decision landed at the end of the 2026-08-12 session. Needs: the kiosk deposit flow to reject-and-prompt-retry below the floor (rather than award and flag), a real reject reason surfaced on the result screen (`HaloBadge` red path already exists), and a call on whether `ml-review` remains as a passive audit trail for the *accepted* band. Don't build until the threshold question below is settled.
 - [!] **Backend stack divergence (Flask → Node) needs a thesis-narrative decision** — update the paper to describe the real Node/Express/Prisma stack, or explicitly document the divergence as a design decision. **Folded in from the retired `docs/CHECKLIST.md` 2026-08-12** so it isn't lost with that file; detail in `10-paper-vs-repo-gap.md`'s software-stack table. The same paragraph applies to the conveyor-vs-servo hardware substitution, which is also a real, defensible design decision the paper doesn't yet describe.
 - [!] **Language scope — the reviewed designs include a language switcher, but which languages beyond English is undecided.** Bisaya/Cebuano is the obvious candidate given the deployment context (University of Cebu Lapu-Lapu and Mandaue), never confirmed. **Folded in from the retired `docs/CHECKLIST.md` 2026-08-12.** Blocks building the switcher as anything real rather than decoration.
 
@@ -148,7 +170,7 @@ Every actionable item across `docs/planning/00-07`, in the order `00-start-here.
 - [ ] Firmware "nudge complete" signal — tied to Phase C's sign-off gate, same file
 - [x] **Explicit camera capture resolution constraints — done 2026-08-11**: `app/session/deposit/page.tsx`'s `getUserMedia` now requests `{ width: { ideal: 1280 }, height: { ideal: 720 } }` instead of an unconstrained call, per the diagnosis that some cameras were defaulting to low resolution. Verified via a real `next build` (clean, no new errors/warnings beyond pre-existing prettier formatting noise elsewhere in the file).
 - [x] **Best-of-N frame capture — done 2026-08-11, implemented as client-side sharpness selection rather than N AI-server calls**: each scan attempt now captures 3 frames ~100ms apart (fits inside the firmware's ~1.7s stationary pause between nudges — verified against `BOTTLE_SCAN_INTERVAL_MS`/`BOTTLE_NUDGE_FORWARD_MS`), scores each with a variance-of-Laplacian sharpness heuristic on a downsampled grayscale copy (standard cheap blur metric, computed in-browser, no new dependency), and sends only the sharpest frame to the AI server. Cheaper than calling `/api/detect` 3x per attempt. Verified via a real `next build`.
-- [!] Reconcile the AI server's 0.40 floor vs. the kiosk's 0.5 accept floor — a product decision, ask rather than guess
+- [!] Reconcile the AI server's 0.40 floor vs. the kiosk's 0.5 accept floor — a product decision, ask rather than guess. **Now coupled to the Phase D `ml-review` decision made 2026-08-12 (auto-reject below threshold): whichever number is chosen becomes the line at which a real user's bottle gets turned away, so it stops being a tuning detail and becomes user-facing behaviour. Decide the two together.**
 - [x] Dataset merge — dropped per explicit user instruction, not pursued further
 
 ## Phase G — Testing infrastructure (`05-feature-build-checklist.md` Stage 1)

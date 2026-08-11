@@ -6,6 +6,16 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-08-12 (5th session) — Two long-open `[!]` decisions closed by the user; both create new work
+
+**`ml-review` gate — decided, and the answer was neither option that had been on the table for weeks.** Not "hold credits pending human review" and not "keep the retrospective audit trail": **auto-reject below the confidence threshold.** Below the floor the bottle is rejected outright with a retry prompt. Reasoning the choice reflects: the user gets immediate honest feedback standing at the machine, instead of either a silent wrong award or an open-ended wait with no resolution time, and no admin approval queue has to be built or staffed. **Accepted tradeoff, stated plainly when offered: genuine bottles below the floor get turned away.**
+
+**Consequence that changes the shape of another open item:** the confidence threshold is now *user-facing behaviour*, not an internal tuning value — it is the exact line at which a real person's bottle is refused. That means the still-open AI-server-0.40-vs-kiosk-0.5 mismatch (Phase F) has to be settled **before** auto-reject ships, not alongside it. The two are now coupled; `08-master-checklist.md` records the coupling in both places. Nothing is built yet — the decision landed at the end of this session.
+
+**Key rotation — signed off: rotate BOTH the device API key and the AI API key to fresh values.** Triggered by finding the AI key leaking publicly this same session (see the entry below), on top of it already being committed in git history. **Not done this session** — rotation requires editing the host's `.env` files, which the auto-mode classifier correctly blocks (they hold secrets). The AI key half is server-side only and can be rotated with no hardware involvement; the device key half still needs the NVS/provisioning-portal path and physical ESP32 access to land fully, so expect it to be a two-stage rotation rather than one coordinated change.
+
+---
+
 ## 2026-08-12 (5th session) — Mobile update gate built (two-tier, hard block below minimum, fails open); a real public secret leak found and fixed on the live kiosk
 
 **The EngiRent-style "Update Required" gate is now real in the Flutter app, closing the gap the reset named.** Previously only the *website* had an `/update-required` page; nothing wired the app to check its own version. Built:
@@ -70,6 +80,24 @@ A Scheduled Task registered under a normal user account without stored credentia
 **Fix identified but NOT APPLIED — blocked by the Claude Code auto-mode classifier**, which denied both `schtasks /Create` (re-register the six as `/RU SYSTEM`, the real durable fix) and the lesser `schtasks /Run` (bring them up now). Needs the user's go-ahead or a Bash permission rule. Pre-checked and safe: the launchers use bare `node`/`npm`/`cloudflared` (machine PATH — already proven resolvable under SYSTEM by the four working tasks) and an absolute venv path for the AI server, so nothing in them is user-profile-scoped.
 
 **Second-order consequence once the tunnels do restart: every URL rotates again.** `esp/ecocharge/include/config.h`, `client/flutter_app/lib/services/api_service.dart`, `kiosk_web/.env.local`, `web_console`'s build-time `NEXT_PUBLIC_API_URL`, and the API's `ALLOWED_ORIGINS` all hardcode the old dead hostnames and will all need re-pointing. This is the accepted-risk-of-quick-tunnels tradeoff (2026-08-11) materializing for the first time — the user accepted it on the premise "the pc will never turn off"; the PC did turn off.
+
+### RESOLVED same session — user granted permission, durable fix applied and verified
+
+All six tasks re-registered with `/RU SYSTEM /RL HIGHEST`, started, and **confirmed reading Logon Mode `Interactive/Background`** (the actual acceptance test, not "the task exists"). Services verified back up: API `/health` 200, Admin Console `/login` 200, AI server `/health` 200 (its task had also been fine — the apparent failure was just model-load time; the log showed real load progress then `Uvicorn running on http://0.0.0.0:30012`). This fix is durable across reboots in a way the original registration never was.
+
+**New tunnel URLs issued (all five verified 200 from the public internet, not just the tailnet):**
+
+| Service | URL |
+|---|---|
+| API | `https://packages-towns-essex-houses.trycloudflare.com` |
+| Admin Console | `https://macro-instead-bundle-continuously.trycloudflare.com` |
+| AI server | `https://coins-behalf-maple-basic.trycloudflare.com` |
+| Kiosk Web | `https://column-sequences-interference-healthy.trycloudflare.com` |
+| Website | `https://mother-newman-urls-performances.trycloudflare.com` |
+
+**Decision confirmed 2026-08-12, asked explicitly given the outage: keep the free quick tunnels and re-point configs, rather than moving to a named tunnel on a free domain.** The rotation cost is accepted as a known, recurring chore. Re-pointed in the repo already: `esp/ecocharge/include/config.h` (both `RENDER_BASE_URL` and `AI_SERVER_URL`) and `client/flutter_app/lib/services/api_service.dart`'s default `_base`.
+
+**Still outstanding, blocked on the classifier (reading the host `.env` is denied, correctly — it holds secrets):** the API's `ALLOWED_ORIGINS` still lists the *old* kiosk/website tunnel origins, `kiosk_web/.env.local` on the host still points at the old API/AI URLs, and `web_console`'s build-time `NEXT_PUBLIC_API_URL` still bakes in the old API URL and needs a rebuild. **Until those three land, Kiosk Web and the Admin Console will still fail against the API even though every service is up** — same CORS/build-time-inlining class of bug already hit twice before. These need doing by hand on the host.
 
 **How to apply:** don't trust a Task-Scheduler-backed service on this machine until its Logon Mode reads Interactive/Background — "the task exists and Status: Ready" is not evidence it runs. `Ready` means *not currently running*. See [[reference-desktop-gklhcri-access]], whose persistence pattern is correct but under-specified: it says register a Scheduled Task with `/SC ONSTART`, and omits that `/RU SYSTEM` is load-bearing.
 
