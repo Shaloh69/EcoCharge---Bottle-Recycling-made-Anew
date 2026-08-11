@@ -116,6 +116,11 @@ class ApiKiosk {
 }
 
 class ApiService {
+  /// The API origin this build talks to. Exposed so the launch-time update
+  /// gate ([AppVersionService]) can reach `/api/app-config` without
+  /// duplicating the `--dart-define=API_BASE_URL` default.
+  static String get baseUrl => _base;
+
   static String? _token;
 
   static Future<void> _loadToken() async {

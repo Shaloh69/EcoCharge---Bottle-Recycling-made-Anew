@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_app/theme/app_theme.dart';
 import 'package:flutter_app/screens/splash_screen.dart';
 import 'package:flutter_app/screens/onboarding_screen.dart';
+import 'package:flutter_app/screens/update_required_screen.dart';
+import 'package:flutter_app/services/app_version_service.dart';
 import 'package:flutter_app/screens/auth/login_screen.dart';
 import 'package:flutter_app/screens/auth/register_screen.dart';
 import 'package:flutter_app/screens/auth/scan_kiosk_screen.dart';
@@ -20,6 +22,19 @@ final _router = GoRouter(
   routes: [
     GoRoute(path: '/', builder: (_, __) => const SplashScreen()),
     GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
+    // Hard block. Reached only from the splash gate when the installed version
+    // is below the server's min_version; there is no route back out.
+    GoRoute(
+      path: '/update-required',
+      builder: (context, state) {
+        final r = state.extra as UpdateGateResult?;
+        return UpdateRequiredScreen(
+          installedVersion: r?.installedVersion ?? 'unknown',
+          latestVersion: r?.latestVersion,
+          downloadUrl: r?.downloadUrl,
+        );
+      },
+    ),
     GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
     GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
     GoRoute(path: '/scan', builder: (_, __) => const ScanKioskScreen()),

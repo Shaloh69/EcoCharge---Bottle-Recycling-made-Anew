@@ -10,6 +10,7 @@ import kioskRouter from "./routes/kiosk";
 import chargingRouter from "./routes/charging";
 import devicesRouter from "./routes/devices";
 import adminRouter from "./routes/admin";
+import appConfigRouter from "./routes/appConfig";
 
 // Express app construction, separated from index.ts's process-startup
 // concerns (listen(), migrations, the stale-session sweep) so integration
@@ -103,6 +104,7 @@ export function createApp() {
   app.use("/api/charging", chargingRouter);
   app.use("/api/devices", devicesRouter);
   app.use("/api/admin", adminRouter);
+  app.use("/api/app-config", appConfigRouter);
 
   app.use(errorHandler);
 

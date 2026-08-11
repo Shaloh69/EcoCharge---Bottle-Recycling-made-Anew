@@ -6,6 +6,27 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-08-12 (5th session) — Mobile update gate built (two-tier, hard block below minimum, fails open); a real public secret leak found and fixed on the live kiosk
+
+**The EngiRent-style "Update Required" gate is now real in the Flutter app, closing the gap the reset named.** Previously only the *website* had an `/update-required` page; nothing wired the app to check its own version. Built:
+- `GET /api/app-config` (`server/server_main/src/routes/appConfig.ts`) — public, unauthenticated, no DB dependency (it must answer before login and during a database problem), returning `min_version`/`latest_version`/`download_url` from three new env-backed config keys.
+- `client/flutter_app/lib/services/app_version_service.dart` — reads the installed version via `package_info_plus`, compares dotted-numeric versions, returns `blocked`/`optional`/`ok`.
+- `client/flutter_app/lib/screens/update_required_screen.dart` — a real hard block (`PopScope(canPop: false)`, no route out), wired at `/update-required` and entered only from the splash gate.
+
+**Product decision made and recorded, not guessed: two tiers, and only the lower one hard-blocks.** Below `MIN_APP_VERSION` the app refuses to run; between min and latest it's a dismissible nudge. Reasoning: this app reads and spends a real credit balance, and a client on an API contract it no longer understands doesn't fail visibly — it silently shows the wrong balance. That specific case is where refusing to run beats degrading. `MIN_APP_VERSION` should therefore be raised **only** for genuinely breaking API changes, since raising it strands anyone who can't update right away. Both default to `1.0.0`, so the gate is inert until someone deliberately raises them.
+
+**The gate fails open by construction, and today proved why that matters.** Unreachable API, timeout, non-200, or malformed JSON all resolve to `ok` and the app proceeds. Had this been written fail-closed, the ~7-hour backend outage found earlier this same session would have bricked every installed copy of the app for a reason that had nothing to do with the app. The splash runs the check concurrently with its existing 2s dwell, so the common (passing) case costs no extra launch time.
+
+**No fabricated bug-finder credit.** EngiRent's version of this pattern credits the person who reported the bug; EcoCharge has no feedback/bug-report pipeline yet, so there is no real name to use and none was invented. Omitted, to be revisited if a feedback pipeline ever exists.
+
+**Verified**: `flutter analyze` clean of new issues (only the three pre-existing `unnecessary_cast` warnings in `profile_screen.dart` remain), a real `flutter build apk --release` succeeds (71.9MB), server `tsc` clean, and 4 new vitest cases (18 total, all passing) covering the endpoint's public reachability, its exact field set, and that it leaks nothing secret. **Not verified live** — the API is down (see the entry below), so the endpoint has never answered a real HTTP request from a real device. That check is outstanding.
+
+**Separately, a real security bug found by actually probing the live kiosk rather than reading its source.** `client/kiosk_web/app/api/health-ai/route.ts` returned `key: "<first 8>...<last 4> (39 chars)"` in **every** response body — 12 of the 39 characters of the AI API key plus its exact length, from a **public, unauthenticated** endpoint on a surface that is normally exposed through a public Cloudflare tunnel. Found by calling `/api/health-ai` in the browser during unrelated verification. Fixed: response bodies now carry only a boolean `keyConfigured`; the masked value (further shortened) remains in server-side `console.log`, which is not world-readable. Checked for the same pattern elsewhere — `app/api/detect/route.ts` and `server_main/src/startup.ts` also mask keys but only ever into logs, so they were fine. `tsc` clean.
+
+**Two things about that key worth raising directly with the user** (neither is mine to act on): it is the same key already committed in git history, so the pending key rotation (Phase B item 3) now has a second, independent reason to happen. And its plaintext value begins with a racial slur — stating that plainly because the key appears in logs, in git history, and in a thesis repository that will be read by an examining panel.
+
+---
+
 ## 2026-08-12 (5th session) — Folder scatter fixed structurally: everything planning/status/reference is now one numbered series under `docs/planning/`; two documents retired outright
 
 **The root cause the 2026-08-12 reset named — "no single file is structurally forced to be the one a session updates" — is closed by consolidation, not by another correction pass.** Root and `docs/` no longer hold planning documents at all; only `README.md` (pointer-only) and `memory.md` remain at root, matching EngiRent's own convention. All moves done via `git mv`, so history is preserved on every file.
