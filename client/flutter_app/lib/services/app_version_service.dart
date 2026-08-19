@@ -60,16 +60,18 @@ class AppVersionService {
   }
 
   Future<UpdateGateResult> check() async {
-    // Read the installed version first — if even this fails there is nothing
-    // meaningful to compare against, so let the app through.
+    // Compile-time fallback for when the platform plugin is unavailable.
+    // This failure mode is real, not theoretical: the 2026-08-20 verification
+    // found a stale web plugin registrant had silently dropped
+    // package_info_plus, which made PackageInfo.fromPlatform() throw and the
+    // old code fail open — the gate was silently disabled on that platform.
+    // Keep this in sync with pubspec.yaml's version when bumping releases.
+    const fallbackVersion = '1.0.0';
     String installed;
     try {
       installed = (await PackageInfo.fromPlatform()).version;
     } catch (_) {
-      return const UpdateGateResult(
-        status: UpdateGateStatus.ok,
-        installedVersion: 'unknown',
-      );
+      installed = fallbackVersion;
     }
 
     try {

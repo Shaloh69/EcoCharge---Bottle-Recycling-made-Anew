@@ -104,9 +104,11 @@ export default function AuthPage() {
   }, []);
 
   const [guestLoading, setGuestLoading] = useState(false);
+  const [guestError, setGuestError] = useState<string | null>(null);
 
   const handleGuest = async () => {
     setGuestLoading(true);
+    setGuestError(null);
     try {
       const kioskId = parseInt(KIOSK_ID);
       const data = await auth.guest(kioskId);
@@ -116,9 +118,14 @@ export default function AuthPage() {
       userStore.set(data.user);
       router.push("/auth/linking");
     } catch {
+      // Found for real 2026-08-20: this used to clear the token and push to
+      // /auth/linking anyway, walking the user into a session hub whose every
+      // API call then 401s — a dead end dressed up as success. A failed guest
+      // start now says so, here, and lets the user try again.
       token.clear();
-      session.set("0");
-      router.push("/auth/linking");
+      setGuestError(
+        "Couldn't start a guest session. Please try again — if this keeps happening, the kiosk may be offline.",
+      );
     } finally {
       setGuestLoading(false);
     }
@@ -288,6 +295,14 @@ export default function AuthPage() {
           >
             {guestLoading ? "Please wait…" : "Continue as Guest"}
           </button>
+          {guestError ? (
+            <p
+              className="text-center text-lg font-semibold"
+              style={{ color: "#DC2626", marginTop: 12 }}
+            >
+              {guestError}
+            </p>
+          ) : null}
         </motion.div>
 
         {/* Back is always reachable — kiosk convention, and this is the only

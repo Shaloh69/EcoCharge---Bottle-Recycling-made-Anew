@@ -42,13 +42,11 @@ Full, code-verified system documentation: [`docs/planning/09-system-analysis.md`
 
 Also present: [`docs/planning/10-paper-vs-repo-gap.md`](docs/planning/10-paper-vs-repo-gap.md) (thesis-paper-vs-repository gap analysis), [`docs/planning/12-self-hosting-guide.md`](docs/planning/12-self-hosting-guide.md) (from-scratch setup + model-training walkthrough), [`docs/planning/13-project-roadmap.md`](docs/planning/13-project-roadmap.md) (phase roadmap), and [`docs/evidence/`](docs/evidence) (thesis evidence pack).
 
-## Current status (2026-08-12)
+## Current status (2026-08-20)
 
 The full bottle-to-credit-to-charge journey is implemented end to end — a functionally complete, integrated system, not a set of disconnected prototypes. Aiven, Supabase, and Render are all fully decommissioned; the system is self-hosted on `desktop-gklhcri`.
 
-> **All services are up as of 2026-08-12 03:5x**, after an outage that began when the host rebooted on 2026-08-11 20:09 and lasted ~7 hours. Cause: the API, admin console, AI server and their three tunnels were registered as Scheduled Tasks under a normal user account, giving them Logon Mode "Interactive only", which **cannot fire an `ONSTART` trigger**. Fixed by re-registering all six with `/RU SYSTEM /RL HIGHEST`; every service verified back up and all five tunnels verified 200 from the public internet. Current URLs are in `docs/planning/08-master-checklist.md` Phase A (they rotate on every tunnel restart).
->
-> **Three host-side config edits are still outstanding**, and Kiosk Web and the Admin Console will still fail against the API until they land: the API's `ALLOWED_ORIGINS`, `kiosk_web/.env.local`, and `web_console`'s build-time `NEXT_PUBLIC_API_URL` (needs a rebuild) all still reference the previous tunnel URLs. Full detail: `memory.md`, 2026-08-12.
+> **All services are up, and service persistence is now proven across a real reboot** (host rebooted 2026-08-18; everything came back on its own — the `/RU SYSTEM` Task-Scheduler fix from the 2026-08-12 outage postmortem held). The five public quick-tunnel URLs **rotate on every tunnel restart** — the current set, each verified live, is always in `docs/planning/08-master-checklist.md` Phase A's top banner, along with the proven rotation runbook. Never trust a tunnel URL written down anywhere else.
 
 What's still in progress:
 
