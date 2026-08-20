@@ -17,8 +17,8 @@ import { StatusBadge } from "@/components/admin/StatusBadge";
 // than faked.
 const columns: DataTableColumn<KioskSession>[] = [
   { key: "id", label: "ID", mono: true, render: (s) => `#${s.id}` },
-  { key: "user", label: "User", render: (s) => `User #${s.user_id}` },
-  { key: "kiosk", label: "Kiosk", render: (s) => `Kiosk #${s.kiosk_id}` },
+  { key: "user", label: "User", render: (s) => s.user?.name ?? `User #${s.user_id}` },
+  { key: "kiosk", label: "Kiosk", render: (s) => s.kiosk?.name ?? `Kiosk #${s.kiosk_id}` },
   {
     key: "started",
     label: "Started",
@@ -43,7 +43,7 @@ export default function SessionsPage() {
   useEffect(() => {
     admin
       .sessions()
-      .then((r) => setSessions(r.sessions ?? []))
+      .then((r) => setSessions(r))
       .catch(() =>
         addToast({ title: "Failed to load sessions", color: "danger" }),
       )

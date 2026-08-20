@@ -18,7 +18,31 @@ export const auth = {
   },
   clear: () => {
     sessionStorage.removeItem("admin_token");
+    sessionStorage.removeItem("admin_user");
     document.cookie = "admin_authed=; path=/; max-age=0; SameSite=Strict";
+  },
+
+  /**
+   * The signed-in admin. Found 2026-08-20: the login response already returned
+   * a real `user` object and it was being thrown away, while AdminSidebar
+   * hard-coded "Admin / admin@ecocharge.ph" — so every admin saw the seed
+   * account's identity regardless of who actually signed in. Same class of bug
+   * as the sessions page's hardcoded mock data (2026-08-11). Stored in
+   * sessionStorage next to the token so it shares the token's lifetime exactly.
+   * Not sensitive: name/email of the account already signed in on this tab.
+   */
+  setUser: (u: User) => {
+    sessionStorage.setItem("admin_user", JSON.stringify(u));
+  },
+  getUser: (): User | null => {
+    if (typeof window === "undefined") return null;
+    const raw = sessionStorage.getItem("admin_user");
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as User;
+    } catch {
+      return null;
+    }
   },
 };
 
@@ -90,8 +114,10 @@ export const admin = {
   kiosks: () => req<Kiosk[]>("/api/admin/kiosks"),
   telemetry: (id: number) =>
     req<Telemetry>(`/api/admin/kiosks/${id}/telemetry/latest`),
-  sessions: (page = 1) =>
-    req<Paginated<KioskSession>>(`/api/admin/sessions?page=${page}`),
+  // NOTE: unlike deposits/charging/transactions/ml-review, this endpoint
+  // returns a bare array (verified against the live API 2026-08-20), as do
+  // users and alerts. Typed accordingly rather than forced into Paginated.
+  sessions: () => req<KioskSession[]>("/api/admin/sessions"),
   deposits: (page = 1) =>
     req<Paginated<Deposit>>(`/api/admin/deposits?page=${page}`),
   charging: (page = 1, status?: string) =>
@@ -168,7 +194,11 @@ export interface KioskSession {
   user_id: number;
   kiosk_id: number;
   started_at: string;
-  ended_at?: string;
+  ended_at?: string | null;
+  // The endpoint joins these in; the table used to ignore them and render
+  // "User #2" / "Kiosk #2" instead of the real names it was already being sent.
+  user?: { name: string; email: string } | null;
+  kiosk?: { name: string } | null;
 }
 export interface Deposit {
   id: number;
@@ -217,11 +247,21 @@ export interface Overview {
   total_credits_earned: number;
   kiosks_online: number;
 }
+/**
+ * The real paginated envelope: `{ items, total, pages, page }`.
+ *
+ * Found 2026-08-20: this interface used to declare `items?`, `deposits?`,
+ * `sessions?` and `transactions?` as four *optional* alternates, so
+ * `r.deposits ?? []` typechecked cleanly while always evaluating to `[]` at
+ * runtime — the API only ever sends `items`. Five pages (deposits, charging,
+ * credits, ml-review, sessions) each read a key that never existed and
+ * rendered a permanently empty table. It went unnoticed because those tables
+ * genuinely had no rows yet; the moment real deposits existed the console
+ * would have shown nothing, with no error anywhere. `items` is required now
+ * precisely so a wrong accessor fails the build instead of failing silently.
+ */
 export interface Paginated<T> {
-  items?: T[];
-  deposits?: T[];
-  sessions?: T[];
-  transactions?: T[];
+  items: T[];
   total: number;
   pages: number;
   page: number;

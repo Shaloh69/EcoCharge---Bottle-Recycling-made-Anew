@@ -60,7 +60,7 @@ export default function MLReviewPage() {
   useEffect(() => {
     admin
       .mlReview()
-      .then((r) => setDeposits(r.deposits ?? []))
+      .then((r) => setDeposits(r.items))
       .catch(() =>
         addToast({ title: "Failed to load ML review queue", color: "danger" }),
       )

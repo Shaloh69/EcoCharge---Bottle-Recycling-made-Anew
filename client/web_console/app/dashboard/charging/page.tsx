@@ -51,7 +51,7 @@ export default function ChargingPage() {
   useEffect(() => {
     admin
       .charging()
-      .then((r) => setSessions(r.sessions ?? []))
+      .then((r) => setSessions(r.items))
       .catch(() =>
         addToast({
           title: "Failed to load charging sessions",

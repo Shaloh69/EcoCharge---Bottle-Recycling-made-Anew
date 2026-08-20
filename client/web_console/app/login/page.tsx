@@ -81,6 +81,7 @@ export default function LoginPage() {
         return;
       }
       auth.setToken(res.access_token);
+      auth.setUser(res.user);
       addToast({ title: "Welcome back", color: "success" });
       router.push("/dashboard");
     } catch (e) {

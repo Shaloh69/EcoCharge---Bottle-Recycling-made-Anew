@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -31,7 +32,7 @@ import {
   Zap,
 } from "lucide-react";
 
-import { auth } from "@/lib/api";
+import { auth, type User } from "@/lib/api";
 
 const navGroups = [
   {
@@ -126,6 +127,15 @@ export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
+
+  // Read once on the client. sessionStorage is unavailable during SSR, so
+  // reading it in an effect (not inline) keeps server and client markup
+  // identical — the same hydration-mismatch trap that bit the kiosk auth page.
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    setCurrentUser(auth.getUser());
+  }, []);
 
   function handleLogout() {
     auth.clear();
@@ -223,14 +233,14 @@ export function AdminSidebar() {
           style={{ display: "flex", alignItems: "center", gap: 10 }}
         >
           <Avatar color="ecoGreen" radius="xl" size={32}>
-            A
+            {(currentUser?.name ?? "Admin").trim().charAt(0).toUpperCase()}
           </Avatar>
           <Box style={{ flex: 1, minWidth: 0 }}>
             <Text truncate fw={600} size="sm">
-              Admin
+              {currentUser?.name ?? "Admin"}
             </Text>
             <Text truncate c="dimmed" size="10px">
-              admin@ecocharge.ph
+              {currentUser?.email ?? "\u2014"}
             </Text>
           </Box>
           <Tooltip

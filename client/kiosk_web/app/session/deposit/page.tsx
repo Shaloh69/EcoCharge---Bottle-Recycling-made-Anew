@@ -16,6 +16,16 @@ import { useSuspendIdle } from "@/lib/idle-suspend";
 import { BinBatteryGauge } from "@/components/kiosk/BinBatteryGauge";
 
 const KIOSK_ID = parseInt(process.env.NEXT_PUBLIC_KIOSK_ID ?? "1");
+
+/**
+ * Accept floor — decided 2026-08-20 (user): 0.5, reconciled with the AI
+ * server's CONF_THRESHOLD (server_AI/app/inference.py), which was raised from
+ * 0.40 to match. Below this the bottle is auto-rejected with a retry prompt
+ * (the Phase D decision: no hold-for-review queue); accepted deposits with
+ * confidence < 0.70 remain visible in the admin ml-review audit trail.
+ * If this ever changes, change CONF_THRESHOLD with it — one number, two homes.
+ */
+const ACCEPT_CONFIDENCE = 0.5;
 const MAX_RETRIES = 6;
 const SCAN_INTERVAL_MS = 2000; // matches BOTTLE_SCAN_INTERVAL_MS in firmware
 
@@ -242,7 +252,7 @@ function DepositContent() {
         continue;
       }
 
-      if (result.detected && result.confidence >= 0.5) {
+      if (result.detected && result.confidence >= ACCEPT_CONFIDENCE) {
         // ── AI Approved ──────────────────────────────────────────────────────
         lastResultRef.current = result;
         console.log(

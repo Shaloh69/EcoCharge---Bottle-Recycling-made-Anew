@@ -29,7 +29,11 @@ YOLO_WEIGHTS = Path(os.environ.get("YOLO_WEIGHTS", str(_BASE / "models" / "best_
 CLASSIFIER_WEIGHTS = Path(
     os.environ.get("CLASSIFIER_WEIGHTS", str(_BASE / "models" / "best_classifier.pt"))
 )
-CONF_THRESHOLD = float(os.environ.get("CONF_THRESHOLD", "0.40"))
+# 0.50 since 2026-08-20 (was 0.40): reconciled with the kiosk's accept floor by
+# explicit user decision — one agreed number. Detections the kiosk would reject
+# anyway are no longer returned at all. Keep equal to the kiosk's
+# ACCEPT_CONFIDENCE (client/kiosk_web/app/session/deposit/page.tsx).
+CONF_THRESHOLD = float(os.environ.get("CONF_THRESHOLD", "0.50"))
 
 # ---------------------------------------------------------------------------
 # Internal state (populated on first load)

@@ -56,7 +56,7 @@ export default function CreditsPage() {
   useEffect(() => {
     admin
       .transactions()
-      .then((r) => setTxns(r.transactions ?? []))
+      .then((r) => setTxns(r.items))
       .catch(() =>
         addToast({ title: "Failed to load transactions", color: "danger" }),
       )

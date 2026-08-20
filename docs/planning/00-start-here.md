@@ -23,12 +23,12 @@ The folder scatter is gone (one numbered series under `docs/planning/`, only `RE
 ## Open work, in priority order
 
 1. **The `[!]` decisions still genuinely open** (stop-and-ask, don't guess):
-   - **AI 0.40 floor vs. kiosk 0.5 accept floor** — now coupled to the decided auto-reject behavior (Phase D): whichever number wins becomes the line where a real user's bottle is refused. Must be settled before auto-reject ships.
+   - ~~AI 0.40 vs kiosk 0.5 floor~~ **SETTLED 2026-08-20: 0.5, shipped and live-verified** (AI server raised to match; kiosk literal is now a named `ACCEPT_CONFIDENCE`).
    - **YOLO26 thesis-narrative confirmation** — the paper isn't in this repo (re-confirmed: no `.docx`/thesis file anywhere in the tree); only the user can check it.
    - **Firmware flash sign-off + physical access** — both fixes live in source (`bottle_fsm.c`, verified present 2026-08-20), hardware still unreachable.
    - **Device-key firmware half** — the DB side is rotated; moving keys into NVS via the provisioning portal still needs the ESP32 in hand. `config.h` now ships `SET_AT_BUILD_TIME` placeholders — never commit a real key again.
-2. **Implement the auto-reject-below-threshold decision** (Phase D → kiosk deposit flow) — blocked on the threshold decision above.
-3. **Admin Console E1 remainder**: the 8 data pages re-screenshot behind login — **needs admin credentials from the user** (the seeded password lives only in the host `.env`, which is correctly unreadable here; ask, don't extract).
+2. **Auto-reject: mostly already shipped** — re-reading the code showed the kiosk already rejects below the floor and never awards credits. Remaining: a specific reject *reason* on the result screen (low-confidence vs nothing-detected), and whether `ml-review` stays a passive audit trail for the now-real 0.5–0.7 accepted band.
+3. ~~Admin Console E1 remainder~~ **DONE 2026-08-20**: all 11 data pages screenshot-verified behind a real login via a throwaway admin (created, used, deleted, 401-confirmed). Caught two real bugs doing it — a hardcoded sidebar identity, and a `Paginated<T>` type whose optional keys let five data pages read a field that never existed. See `memory.md`.
 4. **Kiosk E2 remainder**: `/session/deposit`, `/session/charging`, `/session/result`, receipts, `/auth/linked` — need deposit/charging state a browser can't fake without hardware.
 5. **Phase E design backlog**: mobile screens beyond Home (and Home's balance-card gradient, a banned pattern logged 2026-08-20); bin-full screen (§4.4); Lottie scanning composite (§4.3); the formal `/design-review` + `avoid-ai-design` passes as their own runs; the `optional`-tier update nudge on mobile Home. Follow `02-design-mandate.md` to the letter — including the 2026-08-12 template/palette corrections (lifted dark primary `#34D399`, no Mantine-template/TailAdmin references, Mobile's locked template refs + `fallingLeaves` background).
 6. **Phase H thesis evidence**: UI screenshots are accumulating in `docs/design-screenshots/` (fresh deployed set 2026-08-20); user-testing summary and pilot findings remain blocked on hardware/deployment.
@@ -36,7 +36,7 @@ The folder scatter is gone (one numbered series under `docs/planning/`, only `RE
 
 ## Settled — don't re-litigate
 
-Guest pooled balance (kept, rate-limited) · device-key timing (accepted) · free quick tunnels incl. rotation chore (re-confirmed 2026-08-12) · dataset merge (dropped) · mascot art (authorized, inspired-by credit required wherever it ships) · `ml-review` gate (decided 2026-08-12: **auto-reject below threshold** — implementation pending, threshold pending) · update gate is a **hard block** below min, dismissible nudge below latest, **fails open** on outage (proven necessary by the 08-12 outage) · `06-must-have-app-features.md` re-verified and corrected 2026-08-20 (its testing/release rows were stale — trust the current file).
+Guest pooled balance (kept, rate-limited) · device-key timing (accepted) · free quick tunnels incl. rotation chore (re-confirmed 2026-08-12) · dataset merge (dropped) · mascot art (authorized, inspired-by credit required wherever it ships) · `ml-review` gate (decided 2026-08-12: **auto-reject below threshold**; threshold settled 2026-08-20 at **0.5** and shipped — the kiosk already behaved this way, see item 2) · update gate is a **hard block** below min, dismissible nudge below latest, **fails open** on outage (proven necessary by the 08-12 outage) · `06-must-have-app-features.md` re-verified and corrected 2026-08-20 (its testing/release rows were stale — trust the current file).
 
 ## One user-side loose end
 

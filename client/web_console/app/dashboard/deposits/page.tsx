@@ -64,7 +64,7 @@ export default function DepositsPage() {
   useEffect(() => {
     admin
       .deposits()
-      .then((r) => setDeposits(r.deposits ?? []))
+      .then((r) => setDeposits(r.items))
       .catch(() =>
         addToast({ title: "Failed to load deposits", color: "danger" }),
       )
