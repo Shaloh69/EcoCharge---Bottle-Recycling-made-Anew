@@ -9,7 +9,7 @@
 // the local web server at GET /api/selftest.
 //
 // Test sequence:
-//   1. Pico UART connection — waits SELFTEST_PICO_WAIT_MS for a valid packet
+//   1. Sensor-node (ESP32-B) UART — waits SELFTEST_SENSOR_WAIT_MS for a packet
 //   2. Voltage & current sensors — all 4 ports (SW1/SW3 via ADC, SW2/SW4 via Pico)
 //   3. Ultrasonic sensors — all 3 (entrance, bin-top, bin-bottom)
 //   4. Conveyor motor driver — forward 1 s → stop → reverse 1 s → stop
@@ -29,7 +29,8 @@ typedef struct {
     bool   ultrasonic_ok[3];  // true if returned a valid reading (< max range)
 
     // Pico UART link (SW2 & SW4 data source)
-    bool   pico_ok;           // true if Pico responded within timeout
+    bool   pico_ok;           // true if ESP32-B sensor node responded in time
+                              // (field name kept for API/telemetry compatibility)
 
     // Conveyor motor driver
     bool   motor_ok;          // true if all motor commands returned ESP_OK

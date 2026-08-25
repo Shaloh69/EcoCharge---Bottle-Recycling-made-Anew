@@ -2,7 +2,7 @@
 
 **Rewritten 2026-08-10 — the previous version of this README described an older firmware revision** (a servo-based conveyor gate, ACS712 + ADS1115 I2C sensing, no ultrasonic sensors, no bottle FSM, no Raspberry Pi Pico bridge). That's not what's actually running. This version is corrected against `../../docs/planning/09-system-analysis.md` §11, verified directly from the real v2.0.0 source in `src/`/`include/` — if this ever drifts from the code again, treat the code and `../../docs/planning/09-system-analysis.md` as authoritative, not this file.
 
-This folder contains the ESP-IDF firmware for the EcoCharge kiosk hardware controller. It runs on an ESP32 dev board (PlatformIO, `framework = espidf`, target `esp32dev`, huge_app partition) and manages every physical subsystem: the bottle conveyor, four charging-port relays, three ultrasonic sensors, and per-port current/voltage sensing (partly via a companion Raspberry Pi Pico — see `../pico_sensors`).
+This folder contains the ESP-IDF firmware for the EcoCharge kiosk hardware controller. It runs on an ESP32 dev board (PlatformIO, `framework = espidf`, target `esp32dev`, huge_app partition) and manages every physical subsystem: the bottle conveyor, four charging-port relays, three ultrasonic sensors, and per-port current/voltage sensing (ports 1-2 locally; ports 3-4 via a companion **second ESP32** — see `../esp32_sensor`). **Hardware rev 3.0.0 (2026-08-20) replaced the previous Raspberry Pi Pico co-processor with that second ESP32**, which put all eight analog channels on a WiFi-safe ADC1 and restored port 4's overcurrent protection; reasoning in `../../docs/evidence/hardware-wiring-diagram.md`.
 
 ## Role in the system
 
@@ -12,7 +12,7 @@ API Server  ←—— HTTPS poll (2s) / telemetry POST (5s) ——→  ESP32 (Wi
                                                                   +-- Conveyor (L298N H-bridge) — forward/reverse/fast-forward
                                                                   +-- 4x Relay (charging ports) — active-low, GPIO 25/26/16/5
                                                                   +-- 3x HC-SR04 ultrasonic — entrance, bin-top, bin-bottom
-                                                                  +-- Current/voltage sensing (ADC1 + a UART bridge to a Pico for
+                                                                  +-- Current/voltage sensing (ADC1 ports 1-2 + UART from ESP32-B for
                                                                       the channels the ESP32's own ADC can't cover while WiFi is up)
 ```
 
@@ -34,7 +34,7 @@ Connects to WiFi → polls the API server for commands → posts telemetry. The 
 ### Provisioning mode (no credentials yet)
 Starts a WiFi access point (`EcoCharge_Config`) with a captive-portal DNS server. Connect a phone → browser auto-opens → navigate to `/provision` → enter WiFi SSID/password → save → ESP32 reboots into Normal mode. Includes real WiFi-scan + signal-strength UI on the provisioning page.
 
-A hardware **self-test** (`self_test.c`) exercises the Pico UART link, the conveyor motor, and the sensors at boot — extend this (not build a parallel mechanism) if a remote self-test-from-the-admin-console feature is ever added, per the pattern established on sibling projects.
+A hardware **self-test** (`self_test.c`) exercises the ESP32-B sensor-node UART link, the conveyor motor, and the sensors at boot — extend this (not build a parallel mechanism) if a remote self-test-from-the-admin-console feature is ever added, per the pattern established on sibling projects.
 
 ## Local test dashboard (`/test`)
 
@@ -68,9 +68,18 @@ GPIO 25 / 26 / 16 / 5 — one per port. Independent 3600s max-on watchdog task r
 
 | Channel | Source | Notes |
 |---|---|---|
-| SW1, SW3 current + voltage | ESP32 ADC1 — GPIO 33/35/32/34 | WiFi-safe (ADC1 only) |
-| SW4 current | ESP32 ADC2 — GPIO 12 | **Unavailable while WiFi is active** — ADC2 is claimed by the WiFi driver |
-| SW2 (V+I) and SW4 voltage | Raspberry Pi Pico, over UART2 (RX=17, TX=4, 115200 baud) | See `../pico_sensors` — exists specifically because the ESP32 runs out of usable ADC pins once WiFi claims ADC2 |
+| SW1 current + voltage | This ESP32's ADC1 — GPIO 33 / 32 | WiFi-safe |
+| SW2 current + voltage | This ESP32's ADC1 — GPIO 35 / 34 | WiFi-safe. **New in rev 3.0.0** (was on the Pico) |
+| SW3 + SW4, current **and** voltage | **ESP32-B**, over UART2 (RX=17, TX=4, 115200 baud) | Line format `SW3V,SW3I,SW4V,SW4I` every 500 ms. See `../esp32_sensor` |
+| ~~SW4 current on ADC2 / GPIO12~~ | **removed in rev 3.0.0** | ADC2 is unusable while WiFi is active, so this channel read a permanent 0.00 A and port 4 had **no working overcurrent protection**. GPIO12 is also the MTDI strapping pin. Both problems are gone — nothing uses ADC2 now |
+
+### WiFi reset button (new in rev 3.0.0)
+
+| Pin | Wiring | Behaviour |
+|---|---|---|
+| GPIO 22 | `GPIO22 —— [momentary button] —— GND` (internal pull-up; no external resistor) | **Hold 3 s** → erase stored WiFi credentials from NVS → reboot into the provisioning AP. A tap does nothing. Held at power-on it is ignored until released once, so a stuck button cannot wipe credentials on every boot. |
+
+GPIO22 is used because it is the only free pin on this board that is **not** a strapping pin — a button on GPIO0/2/12/15 held during power-on could prevent the board booting. Implementation: `src/wifi_reset.c`. Full circuit and rationale: `../../docs/evidence/hardware-wiring-diagram.md`.
 
 ### Other
 
@@ -138,7 +147,8 @@ esp/ecocharge/
     ├── bottle_fsm.c          — IDLE/SCANNING/DROPPING/CONFIRMING/REJECTING state machine
     ├── relay_control.c       — GPIO relay driver, fail-safe boot-off, watchdog
     ├── sensor_monitor.c      — Ultrasonic + ADC1 current/voltage sampling
-    ├── self_test.c           — Pico UART / motor / sensor self-test
+    ├── self_test.c           — sensor-node UART / motor / sensor self-test
+    ├── wifi_reset.c          — WiFi reset button (GPIO22, hold 3 s to clear NVS)
     ├── nvs_config.c          — NVS credential persistence
     ├── wifi_provision.c      — UDP DNS server for captive portal
     ├── api_client.c          — HTTPS polling to the API server

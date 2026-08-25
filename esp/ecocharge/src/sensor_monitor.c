@@ -9,26 +9,31 @@
 #include <string.h>
 #include <stdio.h>
 
-// ADC1 channels — SW1 and SW3 only (SW2/SW4 come from Pico via UART)
+// ADC1 channels — SW1 and SW2 are read locally; SW3/SW4 arrive from ESP32-B
+// over UART (hardware rev 3.0.0, 2026-08-20 — the Pico is gone).
 static const adc_channel_t CURRENT_CH[2] = {
     CURRENT_PORT1_ADC_CHANNEL,  // SW1 — GPIO 33
-    CURRENT_PORT3_ADC_CHANNEL,  // SW3 — GPIO 35
+    CURRENT_PORT2_ADC_CHANNEL,  // SW2 — GPIO 35
 };
 static const adc_channel_t VOLTAGE_CH[2] = {
     VOLTAGE_PORT1_ADC_CHANNEL,  // SW1 — GPIO 32
-    VOLTAGE_PORT3_ADC_CHANNEL,  // SW3 — GPIO 34
+    VOLTAGE_PORT2_ADC_CHANNEL,  // SW2 — GPIO 34
 };
 
+// Index in s_data[] that each locally-read ADC pair maps to (0-based ports).
+static const int LOCAL_PORT_IDX[2] = { 0, 1 };   // SW1, SW2
+
 static adc_oneshot_unit_handle_t s_adc1;
-// ADC2 is shared with the WiFi RF switch on ESP32 — reading it while WiFi is
-// active corrupts the receive path and causes random disconnects.  SW4 current
-// is not measured; it always reports 0.  SW4 voltage still comes via Pico UART.
+// ADC2 is no longer used anywhere in this firmware. It is unusable while WiFi
+// is active (shared with the RF switch), which is exactly why SW4's current
+// used to read as a permanent 0. Rev 3.0.0 moves ports 3 and 4 onto ESP32-B's
+// own ADC1, so all eight channels are now genuinely measured.
 static port_sensor_data_t s_data[NUM_CHARGING_PORTS] = {0};
 static uint32_t s_overcurrent_ms[NUM_CHARGING_PORTS] = {0};
 
 esp_err_t sensor_init(void)
 {
-    // --- ADC1 init (SW1 and SW3) ---
+    // --- ADC1 init (SW1 and SW2) ---
     adc_oneshot_unit_init_cfg_t init_cfg = { .unit_id = ADC_UNIT_1 };
     esp_err_t ret = adc_oneshot_new_unit(&init_cfg, &s_adc1);
     if (ret != ESP_OK) {
@@ -53,30 +58,30 @@ esp_err_t sensor_init(void)
         }
     }
 
-    // --- UART2 init (receive SW2/SW4 data from Pico) ---
+    // --- UART2 init (receive SW3/SW4 data from ESP32-B) ---
     uart_config_t uart_cfg = {
-        .baud_rate  = PICO_UART_BAUD,
+        .baud_rate  = SENSOR_UART_BAUD,
         .data_bits  = UART_DATA_8_BITS,
         .parity     = UART_PARITY_DISABLE,
         .stop_bits  = UART_STOP_BITS_1,
         .flow_ctrl  = UART_HW_FLOWCTRL_DISABLE,
         .source_clk = UART_SCLK_DEFAULT,
     };
-    ret = uart_driver_install(PICO_UART_PORT, PICO_UART_BUF, 0, 0, NULL, 0);
+    ret = uart_driver_install(SENSOR_UART_PORT, SENSOR_UART_BUF, 0, 0, NULL, 0);
     if (ret != ESP_OK) {
         ESP_LOGE(LOG_TAG, "UART2 install failed: %s", esp_err_to_name(ret));
         return ret;
     }
-    uart_param_config(PICO_UART_PORT, &uart_cfg);
-    uart_set_pin(PICO_UART_PORT,
-                 PICO_UART_TX_GPIO, PICO_UART_RX_GPIO,
+    uart_param_config(SENSOR_UART_PORT, &uart_cfg);
+    uart_set_pin(SENSOR_UART_PORT,
+                 SENSOR_UART_TX_GPIO, SENSOR_UART_RX_GPIO,
                  UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 
     for (int i = 0; i < NUM_CHARGING_PORTS; i++) {
         s_data[i].port = i + 1;
     }
 
-    ESP_LOGI(LOG_TAG, "Sensor monitor initialized (ADC1 + Pico UART; SW4 current N/A)");
+    ESP_LOGI(LOG_TAG, "Sensor monitor initialized (ADC1 ports 1-2 + ESP32-B UART ports 3-4; all 8 channels live)");
     return ESP_OK;
 }
 
@@ -93,11 +98,12 @@ static float _adc_to_voltage(int raw)
     return v * VOLTAGE_SCALE;
 }
 
-// Read and parse the latest complete line from the Pico.
-// Format: "<SW2V>,<SW2I>,<SW4V>\n"  (raw 12-bit integers, 3 values)
-// SW4 current is now read directly by ESP32 on GPIO12 — not in this stream.
+// Read and parse the latest complete line from the ESP32-B sensor node.
+// Format: "<SW3V>,<SW3I>,<SW4V>,<SW4I>\n"  (raw 12-bit integers, 4 values)
+// Four values as of hardware rev 3.0.0: SW4's current is measured for real now
+// instead of being stuck at 0 on the WiFi-blocked ADC2.
 // Returns true when a valid line was consumed.
-static bool _pico_uart_read(int *sw2v, int *sw2i, int *sw4v)
+static bool _sensor_uart_read(int *sw3v, int *sw3i, int *sw4v, int *sw4i)
 {
     static char buf[64];
     static int  pos = 0;
@@ -106,14 +112,15 @@ static bool _pico_uart_read(int *sw2v, int *sw2i, int *sw4v)
     bool got = false;
 
     // Drain all available bytes; keep last valid parse
-    while (uart_read_bytes(PICO_UART_PORT, &ch, 1, 0) == 1) {
+    while (uart_read_bytes(SENSOR_UART_PORT, &ch, 1, 0) == 1) {
         if (ch == '\n') {
             buf[pos] = '\0';
-            int a, b, c;
-            if (sscanf(buf, "%d,%d,%d", &a, &b, &c) == 3) {
-                *sw2v = a;
-                *sw2i = b;
+            int a, b, c, d;
+            if (sscanf(buf, "%d,%d,%d,%d", &a, &b, &c, &d) == 4) {
+                *sw3v = a;
+                *sw3i = b;
                 *sw4v = c;
+                *sw4i = d;
                 got = true;
             }
             pos = 0;
@@ -130,33 +137,27 @@ void sensor_sample_all(void)
 {
     int raw = 0;
 
-    // SW1 (index 0) — ADC1 direct
-    if (adc_oneshot_read(s_adc1, CURRENT_CH[0], &raw) == ESP_OK) {
-        s_data[0].current_amps = _adc_to_current(raw);
-    }
-    if (adc_oneshot_read(s_adc1, VOLTAGE_CH[0], &raw) == ESP_OK) {
-        s_data[0].voltage_volts = _adc_to_voltage(raw);
-    }
-
-    // SW3 (index 2) — ADC1 direct
-    if (adc_oneshot_read(s_adc1, CURRENT_CH[1], &raw) == ESP_OK) {
-        s_data[2].current_amps = _adc_to_current(raw);
-    }
-    if (adc_oneshot_read(s_adc1, VOLTAGE_CH[1], &raw) == ESP_OK) {
-        s_data[2].voltage_volts = _adc_to_voltage(raw);
+    // SW1 (index 0) and SW2 (index 1) — this board's own ADC1
+    for (int i = 0; i < 2; i++) {
+        const int idx = LOCAL_PORT_IDX[i];
+        if (adc_oneshot_read(s_adc1, CURRENT_CH[i], &raw) == ESP_OK) {
+            s_data[idx].current_amps = _adc_to_current(raw);
+        }
+        if (adc_oneshot_read(s_adc1, VOLTAGE_CH[i], &raw) == ESP_OK) {
+            s_data[idx].voltage_volts = _adc_to_voltage(raw);
+        }
     }
 
-    // SW2 (index 1) voltage + current — Pico GP26/GP27 via UART
-    // SW4 (index 3) voltage          — Pico GP28 via UART
-    int sw2v, sw2i, sw4v;
-    if (_pico_uart_read(&sw2v, &sw2i, &sw4v)) {
-        s_data[1].voltage_volts = _adc_to_voltage(sw2v);
-        s_data[1].current_amps  = _adc_to_current(sw2i);
+    // SW3 (index 2) and SW4 (index 3) — measured by ESP32-B, arriving on UART2.
+    // Both voltage AND current for both ports, so overcurrent protection is now
+    // genuinely active on all four ports (it never was on port 4 before rev 3).
+    int sw3v, sw3i, sw4v, sw4i;
+    if (_sensor_uart_read(&sw3v, &sw3i, &sw4v, &sw4i)) {
+        s_data[2].voltage_volts = _adc_to_voltage(sw3v);
+        s_data[2].current_amps  = _adc_to_current(sw3i);
         s_data[3].voltage_volts = _adc_to_voltage(sw4v);
+        s_data[3].current_amps  = _adc_to_current(sw4i);
     }
-
-    // SW4 current is not read — ADC2 is shared with WiFi RF on ESP32.
-    // s_data[3].current_amps stays 0; overcurrent detection inactive for port 4.
 
     // Relay state + overcurrent detection
     for (int i = 0; i < NUM_CHARGING_PORTS; i++) {

@@ -3,14 +3,34 @@
 
 // ============================================================================
 // EcoCharge Kiosk Controller - Configuration
-// ESP32 — L298N conveyor + 4 charging ports (relay + current + voltage)
+// ESP32-A "Controller" — L298N conveyor + 4 relays + 3 ultrasonics
+//                        + ports 1-2 analog sensing + WiFi reset button
+//
+// HARDWARE REVISION 3.0.0 (2026-08-20): the Raspberry Pi Pico co-processor is
+// GONE, replaced by a second ESP32 ("ESP32-B", esp/esp32_sensor). Two reasons,
+// both real:
+//
+//   1. ADC2 is unusable while WiFi is active on the ESP32. The old design
+//      worked around a channel shortage by putting SW4's current sensor on
+//      ADC2 (GPIO12), which therefore never produced trustworthy readings on
+//      a WiFi-connected kiosk. Splitting 8 analog channels across TWO ESP32s
+//      puts every single one on an ADC1 — the workaround is deleted, not
+//      papered over.
+//   2. GPIO12 is the MTDI strapping pin: it must be LOW at boot or the chip
+//      selects the wrong flash voltage. Hanging a sensor off it was a latent
+//      brick-risk at power-on. That pin is now unused.
+//
+// Split of the 8 analog channels (4 ports x voltage+current):
+//   ESP32-A (this firmware, WiFi ON) : SW1 V+I, SW2 V+I   -> ADC1 only
+//   ESP32-B (esp/esp32_sensor, WiFi OFF): SW3 V+I, SW4 V+I -> ADC1 only
+// B streams its four raw readings to A over UART2, same wiring the Pico used.
 // ============================================================================
 
 // ----------------------------------------------------------------------------
 // System Identity
 // ----------------------------------------------------------------------------
 #define LOG_TAG             "ECOCHARGE"
-#define FIRMWARE_VERSION    "2.0.0"
+#define FIRMWARE_VERSION    "3.0.0"
 
 // ----------------------------------------------------------------------------
 // Conveyor Motor — L298N H-Bridge Driver
@@ -41,11 +61,13 @@
 #define RELAY_ACTIVE_LEVEL   0
 #define RELAY_MAX_ON_SEC     3600
 
-// ADC1 — SW1 (GPIO33, ch5) and SW3 (GPIO35, ch7)
+// ── Local analog sensing: PORTS 1 AND 2 ONLY, all on ADC1 ──────────────────
+// ADC1 is the only ADC that keeps working while WiFi is on. Ports 3 and 4 are
+// read by ESP32-B and arrive over UART (see SENSOR_UART below).
+// GPIO36/39 are deliberately NOT used here — they are input-only and are the
+// right home for the ultrasonic ECHO lines.
 #define CURRENT_PORT1_ADC_CHANNEL   ADC_CHANNEL_5   // GPIO33
-#define CURRENT_PORT3_ADC_CHANNEL   ADC_CHANNEL_7   // GPIO35
-// ADC2 — SW4 current (GPIO12, ch5). Unavailable while WiFi is active.
-#define CURRENT_PORT4_ADC_CHANNEL   ADC_CHANNEL_5   // GPIO12 on ADC2
+#define CURRENT_PORT2_ADC_CHANNEL   ADC_CHANNEL_7   // GPIO35
 
 #define CURRENT_SENSOR_SENSITIVITY  0.100f
 #define CURRENT_SENSOR_VOFFSET      1.65f
@@ -53,19 +75,29 @@
 #define CURRENT_OVERCURRENT_HOLD_MS 2000
 
 #define VOLTAGE_PORT1_ADC_CHANNEL   ADC_CHANNEL_4   // GPIO32
-#define VOLTAGE_PORT3_ADC_CHANNEL   ADC_CHANNEL_6   // GPIO34
+#define VOLTAGE_PORT2_ADC_CHANNEL   ADC_CHANNEL_6   // GPIO34
 #define VOLTAGE_SCALE        75.76f
 #define ADC_VREF_MV          3300
 #define ADC_MAX_VALUE        4095
 
 // ----------------------------------------------------------------------------
-// Pico UART — SW2/SW4 voltage data
+// Sensor-node UART — ESP32-B streams ports 3 & 4 (voltage + current)
 // ----------------------------------------------------------------------------
-#define PICO_UART_PORT       UART_NUM_2
-#define PICO_UART_RX_GPIO    17
-#define PICO_UART_TX_GPIO     4
-#define PICO_UART_BAUD       115200
-#define PICO_UART_BUF        256
+// Line format, one every SENSOR_NODE_PERIOD_MS:
+//     "<SW3V>,<SW3I>,<SW4V>,<SW4I>\n"      raw 12-bit ADC ints, 0..4095
+// Four values now, not the Pico's three: ESP32-B reads SW4's current too, so
+// nothing lands on ADC2 any more. A applies the conversion formulas.
+//
+// Wiring (GND MUST be common between the two boards):
+//     ESP32-B GPIO17 (TX) ---> ESP32-A GPIO17 (RX)
+//     ESP32-B GPIO16 (RX) <--- ESP32-A GPIO4  (TX)
+//     ESP32-B GND        <---> ESP32-A GND
+#define SENSOR_UART_PORT     UART_NUM_2
+#define SENSOR_UART_RX_GPIO  17
+#define SENSOR_UART_TX_GPIO   4
+#define SENSOR_UART_BAUD     115200
+#define SENSOR_UART_BUF      256
+
 
 // ----------------------------------------------------------------------------
 // Ultrasonic Sensors — HC-SR04 (3 sensors)
@@ -124,6 +156,32 @@
 #define WIFI_PASS_DEFAULT    "YourWiFi_Password"
 #define WIFI_RECONNECT_MS    5000
 #define WIFI_MAX_RETRIES     5
+
+// ----------------------------------------------------------------------------
+// WiFi Reset Button — momentary push-button to GND on GPIO22
+// ----------------------------------------------------------------------------
+// Wiring (2 wires, no external parts needed):
+//     ESP32-A GPIO22 ---- [ push button ] ---- GND
+// The internal pull-up holds the pin HIGH; pressing pulls it LOW.
+// Optional but recommended for a panel-mounted button on a long cable:
+// a 100 nF capacitor across the button terminals to suppress contact bounce
+// and pick-up noise. The firmware already debounces in software.
+//
+// GPIO22 chosen deliberately: it is the only free pin on this board that is
+// NOT a strapping pin. GPIO0/2/12/15 all influence boot mode or flash voltage,
+// so a button that happens to be held during power-on could stop the kiosk
+// from booting at all. GPIO22 has no such role.
+//
+// Behaviour: hold for WIFI_RESET_HOLD_MS, and the saved WiFi credentials are
+// erased from NVS and the board reboots straight into the provisioning AP.
+// A deliberate hold (not a tap) is required so a knock or a bounce can never
+// take a working kiosk off the network.
+#define WIFI_RESET_BTN_GPIO      22
+#define WIFI_RESET_ACTIVE_LEVEL   0      // pressed = LOW (internal pull-up)
+#define WIFI_RESET_HOLD_MS     3000      // hold this long to trigger
+#define WIFI_RESET_POLL_MS       50      // debounce/poll interval
+#define WIFI_RESET_TASK_STACK  3072
+#define WIFI_RESET_TASK_PRIO      3
 
 // ----------------------------------------------------------------------------
 // Server identity — set per kiosk unit before flashing
@@ -197,7 +255,7 @@
 // ----------------------------------------------------------------------------
 // Hardware Self-Test
 // ----------------------------------------------------------------------------
-#define SELFTEST_PICO_WAIT_MS     3000   // wait up to 3 s for Pico UART data
+#define SELFTEST_SENSOR_WAIT_MS   3000   // wait up to 3 s for ESP32-B UART data
 #define SELFTEST_MOTOR_SPEED        50   // conveyor speed % during self-test
 #define SELFTEST_MOTOR_FWD_MS     1000   // run forward for 1 s
 #define SELFTEST_MOTOR_PAUSE_MS    500   // pause between directions
@@ -211,7 +269,7 @@
 //    7  command     — admin command poll, fast response
 //    6  bottle_fsm  — mechanical FSM
 //    5  httpd       — web server (set by ESP-IDF default, not here)
-//    4  sensor      — ADC + ultrasonic + Pico UART (below web server!)
+//    4  sensor      — ADC + ultrasonic + ESP32-B UART (below web server!)
 //    3  telemetry   — background HTTP posts
 // ----------------------------------------------------------------------------
 #define SAFETY_TASK_STACK       4096

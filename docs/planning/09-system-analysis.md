@@ -37,7 +37,7 @@ Every claim in this document was checked against the actual source. Stale docume
 | **Admin Console** | `client/web_console/` | Next.js 15 + HeroUI + Recharts | Admin dashboard: live telemetry, CRUD, analytics, remote control |
 | **Mobile App** | `client/flutter_app/` | Flutter (Dart SDK ^3.9) | Companion app: register/login, QR-link to kiosk, balances, history, stop charging |
 | **Kiosk Firmware** | `esp/ecocharge/` | ESP32, ESP-IDF via PlatformIO, FreeRTOS (v2.0.0) | Conveyor, relays, sensors, bottle FSM, WiFi provisioning portal |
-| **Sensor Bridge** | `esp/pico_sensors/` | Raspberry Pi Pico, Arduino core | Extra ADC channels the ESP32 lacks, streamed over UART |
+| **Sensor Node** | `esp/esp32_sensor/` | ESP32, ESP-IDF | Ports 3 & 4 voltage+current on its own ADC1 (WiFi never started), streamed to the controller over UART. **Rev 3.0.0, 2026-08-20 — replaced the Raspberry Pi Pico** |
 | **Training scripts** | `scripts/` | Python (Ultralytics, PyTorch) | `train_yolo.py`, `train_bottle_classifier.py`, dataset tooling; outputs in `runs/` |
 
 > **Legacy code still in the tree (not used at runtime):**
@@ -73,7 +73,7 @@ Every claim in this document was checked against the actual source. Stale docume
   YOLO26 detector → EfficientNet-B0            conveyor (L298N), 4 relays,
   multi-head classifier                        3× HC-SR04 ultrasonic,
   X-Api-Key auth                               analog V/I sensing,
-  local PC + Cloudflare Tunnel,                Pico ADC bridge (UART),
+  local PC + Cloudflare Tunnel,                ESP32-B sensor node (UART),
   or Docker/RunPod                             WiFi provisioning portal
 ```
 
@@ -248,19 +248,20 @@ PlatformIO project, `framework = espidf`, target `esp32dev`, huge_app partition 
 - **Conveyor:** L298N H-bridge — IN1=19, IN2=23, ENA=18 (LEDC PWM 1 kHz)
 - **Relays:** 4 charging ports on GPIO 25/26/16/5, active-low, 3600 s max-on watchdog
 - **Ultrasonic (HC-SR04 ×3):** entrance (13/36), bin-top (14/39), bin-bottom (15/21); entrance threshold 15 cm, bin 20 cm; 5 V→3.3 V dividers on ECHO
-- **Power sensing:** SW1/SW3 current+voltage on ESP32 ADC1 (GPIO 33/35/32/34); SW4 current on ADC2 GPIO12 (unavailable while WiFi is up); **SW2 V/I and SW4 V come from the Pico** over UART2 (RX=17, TX=4, 115200)
+- **Power sensing (rev 3.0.0, 2026-08-20 — rewired):** **SW1 and SW2** current+voltage on ESP32-A's ADC1 (GPIO 33/32 and GPIO 35/34); **SW3 and SW4** current+voltage measured by **ESP32-B** on *its* ADC1 (GPIO 33/32 and 35/34) and streamed to A over UART2 (A: RX=17, TX=4, 115200) as `"SW3V,SW3I,SW4V,SW4I\n"` every 500 ms. **Nothing uses ADC2 any more** — that is the point of the revision: SW4's current previously sat on ADC2/GPIO12 and therefore read a permanent 0.00 A with WiFi up, so port 4 had no working overcurrent protection. All four ports are now genuinely monitored, and GPIO12 (an MTDI strapping pin) is unused.
 - **Status LED** GPIO27 with distinct blink patterns per state
 
 **FreeRTOS tasks** (priority): safety/watchdog (10), command poll (7), bottle FSM (6), httpd (5), sensors (4), telemetry (3).
 
-**WiFi provisioning:** credentials in NVS; if none (or connect fails) the ESP starts an AP `EcoCharge_Config` with a **captive portal** (`/generate_204` etc. redirects) serving a provisioning page with WiFi scan + signal strength UI. In station mode the same embedded web server (`web_server.c`) exposes a local test dashboard: `/` (status), `/test` (manual controls), `/api/status`, `/api/sse`, conveyor forward/reverse/stop/speed, relay on/off/all-off, `/api/wifi/scan`, `/api/selftest`, `/api/reboot`. A **hardware self-test** (`self_test.c`) exercises the Pico UART, motor, and sensors at boot.
+**WiFi provisioning:** credentials in NVS; if none (or connect fails) the ESP starts an AP `EcoCharge_Config` with a **captive portal** (`/generate_204` etc. redirects) serving a provisioning page with WiFi scan + signal strength UI. In station mode the same embedded web server (`web_server.c`) exposes a local test dashboard: `/` (status), `/test` (manual controls), `/api/status`, `/api/sse`, conveyor forward/reverse/stop/speed, relay on/off/all-off, `/api/wifi/scan`, `/api/selftest`, `/api/reboot`. A **hardware self-test** (`self_test.c`) exercises the ESP32-B sensor-node UART, motor, and sensors at boot. **New in rev 3.0.0:** a **WiFi reset button** on GPIO22 (internal pull-up, momentary to GND) — hold 3 s to erase stored credentials from NVS and reboot straight into the provisioning AP, the only field recovery path when a kiosk holds valid-but-wrong credentials for a renamed network.
 
 **Cloud loop:** poll commands every 2 s, POST telemetry every 5 s, `/health` ping every 4 min to keep the free Render instance awake.
 
-## Pico Sensor Bridge (`esp/pico_sensors`)
+## ESP32-B Sensor Node (`esp/esp32_sensor`)
 
-Raspberry Pi Pico (Arduino/earlephilhower core). Reads three 12-bit ADC channels — SW2 voltage (GP26), SW2 current (GP27), SW4 voltage (GP28) — and prints `SW2V,SW2I,SW4V\n` raw values over UART0 to the ESP32 every 500 ms. The ESP32 applies calibration formulas. Exists because the ESP32 runs out of usable ADC pins once WiFi claims ADC2.
+**Hardware rev 3.0.0, 2026-08-20 — this replaced a Raspberry Pi Pico.** A second ESP32 (ESP-IDF, same toolchain and same part number as the controller) whose **WiFi is never started**. Reads four 12-bit ADC1 channels — SW3 voltage (GPIO32), SW3 current (GPIO33), SW4 voltage (GPIO34), SW4 current (GPIO35) — averages 8 samples each, and streams `"SW3V,SW3I,SW4V,SW4I"` raw counts over UART2 to ESP32-A every 500 ms. Calibration constants live only on A, so recalibrating means reflashing one board.
 
+**Why it exists, and what the change actually fixed.** Four ports x (voltage + current) = eight analog channels, and one ESP32 cannot supply eight trustworthy ones: ADC2 is unusable while WiFi is active, and ADC1 realistically offers six, two of which are better spent on input-only ultrasonic ECHO pins. The old Pico split left **SW4's current sensor on ADC2 (GPIO12)**, so port 4's current read a permanent 0.00 A on a WiFi-connected kiosk — **its overcurrent protection never worked** — and GPIO12 is additionally the MTDI strapping pin (must be LOW at boot or the chip picks the wrong flash voltage). Splitting the eight channels across two ESP32s puts every one on an ADC1: nothing touches ADC2, GPIO12 is free, and all four ports are genuinely monitored. Full pin tables and reasoning: `docs/evidence/hardware-wiring-diagram.md`.
 ---
 
 ## 12. AI Server (`server/server_AI`)

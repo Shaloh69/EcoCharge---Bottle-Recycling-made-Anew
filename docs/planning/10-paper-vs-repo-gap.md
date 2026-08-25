@@ -91,7 +91,7 @@ Unchanged — the paper's survey data (78.8% supported a reward-based recycling 
 
 ### Repository Overview
 
-Top-level areas, current real structure per `docs/planning/09-system-analysis.md` §2: `client/kiosk_web`, `client/web_console`, `client/flutter_app`, `server/server_main`, `server/server_AI`, `esp/ecocharge`, `esp/pico_sensors`, `scripts/`, `runs/`.
+Top-level areas, current real structure per `docs/planning/09-system-analysis.md` §2: `client/kiosk_web`, `client/web_console`, `client/flutter_app`, `server/server_main`, `server/server_AI`, `esp/ecocharge`, `esp/esp32_sensor`, `scripts/`, `runs/`.
 
 ### `scripts/` and `runs/` — still the most mature, unchanged assessment
 
@@ -107,7 +107,7 @@ FastAPI, two-stage pipeline (YOLO26 detector → `BottleAttributeNet` EfficientN
 
 ### `esp/ecocharge` — real kiosk controller firmware, not a motor-control prototype
 
-The original analysis found "motor movement, AP mode networking, simple web control" and explicitly noted this was *not yet* the thesis kiosk controller — no relay control, no current sensing, no bin monitoring, no bottle-credit logic. **All of that gap is now closed**: v2.0.0 implements the full 5-state bottle FSM, 4-port relay charging with an independent 3600s watchdog, 3× HC-SR04 ultrasonic sensing (entrance + bin-top + bin-bottom), current/voltage sensing (including a Raspberry Pi Pico ADC bridge for the channels the ESP32's own ADC can't cover while WiFi is active), and a WiFi provisioning captive portal. Full hardware map in `docs/planning/09-system-analysis.md` §11.
+The original analysis found "motor movement, AP mode networking, simple web control" and explicitly noted this was *not yet* the thesis kiosk controller — no relay control, no current sensing, no bin monitoring, no bottle-credit logic. **All of that gap is now closed**: v2.0.0 implements the full 5-state bottle FSM, 4-port relay charging with an independent 3600s watchdog, 3× HC-SR04 ultrasonic sensing (entrance + bin-top + bin-bottom), current/voltage sensing across **two ESP32s** (rev 3.0.0, 2026-08-20 — a second ESP32 replaced the Raspberry Pi Pico, putting all eight analog channels on a WiFi-safe ADC1), and a WiFi provisioning captive portal. Full hardware map in `docs/planning/09-system-analysis.md` §11.
 
 **Two known gaps, precisely scoped, not vague:** `SCANNING` has no timeout (can nudge a bottle indefinitely under specific failure conditions) and `CONFIRMING` doesn't re-check the bin sensor before finalizing a reject. Both have exact proposed fixes in `docs/planning/11-audit-findings.md`, deliberately not yet flashed pending review — see `docs/planning/03-revamp-master.md` §3.2–§3.3.
 
@@ -130,7 +130,7 @@ The original analysis's "Hello World, no EcoCharge logic, no auth, no API integr
 | Database | MySQL, account/transaction storage | Real Prisma schema, 9+ tables, auto-migrated at startup | **Done** — self-hosted in Docker on `desktop-gklhcri` since 2026-08-11 (**row corrected 2026-08-12** — previously still said "still hosted on Aiven, not yet self-hosted") |
 | User accounts | Register/login/account balance | Real JWT auth (registered + guest), credit balance tracked | **Done** |
 | Charging control | Four charging ports, relay/current monitoring | Real relay control + current/voltage sensing + independent safety watchdog | **Done** |
-| Sensor integration | Ultrasonic, current sensor, relay, servo | All implemented; 3× ultrasonic, current/voltage sensing (incl. Pico bridge), 4× relay, conveyor (not a servo trapdoor — a conveyor-belt design instead) | **Done**, with the design substituting a conveyor for the paper's servo/trapdoor concept — worth naming explicitly in the thesis write-up as an implementation decision |
+| Sensor integration | Ultrasonic, current sensor, relay, servo | All implemented; 3× ultrasonic, current/voltage on all 4 ports (split across two ESP32s, rev 3.0.0), 4× relay, conveyor (not a servo trapdoor — a conveyor-belt design instead) | **Done**, with two decisions worth naming explicitly in the thesis: the conveyor substituted for the paper's servo/trapdoor concept, and the two-microcontroller split that the ESP32's WiFi/ADC2 conflict forces (see `docs/evidence/hardware-wiring-diagram.md`) |
 | Trash-bin monitoring | Bin status visible in interface | Bin-level telemetry drives real admin alerts (≥80%/≥95%) and a server-side deposit cutoff at ≥95%; kiosk-facing UI treatment not yet built | **Mostly done** — admin-side complete, kiosk-side pending the design revamp |
 | Kiosk UI | Dedicated kiosk application | Real, functional Next.js app against the live API; visual redesign not yet executed | **Functional, not yet redesigned** |
 | Admin web/dashboard | Monitoring console | Real, functional dashboard (overview, kiosks, sessions, deposits, charging, credits, users, alerts, ml-review, analytics, settings); visual redesign not yet executed | **Functional, not yet redesigned** |

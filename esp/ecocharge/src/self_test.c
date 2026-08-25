@@ -23,30 +23,31 @@ static selftest_results_t s_last;
 static bool               s_has_results = false;
 
 // ---------------------------------------------------------------------------
-// Test 1: Pico UART connection
-// Waits up to SELFTEST_PICO_WAIT_MS for a valid "<v>,<i>,<v>,<i>\n" line.
+// Test 1: sensor-node (ESP32-B) UART connection
+// Waits up to SELFTEST_SENSOR_WAIT_MS for a valid "<v>,<i>,<v>,<i>\n" line.
 // sensor_init() has already installed the UART driver before we are called.
 // ---------------------------------------------------------------------------
-static bool _test_pico(void)
+static bool _test_sensor_node(void)
 {
-    ESP_LOGI(TAG, "  Waiting for Pico data (up to %d ms)...", SELFTEST_PICO_WAIT_MS);
+    ESP_LOGI(TAG, "  Waiting for ESP32-B data (up to %d ms)...", SELFTEST_SENSOR_WAIT_MS);
 
     char    line[64];
     int     pos          = 0;
-    int     remaining_ms = SELFTEST_PICO_WAIT_MS;
+    int     remaining_ms = SELFTEST_SENSOR_WAIT_MS;
     uint8_t ch;
 
     while (remaining_ms > 0) {
-        int got = uart_read_bytes(PICO_UART_PORT, &ch, 1, pdMS_TO_TICKS(10));
+        int got = uart_read_bytes(SENSOR_UART_PORT, &ch, 1, pdMS_TO_TICKS(10));
         remaining_ms -= 10;
 
         if (got != 1) continue;
 
         if (ch == '\n') {
             line[pos] = '\0';
-            int a, b, c;
-            if (sscanf(line, "%d,%d,%d", &a, &b, &c) == 3) {
-                ESP_LOGI(TAG, "  Pico UART: SW2V=%d SW2I=%d SW4V=%d  [PASS]", a, b, c);
+            int a, b, c, d;
+            if (sscanf(line, "%d,%d,%d,%d", &a, &b, &c, &d) == 4) {
+                ESP_LOGI(TAG, "  Sensor node UART: SW3V=%d SW3I=%d SW4V=%d SW4I=%d  [PASS]",
+                         a, b, c, d);
                 return true;
             }
             pos = 0;  // bad line — reset and keep waiting
@@ -57,17 +58,17 @@ static bool _test_pico(void)
         }
     }
 
-    ESP_LOGW(TAG, "  Pico UART: no valid packet received  [WARNING]");
-    ESP_LOGW(TAG, "  SW2 & SW4 sensor data will read 0.00 until Pico connects");
+    ESP_LOGW(TAG, "  Sensor node UART: no valid packet received  [WARNING]");
+    ESP_LOGW(TAG, "  SW3 & SW4 sensor data will read 0.00 until ESP32-B connects");
     return false;
 }
 
 // ---------------------------------------------------------------------------
 // Test 2: Voltage & current sensors (all 4 ports)
 // Calls sensor_sample_all() a few times to warm up ADC, then reads each port.
-// Ports 1 & 3 are always readable (ADC direct); ports 2 & 4 depend on Pico.
+// Ports 1 & 2 are always readable (local ADC1); ports 3 & 4 depend on ESP32-B.
 // Pass criterion for ADC ports: sensor_get_port() returns ESP_OK.
-// Pass criterion for Pico ports: always pass (with warning if Pico is offline).
+// Pass criterion for remote ports: always pass (warn if the sensor node is offline).
 // ---------------------------------------------------------------------------
 static void _test_sensors(selftest_results_t *r)
 {
@@ -84,16 +85,16 @@ static void _test_sensors(selftest_results_t *r)
         r->voltage[p - 1] = d.voltage_volts;
         r->current[p - 1] = d.current_amps;
 
-        bool is_pico_port = (p == 2 || p == 4);
+        bool is_remote_port = (p == 3 || p == 4);
 
-        if (is_pico_port) {
-            // Pico port — mark ok regardless (reading 0 is valid if Pico is offline)
+        if (is_remote_port) {
+            // Remote port — mark ok regardless (0 is valid if ESP32-B is offline)
             r->sensor_ok[p - 1] = true;
             if (!r->pico_ok) {
-                ESP_LOGW(TAG, "  Port %d [Pico]: V=%.1fV  I=%.3fA  [PASS w/WARNING — Pico offline]",
+                ESP_LOGW(TAG, "  Port %d [ESP32-B]: V=%.1fV  I=%.3fA  [PASS w/WARNING — node offline]",
                          p, d.voltage_volts, d.current_amps);
             } else {
-                ESP_LOGI(TAG, "  Port %d [Pico]: V=%.1fV  I=%.3fA  [PASS]",
+                ESP_LOGI(TAG, "  Port %d [ESP32-B]: V=%.1fV  I=%.3fA  [PASS]",
                          p, d.voltage_volts, d.current_amps);
             }
         } else {
@@ -182,9 +183,9 @@ esp_err_t self_test_run(selftest_results_t *results)
     ESP_LOGI(TAG, "║   ECOCHARGE HARDWARE SELF-TEST       ║");
     ESP_LOGI(TAG, "╚══════════════════════════════════════╝");
 
-    // ── [1/4] Pico UART ──────────────────────────────────────────────────────
-    ESP_LOGI(TAG, "── [1/4] Pico UART Connection ──");
-    results->pico_ok = _test_pico();
+    // ── [1/4] Sensor node UART ───────────────────────────────────────────────
+    ESP_LOGI(TAG, "── [1/4] Sensor Node (ESP32-B) UART Connection ──");
+    results->pico_ok = _test_sensor_node();
 
     // ── [2/4] Voltage & Current Sensors ─────────────────────────────────────
     ESP_LOGI(TAG, "── [2/4] Voltage & Current Sensors ──");
@@ -210,12 +211,12 @@ esp_err_t self_test_run(selftest_results_t *results)
     if (results->all_critical_ok && results->pico_ok) {
         ESP_LOGI(TAG, "║   ALL TESTS PASSED ✓                 ║");
     } else if (results->all_critical_ok) {
-        ESP_LOGW(TAG, "║   PASSED — Pico UART warning         ║");
+        ESP_LOGW(TAG, "║   PASSED — sensor-node UART warning  ║");
     } else {
         ESP_LOGE(TAG, "║   %d CRITICAL TEST(S) FAILED          ║", results->fail_count);
     }
     if (!results->pico_ok) {
-        ESP_LOGW(TAG, "║   WARNING: Pico not responding       ║");
+        ESP_LOGW(TAG, "║   WARNING: ESP32-B not responding    ║");
         ESP_LOGW(TAG, "║   SW2 & SW4 sensors offline          ║");
     }
     ESP_LOGI(TAG, "╚══════════════════════════════════════╝");

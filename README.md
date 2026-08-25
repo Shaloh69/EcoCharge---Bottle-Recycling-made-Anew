@@ -22,7 +22,7 @@ Full, code-verified system documentation: [`docs/planning/09-system-analysis.md`
 | [`server/server_main`](server/server_main) | Node.js + Express + TypeScript + Prisma | Central API — auth, sessions, deposits, credits, charging, device commands, SSE, admin |
 | [`server/server_AI`](server/server_AI) | Python + FastAPI + PyTorch/Ultralytics | Two-stage bottle detection & classification inference service |
 | [`esp/ecocharge`](esp/ecocharge) | ESP32, ESP-IDF (PlatformIO), FreeRTOS | Kiosk hardware controller — conveyor, relays, sensors, bottle FSM, WiFi provisioning |
-| [`esp/pico_sensors`](esp/pico_sensors) | Raspberry Pi Pico, Arduino core | Extra ADC channels the ESP32's WiFi-constrained ADC can't cover, streamed over UART |
+| [`esp/esp32_sensor`](esp/esp32_sensor) | ESP32, ESP-IDF (PlatformIO) | **Sensor node (hardware rev 3.0.0)** — reads charging ports 3 & 4 (voltage + current) on its own ADC1 with WiFi never started, and streams raw counts to the controller over UART. Replaced the Raspberry Pi Pico 2026-08-20; see [`docs/evidence/hardware-wiring-diagram.md`](docs/evidence/hardware-wiring-diagram.md) for why |
 | [`scripts/`](scripts) | Python (Ultralytics, PyTorch) | Model training pipeline (`train_yolo.py`, `train_bottle_classifier.py`) and dataset tooling |
 
 ## Documentation map — start here, not with the code

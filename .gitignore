@@ -290,3 +290,6 @@ scripts/extract_frames/**
 # local env backups (may contain live keys)
 *.env.local.bak
 .env.local.bak
+
+# PlatformIO build output (ESP32-B sensor node)
+esp/esp32_sensor/.pio/

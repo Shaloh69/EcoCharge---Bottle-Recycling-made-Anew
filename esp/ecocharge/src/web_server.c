@@ -481,7 +481,7 @@ static const char *s_html_test =
 
 /* Voltage / current table */
 "  var rows='';"
-"  var src=['ADC','Pico','ADC','Pico'];"
+"  var src=['ADC','ADC','ESP32-B','ESP32-B'];"
 "  d.ports.forEach(function(p,i){"
 "    var stCls=p.overcurrent?'warn':(p.relay_on?'on':'off');"
 "    var stTxt=p.overcurrent?'OVERCURRENT':(p.relay_on?'ACTIVE':'IDLE');"

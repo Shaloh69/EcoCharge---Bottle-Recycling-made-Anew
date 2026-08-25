@@ -6,6 +6,26 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-08-20 (7th session) — Hardware rev 3.0.0: Pico replaced by a second ESP32, WiFi reset button added, new Git remote
+
+**User-directed: "change the hardware instead of using an esp and a pico I will use two ESPs", plus a WiFi reset button, plus a new repo remote.** The swap was directed as a parts decision; checking the actual pin map showed it also fixes a measurement that had never worked.
+
+**Git remote moved** to `https://github.com/Shaloh69/EcoCharge---Bottle-Recycling-made-Anew.git` (verified to exist, HTTP 200). The old repo's pre-rewrite objects are still the user's to delete — unchanged from the previous session's note.
+
+**The real reason two ESP32s is better, not just tidier.** Four charging ports x (voltage + current) = **eight** analog channels. One ESP32 cannot supply eight trustworthy ones: ADC2 is unusable while WiFi is active (shared with the radio) and ADC1 realistically offers six, two of which are better spent on the input-only GPIO36/39 pins that suit ultrasonic ECHO lines. The old design absorbed the shortage by parking **SW4's current sensor on ADC2 (GPIO12)** — so on a WiFi-connected kiosk, which is always, **port 4's current read a permanent 0.00 A and its overcurrent protection never functioned.** The firmware even said so in a comment. Splitting eight channels across two ESP32s puts every one on an ADC1: nothing touches ADC2, all four ports are genuinely monitored for the first time, and **GPIO12 — the MTDI strapping pin, which must be LOW at boot or the chip selects the wrong flash voltage — is now unused**, removing a latent power-on hazard nobody had flagged.
+
+**New split.** ESP32-A (WiFi ON): conveyor, 4 relays, 3 ultrasonics, SW1+SW2 on its ADC1 (GPIO32/33 and 34/35), WiFi reset button. ESP32-B (`esp/esp32_sensor`, WiFi **never started**): SW3+SW4 on its ADC1 using the *same* pin pattern deliberately, so a technician learns one layout. B streams `SW3V,SW3I,SW4V,SW4I\n` over UART2 every 500 ms — **four values, not the Pico's three**, so A's parser rejects a stale three-field line outright and a half-upgraded bench fails loudly instead of silently mis-assigning ports. Raw ADC counts only; calibration constants stay solely on A, so recalibrating reflashes one board.
+
+**WiFi reset button — GPIO22, hold 3 s.** Two wires and a button to GND on the internal pull-up; no external resistor. It closes a genuine operational hole: the provisioning AP was previously reachable *only when stored credentials failed*, so a kiosk holding valid-but-wrong credentials (network renamed, password rotated) was unreachable and could only be recovered by physically retrieving and reflashing it. **GPIO22 chosen because it is the only free non-strapping pin** — a button on GPIO0/2/12/15 held during a power cut could stop the kiosk booting entirely. Two deliberate behaviours worth keeping: a button already held **at boot** is ignored until released once (a stuck button would otherwise wipe credentials on every power-on and present as "the kiosk keeps forgetting its WiFi"), and a failed NVS erase logs and **does not reboot** (rebooting would drop the kiosk offline for nothing and destroy the log line explaining why).
+
+**Both firmwares compile — verified with real `pio run`, not assumed.** ESP32-A 25.5% flash / 10.7% RAM; ESP32-B 5.3% / 3.5%. One real compile error surfaced and was fixed: `wifi_reset.h` declared `bool` without `<stdbool.h>`, which in C gives an implicit `int` return type and a conflicting-types error against the `.c` file.
+
+**Pre-existing documentation bug found while updating the wiring docs:** `esp/ecocharge/WIRING.md`'s pin-reference chart annotated **IN1/IN2/ENA as GPIO25/26/27**. That has not matched the firmware in a long time — the real motor pins are **19/23/18**, and **GPIO25/26 are charging-port relays**, GPIO27 the status LED. Anyone wiring a motor driver from that chart would have connected it to two mains relays. Corrected, with a banner naming the canonical source. The connection *tables* earlier in the same file were already right, which is exactly how this survived: two representations of the same thing, only one maintained.
+
+**How to apply:** `docs/evidence/hardware-wiring-diagram.md` is now the single canonical pin map for both boards and carries the thesis-ready paragraph on the two-microcontroller decision. `esp/ecocharge/WIRING.md` is motor-only and says so. When hardware access returns, the first bench task is flashing ESP32-B and confirming the UART link — none of this has been flashed or probed, only compiled.
+
+---
+
 ## 2026-08-20 (6th session, later) — Threshold settled at 0.5 and shipped; admin console screenshot-verified via a throwaway admin, which caught two more real bugs — one that would have blanked five data pages
 
 **Three user decisions in one line: confidence threshold = 0.5; create a dummy admin, screenshot, then delete it; the GitHub repo deletion stays with the user.**

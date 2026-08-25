@@ -23,7 +23,7 @@ Unchanged, and **now achieved at the code level**: a user can authenticate/start
 - Flutter mobile app confirmed in scope — and, as of this refresh, actually built and API-integrated, not just scoped.
 - Credit model as originally decided: 1 bottle = 1–3 credits (volume-tiered, not flat), 1 credit = editable minutes of charging via `SystemSetting` (originally simpler, now more flexible than the freeze anticipated).
 - ESP32 communication: confirmed as originally planned — polls the API over WiFi STA mode, never receives inbound connections.
-- Hardware: **more than originally confirmed** — the freeze said 1 servo, 4 relays, 4 current/voltage sensors; the real build is a conveyor (not a servo trapdoor) plus 3× ultrasonic sensors plus a Raspberry Pi Pico ADC bridge for sensor channels the ESP32 alone can't cover.
+- Hardware: **more than originally confirmed** — the freeze said 1 servo, 4 relays, 4 current/voltage sensors; the real build is a conveyor (not a servo trapdoor) plus 3× ultrasonic sensors plus **a second ESP32** acting as a sensor node for the analog channels one ESP32 alone cannot cover while WiFi is active (rev 3.0.0, 2026-08-20 — this replaced an earlier Raspberry Pi Pico bridge), plus a WiFi reset button.
 
 **Still open from this phase, genuinely unresolved:**
 - [ ] **Backend stack divergence (Flask → Node) needs a thesis-narrative decision** — update the paper to describe the real stack, or explicitly document the divergence as a design decision. Tracked in `docs/planning/10-paper-vs-repo-gap.md`'s software-stack table.

@@ -19,6 +19,7 @@
 #include "api_client.h"
 #include "wifi_sta.h"
 #include "wifi_ap.h"
+#include "wifi_reset.h"
 #include "wifi_provision.h"
 #include "web_server.h"
 #include "self_test.h"
@@ -281,6 +282,13 @@ void app_main(void)
     ESP_ERROR_CHECK(relay_init());
     ESP_ERROR_CHECK(sensor_init());
     ESP_ERROR_CHECK(ultrasonic_init());
+
+    // WiFi reset button (hardware rev 3.0.0). Started BEFORE the boot-mode
+    // decision below on purpose: if stored credentials point at a network that
+    // no longer exists, the kiosk can sit in a long retry/AP-fallback cycle,
+    // and the button has to be responsive during exactly that window — it is
+    // the only field recovery path that does not require reflashing.
+    ESP_ERROR_CHECK(wifi_reset_button_init());
 
     // Safety task drives LED + relay watchdog from this point forward
     xTaskCreate(safety_task, "safety", SAFETY_TASK_STACK, NULL,

@@ -1,5 +1,13 @@
 # EcoCharge Motor Control - Wiring Guide
 
+> ### ⚠️ Read this first — scope and a real correction (2026-08-20)
+>
+> **This document covers the L298N conveyor motor only.** For the complete, current pin map of both boards — controller *and* sensor node — plus the charging ports, ultrasonics and the WiFi reset button, the canonical source is **[`docs/evidence/hardware-wiring-diagram.md`](../../docs/evidence/hardware-wiring-diagram.md)**, which is transcribed directly from firmware that compiles.
+>
+> **Correction:** the "Pin Reference Chart" near the bottom of this file used to annotate **IN1 → GPIO25, IN2 → GPIO26, ENA → GPIO27**. That has not matched the firmware for a long time. The real assignment in `include/config.h` is **IN1 → GPIO19, IN2 → GPIO23, ENA → GPIO18**, and GPIO25/26 are **charging-port relays** while GPIO27 is the **status LED**. Wiring a motor driver to GPIO25/26 would have switched two mains relays instead. The chart below is corrected; the connection tables earlier in this document were already right.
+>
+> **Hardware rev 3.0.0 (2026-08-20):** the Raspberry Pi Pico co-processor has been replaced by a **second ESP32** (`esp/esp32_sensor`), and a **WiFi reset button** was added on **GPIO22**. Neither affects the motor wiring described here.
+
 Complete wiring instructions for connecting the ESP32 to the L298N motor driver and 12V DC motor.
 
 ## ⚠️ Important: 5V Motor Considerations
@@ -440,20 +448,20 @@ Keep spares on hand:
          ┌───────────────────────┐
          │                       │
     3V3  │●                     ●│ GND
-    EN   │●                     ●│ GPIO 23
-GPIO 36  │●                     ●│ GPIO 22
-GPIO 39  │●                     ●│ GPIO 1 (TX)
-GPIO 34  │●                     ●│ GPIO 3 (RX)
-GPIO 35  │●                     ●│ GPIO 21
-GPIO 32  │●                     ●│ GPIO 19
-GPIO 33  │●                     ●│ GPIO 18
-GPIO 25  │●← IN1                ●│ GPIO 5
-GPIO 26  │●← IN2                ●│ GPIO 17
-GPIO 27  │●← ENA                ●│ GPIO 16
-GPIO 14  │●                     ●│ GPIO 4
-GPIO 12  │●                     ●│ GPIO 2 (LED)
-    GND  │●← GND                ●│ GPIO 15
-GPIO 13  │●                     ●│ GND
+    EN   │●                     ●│ GPIO 23  ← IN2 (motor)
+GPIO 36  │●← ECHO entrance      ●│ GPIO 22  ← WIFI RESET BTN
+GPIO 39  │●← ECHO bin-top       ●│ GPIO 1 (TX)
+GPIO 34  │●← SW2 voltage        ●│ GPIO 3 (RX)
+GPIO 35  │●← SW2 current        ●│ GPIO 21  → ECHO bin-bottom
+GPIO 32  │●← SW1 voltage        ●│ GPIO 19  ← IN1 (motor)
+GPIO 33  │●← SW1 current        ●│ GPIO 18  ← ENA (motor PWM)
+GPIO 25  │●← RELAY P1           ●│ GPIO 5   → RELAY P4
+GPIO 26  │●← RELAY P2           ●│ GPIO 17  → UART2 RX (from ESP32-B)
+GPIO 27  │●← STATUS LED         ●│ GPIO 16  → RELAY P3
+GPIO 14  │●← TRIG bin-top       ●│ GPIO 4   → UART2 TX (to ESP32-B)
+GPIO 12  │●  UNUSED (rev 3.0.0) ●│ GPIO 2 (LED)
+    GND  │●← GND                ●│ GPIO 15  → TRIG bin-bottom
+GPIO 13  │●← TRIG entrance      ●│ GND
     VIN  │●                     ●│ 3V3
          │                       │
          └───────────────────────┘
