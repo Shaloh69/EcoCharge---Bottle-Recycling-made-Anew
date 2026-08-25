@@ -6,6 +6,31 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-08-20 (8th session) — Both ESP32s FLASHED and verified; found the firmware had never been able to reach the backend; backend URL is now runtime-configurable
+
+**First hardware access of the whole project.** Both boards were connected to the laptop, both firmwares compiled, both flashed, both verified by reading their real boot output over serial.
+
+**MAJOR bug found by reading the boards before flashing them: the firmware could never reach the backend, and had not been able to for months.** `api_client.c` hardcoded `#define RENDER_HOST "ecocharge-server-j7u7.onrender.com"` and **never referenced `config.h`'s `RENDER_BASE_URL` at all** — that constant was used only in a startup `printf` and a status-page string. Render was decommissioned months ago. So **every tunnel-URL edit ever made to `config.h` — including several this month — was purely cosmetic**, and the ESP32 was calling a dead host the entire time. The boot banners proved it live before reflashing: COM3 reported `ecocharge-server.onrender.com`, COM5 reported `ecocharge-server-j7u7.onrender.com` — two *different* dead hosts, neither matching `config.h`. This is exactly the class of bug that only appears when you look at the real device instead of the source.
+
+**Fix, which also answers the user's URL-rotation question properly: the backend host now lives in NVS and is settable from the provisioning portal — no reflash needed.** `nvs_config_{has,get,set,clear}_backend()` added; `api_client_init()` resolves the host once at startup from NVS, falling back to `RENDER_BASE_URL` when nothing is stored (so it can never end up with no target). `nvs_config_set_backend()` strips any `https://`/path itself, because a human pasting a tunnel URL from a browser will include the scheme and storing that would silently break every request — `esp_http_client`'s `.host` field must be a bare hostname or it looks up `":hostname"`.
+
+**WiFi provisioning already existed** (`/provision`, `/provision/save`, `/provision/reset`, `/api/wifi/scan`, captive portal, real scan-with-signal-strength UI) — it was **not** rebuilt. What was added is an optional **Backend URL** field on that same page, so one visit to the AP sets both WiFi and the server URL.
+
+**Verified live on the real hardware after flashing:**
+- COM3 → `EcoCharge Kiosk Controller v3.0.0`, `Sensor monitor initialized (ADC1 ports 1-2 + ESP32-B UART ports 3-4; all 8 channels live)`, `WiFi reset button ready on GPIO22 (hold 3000 ms to erase credentials)`, and — the important one — `API client ready. Target: thu-coating-excerpt-compare.trycloudflare.com:443`. The dead Render host is gone from the running device.
+- COM5 → `EcoCharge Sensor Node (ESP32-B) v3.0.0`, streaming `SW3V/SW3I/SW4V/SW4I` every 500 ms with real (noisy, floating-input) ADC values — expected with nothing wired.
+- The NVS fallback path logged itself honestly: `No backend host in NVS — using compile-time default: ...`.
+
+**Board assignment (both were identical spares running the same old v2.0.0 controller firmware, so this was an arbitrary but now-fixed choice):** **COM3 = ESP32-A controller** (CP210x), **COM5 = ESP32-B sensor node** (CH340). **Label them physically** — the firmwares are not interchangeable and nothing on the board itself says which is which.
+
+**Tooling note worth keeping:** the system Python has no `pyserial`; PlatformIO's bundled interpreter does — `~/.platformio/penv/Scripts/python.exe`. Use that for any direct serial work. Also: pulsing DTR/RTS on open resets the ESP32, which conveniently produces a fresh boot banner — that is how both boards were identified non-destructively before flashing.
+
+**Bash heredoc trap that cost real time and wrote a corrupt file twice:** a `<<'PYEOF'` heredoc still consumed one level of backslashes, so a Python source containing `'\\0'` reached the interpreter as `'\0'` and wrote a **literal NUL byte** into `api_client.c` and `web_server.c` (git then reported them as binary). Two failed repair attempts also silently no-op'd for the same reason. **Fix: build a backslash as `bytes([92])` / `chr(92)`, never as a literal in a heredoc** — or use the Write tool for anything containing escapes.
+
+**Kiosk PC over Tailscale — answered honestly: the approach works, but there is no EcoCharge kiosk PC on the tailnet right now.** `tailscale status` shows `minniedumpor`, `desktop-gklhcri`, `desktop-vf3d79q`, `irm-pc`, two road-sentinel Pis, and `engirent-kiosk` (the *sibling* project's, offline 18 days). Nothing for this kiosk. Once such a PC exists and is on the tailnet, reflashing over it needs only PlatformIO-or-esptool plus the `.bin`, and a serial reflash would work fine — **but with the backend host in NVS, a URL change no longer requires serial or a reflash at all**, which is the better answer to the original question.
+
+---
+
 ## 2026-08-20 (7th session) — Hardware rev 3.0.0: Pico replaced by a second ESP32, WiFi reset button added, new Git remote
 
 **User-directed: "change the hardware instead of using an esp and a pico I will use two ESPs", plus a WiFi reset button, plus a new repo remote.** The swap was directed as a parts decision; checking the actual pin map showed it also fixes a measurement that had never worked.

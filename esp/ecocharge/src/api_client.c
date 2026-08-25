@@ -5,6 +5,7 @@
 #include "sensor_monitor.h"
 #include "ultrasonic.h"
 #include "bottle_fsm.h"
+#include "nvs_config.h"
 #include "esp_http_client.h"
 #include "esp_crt_bundle.h"
 #include "esp_log.h"
@@ -19,10 +20,28 @@
 #define POLL_TIMEOUT_MS     10000   // 10 s for normal polls — fail fast on drops
 #define TELEM_TIMEOUT_MS    10000   // 10 s for telemetry
 
-// Split RENDER_BASE_URL into host + port so we never pass a full https:// URL
-// through esp_http_client's URL parser (it miscuts the hostname).
-#define RENDER_HOST  "ecocharge-server-j7u7.onrender.com"
-#define RENDER_PORT  443
+// ---------------------------------------------------------------------------
+// Backend target — resolved at runtime, 2026-08-20.
+//
+// REAL BUG FIXED HERE: this file used to hardcode
+//     #define RENDER_HOST "ecocharge-server-j7u7.onrender.com"
+// and never referenced config.h's RENDER_BASE_URL at all. Render was
+// decommissioned months ago, so every request this firmware made went to a
+// dead host — and every tunnel-URL edit made to config.h since the
+// self-hosting migration was purely cosmetic, because nothing read it.
+//
+// The host now comes from NVS (settable from the provisioning portal, no
+// reflash needed — the tunnel hostname rotates on every restart), falling back
+// to config.h's RENDER_BASE_URL when nothing is stored.
+//
+// Still split into host + port rather than passing a full URL: esp_http_client's
+// URL parser miscuts a scheme-prefixed hostname into ":hostname".
+// ---------------------------------------------------------------------------
+static char     s_backend_host[128] = {0};
+static uint16_t s_backend_port      = 443;
+
+#define RENDER_HOST  s_backend_host
+#define RENDER_PORT  s_backend_port
 
 // ---------------------------------------------------------------------------
 // HTTP response accumulator
@@ -227,8 +246,24 @@ static void _parse_and_execute_commands(const char *json)
 // ---------------------------------------------------------------------------
 esp_err_t api_client_init(void)
 {
-    ESP_LOGI(LOG_TAG, "API client ready. Target: %s:%d", RENDER_HOST, RENDER_PORT);
+    // Resolve the backend once, here, rather than per-request: NVS reads are
+    // cheap but not free, and a host that changed mid-session would give
+    // different requests different targets. A change takes effect on reboot,
+    // which is exactly what the provisioning portal does after saving.
+    esp_err_t ret = nvs_config_get_backend(s_backend_host, sizeof(s_backend_host),
+                                           &s_backend_port);
+    if (ret != ESP_OK || s_backend_host[0] == '\0') {
+        ESP_LOGE(LOG_TAG, "Could not resolve a backend host — API client cannot start");
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(LOG_TAG, "API client ready. Target: %s:%u", RENDER_HOST, (unsigned)RENDER_PORT);
     return ESP_OK;
+}
+
+const char *api_client_backend_host(void)
+{
+    return s_backend_host[0] ? s_backend_host : "(unset)";
 }
 
 // ---------------------------------------------------------------------------

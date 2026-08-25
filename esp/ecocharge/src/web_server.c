@@ -22,7 +22,7 @@
 //
 //  /              → redirect; provisioning mode → /provision, normal → /test
 //  /provision     → WiFi setup form (captive-portal page)
-//  /provision/save  POST ssid=&pass=   → save to NVS + reboot
+//  /provision/save  POST ssid=&pass=[&backend=]  → save to NVS + reboot
 //  /provision/reset POST               → clear NVS + reboot
 //  /test          → hardware test page (relays, sensors via SSE, servo)
 //  /api/status    GET  → JSON snapshot of all sensors + relay + wifi state
@@ -209,13 +209,19 @@ static const char *s_html_provision =
 "<input type='text' id='ssid' placeholder='Select above or type manually'>"
 "<label>Password</label>"
 "<input type='password' id='pass' placeholder='WiFi password'>"
+"<label>Backend URL <span style='font-weight:400;opacity:.7'>(optional)</span></label>"
+"<input type='text' id='backend' placeholder='https://xxxx.trycloudflare.com'>"
+"<div style='font-size:12px;opacity:.7;margin:-4px 0 10px'>"
+"Leave blank to keep the current server. Paste the full URL &#8212; the scheme is stripped automatically."
+"</div>"
 "<button onclick='save()' id='saveBtn'>Save &amp; Connect</button>"
 "<button class='sec' onclick='doScan()' id='scanBtn' style='margin-top:8px'>"
 "&#128268; Rescan</button>"
 "</div>"
 "<div id='msg'></div>"
 "<div class='card'><p style='color:#8b949e;font-size:12px;margin:0'>"
-"Firmware: " FIRMWARE_VERSION " &nbsp;|&nbsp; Backend: " RENDER_BASE_URL
+"Firmware: " FIRMWARE_VERSION " &nbsp;|&nbsp; Built-in backend: " RENDER_BASE_URL
+"<br>A Backend URL saved above overrides this and survives reboots."
 "</p></div>"
 "<script>"
 /* Signal strength → bar count (0-4) */
@@ -272,9 +278,11 @@ static const char *s_html_provision =
 "async function save(){"
 "  var ssid=document.getElementById('ssid').value.trim();"
 "  var pass=document.getElementById('pass').value;"
+"  var backend=document.getElementById('backend').value.trim();"
 "  if(!ssid){alert('Please select or enter a network name.');return;}"
 "  document.getElementById('saveBtn').disabled=true;"
-"  var body='ssid='+encodeURIComponent(ssid)+'&pass='+encodeURIComponent(pass);"
+"  var body='ssid='+encodeURIComponent(ssid)+'&pass='+encodeURIComponent(pass)"
+"           +(backend?'&backend='+encodeURIComponent(backend):'');"
 "  try{"
 "    var r=await fetch('/provision/save',{method:'POST',"
 "      headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body});"
@@ -600,11 +608,11 @@ static esp_err_t provision_page_handler(httpd_req_t *req)
 }
 
 // ---------------------------------------------------------------------------
-// POST /provision/save  — body: ssid=...&pass=...
+// POST /provision/save  — body: ssid=...&pass=...[&backend=...]
 // ---------------------------------------------------------------------------
 static esp_err_t provision_save_handler(httpd_req_t *req)
 {
-    char body[256] = {0};
+    char body[512] = {0};
     int  body_len  = req->content_len < (int)sizeof(body) - 1
                      ? req->content_len : (int)sizeof(body) - 1;
 
@@ -612,10 +620,15 @@ static esp_err_t provision_save_handler(httpd_req_t *req)
         httpd_req_recv(req, body, body_len);
     }
 
-    char ssid[64] = {0};
-    char pass[64] = {0};
+    char ssid[64]    = {0};
+    char pass[64]    = {0};
+    char backend[128] = {0};
     _form_field(body, body_len, "ssid", ssid, sizeof(ssid));
     _form_field(body, body_len, "pass", pass, sizeof(pass));
+    // Optional. Added 2026-08-20 so a rotated tunnel hostname can be changed
+    // in the field instead of requiring the kiosk to be retrieved and
+    // reflashed. Blank means "leave whatever is already stored alone".
+    _form_field(body, body_len, "backend", backend, sizeof(backend));
 
     if (ssid[0] == '\0') {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing ssid");
@@ -626,6 +639,18 @@ static esp_err_t provision_save_handler(httpd_req_t *req)
     if (ret != ESP_OK) {
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "NVS write failed");
         return ESP_FAIL;
+    }
+
+    if (backend[0] != '\0') {
+        // nvs_config_set_backend() strips any scheme/path itself, so pasting
+        // the full "https://xxx.trycloudflare.com" straight from a browser
+        // address bar is fine and is what people will actually do.
+        ret = nvs_config_set_backend(backend, 443);
+        if (ret != ESP_OK) {
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
+                                "Backend URL write failed");
+            return ESP_FAIL;
+        }
     }
 
     httpd_resp_set_type(req, "application/json");

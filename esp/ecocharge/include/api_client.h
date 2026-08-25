@@ -30,4 +30,7 @@ esp_err_t api_client_poll_commands(void);
  */
 esp_err_t api_client_post_telemetry(void);
 
+/** The backend hostname this client resolved at init (for status pages). */
+const char *api_client_backend_host(void);
+
 #endif // API_CLIENT_H
