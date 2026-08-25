@@ -20,6 +20,10 @@ The folder scatter is gone (one numbered series under `docs/planning/`, only `RE
 - Update `memory.md` the moment something real is found or decided. Commit as you go. Ask before pushing unless push approval was already given this session.
 - Flutter SDK: `D:\Projects-Shem\Flutter\flutter\bin` (not on PATH). Server access: see the desktop-gklhcri memory note — `/RU SYSTEM /RL HIGHEST` is load-bearing for anything `ONSTART`.
 
+## Before any pilot: read `14-production-readiness.md`
+
+`docs/planning/14-production-readiness.md` (created 2026-08-25) is the ordered pre-production list — P0 blockers, then everything else. Three gaps found while writing it that were in **no** checklist before: **zero database backups** (the `backups/mysql` folder is empty and no backup task exists), **unbounded logs**, and **an API that treats a not-yet-ready MySQL as fatal** — verified crash-looping every ~8s on 2026-08-24, 29,746 restarts logged. Also: the **overcurrent trip has never been tested with a real load**, which is the one item where being wrong hurts somebody.
+
 ## Open work, in priority order
 
 1. **The `[!]` decisions still genuinely open** (stop-and-ask, don't guess):

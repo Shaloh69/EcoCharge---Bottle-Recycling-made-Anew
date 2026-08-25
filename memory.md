@@ -6,6 +6,27 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-08-25 (9th session) — Full doc re-read; production-readiness checklist created; three previously-invisible production gaps found
+
+**User asked to run through the documents again and produce a complete pre-production checklist.** Re-reading found real staleness, and probing the live host found three gaps that were in **no** checklist anywhere.
+
+**`05-feature-build-checklist.md` was badly stale AND claimed primacy over the wrong file.** It literally said *"treat this file as the current source of truth for build status, not `08-master-checklist.md`"* — accurate on 2026-08-10, and exactly backwards ever since. It still listed as not-started: the test runner, all the AI-server tests, the whole E2E suite, the architecture diagram, the hardware wiring diagram, the ML evaluation report, the limitations section, the root README, the ESLint fix, Playwright, camera-resolution constraints, best-of-N capture, and the confidence-threshold reconciliation — **all of which shipped between 08-10 and 08-20.** Corrected 27 items and demoted the primacy claim with a banner. Left as the *scope inventory* it is genuinely good at being.
+
+**Three stale `[!]`/`[ ]` items in `08-master-checklist.md` itself** were resolved days ago and never flipped: service persistence (fixed 08-12, proven by a real reboot 08-18), tunnel re-pointing (done twice, runbook written), and key rotation (done 08-12, both keys verified dead). Fixed.
+
+**Three genuine production gaps found by probing the host, none previously documented:**
+1. **ZERO database backups.** `D:\EcoChargeackups\mysql` exists and is **empty**; no backup task exists. The only copy of every user, credit balance and deposit is one Docker volume on one desktop. **This is the largest non-safety risk in the project** — a disk failure erases every credit anyone has earned.
+2. **The API treats a not-yet-ready MySQL as a fatal error.** `restarts.log` holds **29,746 restart lines**; on 2026-08-24 it restarted every ~8 s for an extended period with `P1017: Server has closed the connection` from `prisma migrate deploy`. It only recovered because the `.bat` loop kept retrying. `startup.ts` self-heals P3005/P3009/P3018 but not P1017, which is a *transient readiness* error, not a schema problem. Needs a DB-readiness wait with backoff.
+3. **Unbounded logs** — `stdout.log` 43.6 MB, `stderr.log` 18.5 MB, no rotation. Not urgent (641 GB free) but it is also why nobody noticed #2: the evidence was buried in a file too large to casually read.
+
+**Also worth stating plainly, and now P0 in the new doc: the overcurrent trip has never been tested with a real load.** `CURRENT_OVERCURRENT_AMPS = 15.0` and the three sensor-calibration constants are unverified numbers in a config file. This is the one area where being wrong injures somebody rather than annoying them, and no one on this project has claimed an electrical qualification.
+
+**Created `docs/planning/14-production-readiness.md`** — P0 (safety, data loss, reliability) / P1 (before real users) / P2 (defensible thesis) / P3 (post-pilot), plus a table of the six decisions still owed. Deliberately framed around a real pilot with mains power and non-developer users, because that framing is what makes "a bug that wastes a bottle" and "a bug that energises a relay wrongly" different priorities. Cross-linked from `README.md`, `00-start-here.md`, and `08`.
+
+**How to apply:** `08-master-checklist.md` tracks what was *built*; `14-production-readiness.md` tracks what going *live* requires — they are different lists and neither subsumes the other. When a doc claims to supersede another, check the dates before believing it; `05` was confidently wrong for fifteen days.
+
+---
+
 ## 2026-08-20 (8th session) — Both ESP32s FLASHED and verified; found the firmware had never been able to reach the backend; backend URL is now runtime-configurable
 
 **First hardware access of the whole project.** Both boards were connected to the laptop, both firmwares compiled, both flashed, both verified by reading their real boot output over serial.

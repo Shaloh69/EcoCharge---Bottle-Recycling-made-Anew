@@ -31,6 +31,7 @@ Full, code-verified system documentation: [`docs/planning/09-system-analysis.md`
 
 1. [`docs/planning/00-start-here.md`](docs/planning/00-start-here.md) — the current kickoff/status prompt. Read this first.
 2. [`docs/planning/08-master-checklist.md`](docs/planning/08-master-checklist.md) — **the single source of truth for what is actually done.** Every other status claim in this repo defers to it.
+3. [`docs/planning/14-production-readiness.md`](docs/planning/14-production-readiness.md) — **what still has to be true before this runs in front of real users.** P0 blockers first; read this before planning a pilot.
 3. [`docs/planning/09-system-analysis.md`](docs/planning/09-system-analysis.md) — full system audit, verified against real code (architecture, data model, API surface, hardware map, FSMs).
 4. [`docs/planning/11-audit-findings.md`](docs/planning/11-audit-findings.md) — a later, narrower pass: findings, fixes applied, and exact proposed values for the two firmware fixes still awaiting sign-off before any flash.
 5. [`docs/planning/03-revamp-master.md`](docs/planning/03-revamp-master.md) — the active migration/rework plan (self-hosting, security, design).
