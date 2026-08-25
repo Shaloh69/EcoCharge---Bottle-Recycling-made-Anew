@@ -6,6 +6,22 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-08-25 (9th session, later) — Kiosk PC joined the tailnet and is reachable
+
+**The physical kiosk's PC is on the tailnet and SSH-reachable: `ssh ecocharge@100.113.67.13`** (Tailscale name `desktop-5nrh6ug`, owner `hartpayr@gmail.com`, Windows 10 Pro 22H2). Verified directly, not assumed: ping 0% loss, port 22 open, **key auth working**, the account is an Administrator, and the SSH default shell is already PowerShell. **The user is `ecocharge`, not the server's `transfer`** — a genuinely easy mistake since every other machine in this project uses `transfer`.
+
+**This closes the gap flagged on 2026-08-20**, when `tailscale status` showed no EcoCharge kiosk at all (only the sibling project's `engirent-kiosk`, offline 18 days).
+
+**Checked directly and worth knowing before planning anything on it: the toolchain is empty.** No `node`, no `git`, no `pio`/PlatformIO; `python` resolves only to the Windows Store stub. **No ESP32 is attached either** — the only serial device is `COM1`, a motherboard port, not a USB bridge. So the "reflash the ESP32 over Tailscale through the kiosk PC" idea is viable but **not set up**: it needs a toolchain installed, the firmware `.bin` copied over, and a board physically plugged in.
+
+**Mostly moot, though, and worth remembering before anyone spends time on it:** since hardware rev 3.0.0 the ESP32's backend host lives in **NVS** and is set from the WiFi provisioning portal, so a rotated tunnel hostname needs **no reflash at all**. Serial access through this PC is only required for a genuine firmware update.
+
+**Documented in:** `08-master-checklist.md` Phase A (new "Kiosk PC" subsection), `docs/evidence/architecture-diagram.md` (new machines table covering all three machines), and the durable memory file [[reference-ecocharge-kiosk-pc-access]].
+
+**How to apply:** the `/RU SYSTEM /RL HIGHEST` Scheduled-Task lesson from the server applies here too — anything on the kiosk PC that must survive a reboot needs it, and must be confirmed by reading Logon Mode.
+
+---
+
 ## 2026-08-25 (9th session) — Full doc re-read; production-readiness checklist created; three previously-invisible production gaps found
 
 **User asked to run through the documents again and produce a complete pre-production checklist.** Re-reading found real staleness, and probing the live host found three gaps that were in **no** checklist anywhere.

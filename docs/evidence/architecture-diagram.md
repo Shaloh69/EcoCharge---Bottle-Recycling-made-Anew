@@ -63,3 +63,15 @@ flowchart TB
 - **MySQL is never reachable off-box**, by design — bound to `127.0.0.1:13306` only. The API is the only thing that talks to it, and the API only runs on this same machine.
 - **Media storage is a local folder on this same box**, not a separate service. Supabase (cloud and a self-hosted Docker instance that was actually built and torn down again the same week) is fully gone — see `docs/planning/03-revamp-master.md` §1.4.
 - **All five self-hosted services run as Windows Task-Scheduler-launched processes** with a crash-restart loop — not a real service manager (NSSM/PM2 are both absent from this machine, checked directly). Verified stable under a real restart cycle, not independently verified across an actual machine reboot.
+
+---
+
+## Machines (verified 2026-08-25)
+
+| Machine | Tailscale | Role |
+|---|---|---|
+| `desktop-gklhcri` | `100.122.239.125`, user `transfer` | Self-hosting server — Docker MySQL, Node API, AI server, admin console, website, all five Cloudflare tunnels |
+| `desktop-5nrh6ug` | `100.113.67.13`, user `ecocharge` | **The kiosk PC** — the machine inside the physical kiosk that drives the touchscreen browser. Joined the tailnet 2026-08-25; Windows 10 Pro 22H2. No `node`/`git`/`pio` installed yet, and no ESP32 attached (only motherboard `COM1`). |
+| `minniedumpor` | `100.111.57.42` | Development laptop |
+
+The two ESP32s (controller + sensor node, hardware rev 3.0.0) are **not** network devices in their own right — the controller reaches the API over WiFi as an HTTP client, and the sensor node has no radio at all. See `hardware-wiring-diagram.md`.

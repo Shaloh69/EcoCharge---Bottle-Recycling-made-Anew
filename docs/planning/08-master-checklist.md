@@ -84,6 +84,14 @@ Every actionable item across `docs/planning/00-07`, in the order `00-start-here.
 - [ ] §1.6 step 8: decommission Render (the two Next.js apps) — **only after they're moved to persistent services and proven under real use.** Aiven needs no decommissioning — already unreachable and abandoned, nothing left pointing at it.
 - [x] **Cloudflare tunnel consistency — done 2026-08-11 (4th session): all four client surfaces now have a real public path, not just API/AI/Admin.** Kiosk Web (`desktop-gklhcri:30013`, `EcoChargeKioskWeb`/`EcoChargeTunnelKiosk`) and the Website (`desktop-gklhcri:30014`, `EcoChargeWeb`/`EcoChargeTunnelWeb`) both deployed as real staging instances with their own quick tunnels, both verified reachable from outside the tailnet via real `curl`. Both were previously "not deployed publicly at all" — this closes that gap for real, not just in planning. Full URLs/detail: `memory.md`.
 
+### Kiosk PC — joined the tailnet 2026-08-25
+
+- [x] **The physical kiosk's PC is now reachable.** `ssh ecocharge@100.113.67.13` — Tailscale name `desktop-5nrh6ug`, owner `hartpayr@gmail.com`, Windows 10 Pro 22H2, Tailscale 1.102.2. Verified from this machine 2026-08-25: ping 0% loss, port 22 open, **key auth working**, account is an Administrator, SSH default shell already PowerShell. **Note the user is `ecocharge`, not the server's `transfer`.** This is a *separate machine* from `desktop-gklhcri` — the kiosk PC runs the touchscreen browser; the server runs API/AI/admin/DB.
+- [ ] **Toolchain not installed — checked directly, don't assume.** `node`, `git` and `pio`/PlatformIO are all absent; `python` resolves only to the Windows Store stub. Needed before this PC can serve as the serial-reflash path for the ESP32s.
+- [ ] **No ESP32 attached yet** — the only serial device is `COM1`, a motherboard port, not a USB bridge. The reflash-over-Tailscale path is viable but unproven end to end.
+- [ ] **If anything on this PC must survive a reboot**, register it with `/RU SYSTEM /RL HIGHEST` and confirm Logon Mode reads `Interactive/Background`. The same defect cost a 7-hour outage on the server (2026-08-12).
+- **Largely superseded for URL changes:** since hardware rev 3.0.0 the ESP32's backend host lives in NVS and is set from the provisioning portal, so a rotated tunnel needs **no reflash at all**. Serial access here is only for genuine firmware updates.
+
 ## Phase B — `docs/planning/09-system-analysis.md`'s original five issues (`03-revamp-master.md` §2)
 
 - [x] Kiosk endpoint auth (`/list`, `/:id/ports`, `/:id/sse`) — **re-verified live 2026-08-20**: all three return 401 with no token, via the public tunnel
