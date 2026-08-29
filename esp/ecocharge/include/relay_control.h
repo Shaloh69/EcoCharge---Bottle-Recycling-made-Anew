@@ -50,4 +50,14 @@ uint32_t relay_port_elapsed_ms(uint8_t port);
  */
 void relay_check_timeouts(void);
 
+/**
+ * @brief Tell ESP32-B this controller is alive so it may keep relays closed.
+ *
+ * Added rev 4.0.0, when the relays moved to ESP32-B. B cuts every relay if it
+ * hears nothing for SENSOR_LINK_TIMEOUT_MS, so a crashed or unplugged
+ * controller cannot leave mains switched on. Call at least every
+ * SENSOR_HEARTBEAT_MS from the safety task.
+ */
+void relay_send_heartbeat(void);
+
 #endif // RELAY_CONTROL_H

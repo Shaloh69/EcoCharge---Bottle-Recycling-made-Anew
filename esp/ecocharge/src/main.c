@@ -120,8 +120,21 @@ static void safety_task(void *arg)
     int        pat_idx   = 0;
     led_mode_t last_mode = (led_mode_t)(-1);
 
+    uint32_t hb_accum_ms = 0;
+
     while (1) {
         relay_check_timeouts();
+
+        // Heartbeat to ESP32-B (rev 4.0.0). B holds its relays closed only
+        // while this keeps arriving; if this task dies or the board resets, B
+        // cuts mains on its own after SENSOR_LINK_TIMEOUT_MS. Sent from the
+        // safety task deliberately — the heartbeat should stop precisely when
+        // the safety loop stops, not merely when the network does.
+        hb_accum_ms += 100;
+        if (hb_accum_ms >= SENSOR_HEARTBEAT_MS) {
+            hb_accum_ms = 0;
+            relay_send_heartbeat();
+        }
 
         // ── LED state machine ──────────────────────────────────────────────
         led_mode_t mode = s_led_mode;

@@ -3,6 +3,7 @@
 
 #include "esp_err.h"
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef struct {
     uint8_t  port;
@@ -37,5 +38,19 @@ esp_err_t sensor_get_port(uint8_t port, port_sensor_data_t *out);
  * @return Bitmask: bit N-1 set if port N is overcurrent.
  */
 uint8_t sensor_get_overcurrent_mask(void);
+
+/**
+ * @brief What ESP32-B reports a relay is PHYSICALLY doing.
+ *
+ * Added rev 4.0.0. Differs from what this board last commanded exactly when it
+ * matters: B tripped the port on overcurrent, or B cut everything after losing
+ * our heartbeat. Used by relay_port_is_active() so telemetry reports reality.
+ *
+ * @return 1 on, 0 off, or -1 if B has not reported yet / the link is down.
+ */
+int sensor_reported_relay_state(uint8_t port);
+
+/** @brief True while ESP32-B telemetry is arriving. Added rev 4.0.0. */
+bool sensor_link_is_up(void);
 
 #endif // SENSOR_MONITOR_H

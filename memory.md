@@ -6,6 +6,40 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-08-25 (10th session) — Hardware rev 4.0.0: GPIO36/39 don't exist on these boards, and the two ESP32s are now balanced by subsystem
+
+**Two user-reported constraints, both real, both with consequences bigger than they first look.**
+
+**1. "The pin number limit is only 35."** GPIO36 and GPIO39 are not broken out on the boards actually in use. Rev 3 had put two ultrasonic ECHO lines there *specifically because they are input-only* — ideal for ECHO, no output driver to accidentally enable. Moved to **GPIO34/35**, which are also input-only, so the reasoning survives the move intact rather than being compromised. Bin-bottom moved to TRIG 25 / ECHO 26.
+
+**The knock-on effect is the important part:** with 36-39 gone, **ADC1 offers only four usable channels** (32/33/34/35). Eight are needed (4 ports x voltage+current). ADC2 has plenty more but is dead whenever WiFi is active. So all eight channels can only live on the board that never starts its radio — **ESP32-B**. The pin constraint didn't just move two wires; it forced the architecture.
+
+**2. "One ESP has more load than the other."** Correct, and badly so: rev 3 gave A eleven jobs and B four ADC reads — a whole microcontroller doing almost nothing. Rev 4 splits by **subsystem** instead of by convenience:
+
+| | ESP32-A "Controller" | ESP32-B "Charging Node" |
+|---|---|---|
+| Owns | WiFi/TLS/HTTP, bottle FSM, conveyor, 3 ultrasonics, reset button, LED | 4 relays + all 8 analog channels |
+| WiFi | ON | **never started** (this is what frees ADC2) |
+| GPIO | **13** | **14** |
+
+Rev 3 was 21 vs 6. A still carries the heavier *compute*, which is the honest reading of "even".
+
+**The rebalance made the system safer, not just tidier — this is the part worth keeping.** Moving relays to B puts the overcurrent trip on the same microcontroller as the relay it cuts, so **protection no longer depends on a serial link**. Three independent layers now live on B: a local trip (raw >=3908 held 2 s, and a tripped port refuses to re-close until explicitly cycled, so a server retry loop can't re-energise a genuine fault every few seconds); a **link-loss watchdog** (A silent 5 s -> all relays off, so a dead or unplugged controller can't leave mains switched on); and an independent 1-hour max-on ceiling. A's heartbeat is sent from the **safety task** deliberately, so it stops precisely when the safety loop stops rather than merely when the network drops.
+
+**`relay_control.c` kept its exact public API** — it now sends `R,<port>,<0|1>` / `X` / `P` over UART2 instead of toggling GPIO, so `api_client.c`, `main.c` and the FSM are untouched. One genuine improvement fell out: `relay_port_is_active()` now reports **what B says is physically true**, not what A last commanded. Those differ exactly when it matters most.
+
+**Both firmwares compile clean** (A: 25.4% flash / 10.8% RAM; B: 6.0% / 3.5%). **Neither is flashed** — both boards were physically disconnected by then (zero COM ports enumerated), so the upload failure was cabling, not code. Binaries are built and ready.
+
+**Bench tests this revision specifically needs, none yet done:** the A<->B UART link; a relay physically clicking; **unplug A's TX and confirm B de-energises within 5 s** (the new fail-safe); and the local overcurrent trip with a real load — which was already P0 in `14-production-readiness.md` and stays there.
+
+**The heredoc backslash trap bit twice more.** Writing `
+` inside a `<<'PYEOF'` heredoc still loses one level, so a comment line containing `"...
+"` became a real newline mid-comment and produced `error: missing terminating " character`. **Use `chr(92)` to build a backslash, or the Write tool, for anything containing escapes** — this is the third session it has cost time.
+
+**Docs rewritten:** `docs/evidence/hardware-wiring-diagram.md` (full rev-4 rewrite — both pin tables, the constraint chain that forces the split, the bidirectional protocol, the three safety layers), plus `08-master-checklist.md` Phase C, `esp/ecocharge/WIRING.md` (pin chart now marks 36/39 as non-existent) and the firmware README.
+
+---
+
 ## 2026-08-25 (9th session, later) — Kiosk PC joined the tailnet and is reachable
 
 **The physical kiosk's PC is on the tailnet and SSH-reachable: `ssh ecocharge@100.113.67.13`** (Tailscale name `desktop-5nrh6ug`, owner `hartpayr@gmail.com`, Windows 10 Pro 22H2). Verified directly, not assumed: ping 0% loss, port 22 open, **key auth working**, the account is an Administrator, and the SSH default shell is already PowerShell. **The user is `ecocharge`, not the server's `transfer`** — a genuinely easy mistake since every other machine in this project uses `transfer`.

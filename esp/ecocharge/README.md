@@ -58,9 +58,9 @@ GPIO 25 / 26 / 16 / 5 — one per port. Independent 3600s max-on watchdog task r
 
 | Sensor | GPIOs | Threshold |
 |---|---|---|
-| Entrance | 13 / 36 | < 15cm triggers `SCANNING` |
-| Bin-top | 14 / 39 | 20cm |
-| Bin-bottom | 15 / 21 | 20cm |
+| Entrance | 13 / **34** | < 15cm triggers `SCANNING`. ECHO moved off GPIO36 in rev 4.0.0 — **that pin does not exist on the boards in use**; 34 is also input-only |
+| Bin-top | 14 / **35** | 20cm. ECHO moved off GPIO39, same reason |
+| Bin-bottom | **25 / 26** | 20cm |
 
 5V → 3.3V voltage dividers on each ECHO line.
 
@@ -68,9 +68,8 @@ GPIO 25 / 26 / 16 / 5 — one per port. Independent 3600s max-on watchdog task r
 
 | Channel | Source | Notes |
 |---|---|---|
-| SW1 current + voltage | This ESP32's ADC1 — GPIO 33 / 32 | WiFi-safe |
-| SW2 current + voltage | This ESP32's ADC1 — GPIO 35 / 34 | WiFi-safe. **New in rev 3.0.0** (was on the Pico) |
-| SW3 + SW4, current **and** voltage | **ESP32-B**, over UART2 (RX=17, TX=4, 115200 baud) | Line format `SW3V,SW3I,SW4V,SW4I` every 500 ms. See `../esp32_sensor` |
+| **All four ports, current and voltage** | **ESP32-B**, over UART2 (RX=17, TX=4, 115200 baud) | **Rev 4.0.0:** this board reads no analog at all. B streams `T,v1,i1,...,v4,i4,relaymask,ocmask` every 100 ms. Only B can host all eight channels: ADC1 has four usable channels here (GPIO36-39 don't exist on these boards) and ADC2 is dead while WiFi is on — B never starts its radio. See `../esp32_sensor` |
+| **Relays** | **ESP32-B** | **Rev 4.0.0:** moved so the overcurrent trip sits on the same board as the relays it cuts. `relay_control.c` keeps its exact API and sends `R,<port>,<0\|1>` over UART instead of toggling a GPIO |
 | ~~SW4 current on ADC2 / GPIO12~~ | **removed in rev 3.0.0** | ADC2 is unusable while WiFi is active, so this channel read a permanent 0.00 A and port 4 had **no working overcurrent protection**. GPIO12 is also the MTDI strapping pin. Both problems are gone — nothing uses ADC2 now |
 
 ### WiFi reset button (new in rev 3.0.0)

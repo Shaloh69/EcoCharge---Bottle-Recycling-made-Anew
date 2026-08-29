@@ -3,34 +3,46 @@
 
 // ============================================================================
 // EcoCharge Kiosk Controller - Configuration
-// ESP32-A "Controller" — L298N conveyor + 4 relays + 3 ultrasonics
-//                        + ports 1-2 analog sensing + WiFi reset button
+// ESP32-A "Controller" - WiFi, HTTP, bottle FSM, conveyor, ultrasonics,
+//                        WiFi reset button, status LED
 //
-// HARDWARE REVISION 3.0.0 (2026-08-20): the Raspberry Pi Pico co-processor is
-// GONE, replaced by a second ESP32 ("ESP32-B", esp/esp32_sensor). Two reasons,
-// both real:
+// HARDWARE REVISION 4.0.0 (2026-08-25) - board constraint + load rebalance
 //
-//   1. ADC2 is unusable while WiFi is active on the ESP32. The old design
-//      worked around a channel shortage by putting SW4's current sensor on
-//      ADC2 (GPIO12), which therefore never produced trustworthy readings on
-//      a WiFi-connected kiosk. Splitting 8 analog channels across TWO ESP32s
-//      puts every single one on an ADC1 — the workaround is deleted, not
-//      papered over.
-//   2. GPIO12 is the MTDI strapping pin: it must be LOW at boot or the chip
-//      selects the wrong flash voltage. Hanging a sensor off it was a latent
-//      brick-risk at power-on. That pin is now unused.
+// TWO changes from rev 3.0.0, both driven by real constraints:
 //
-// Split of the 8 analog channels (4 ports x voltage+current):
-//   ESP32-A (this firmware, WiFi ON) : SW1 V+I, SW2 V+I   -> ADC1 only
-//   ESP32-B (esp/esp32_sensor, WiFi OFF): SW3 V+I, SW4 V+I -> ADC1 only
-// B streams its four raw readings to A over UART2, same wiring the Pico used.
+// 1. GPIO36 and GPIO39 DO NOT EXIST on the boards actually being used.
+//    Rev 3 put two ultrasonic ECHO lines on them because they are input-only
+//    and therefore ideal for ECHO. On these boards the usable range stops at
+//    GPIO35. Those ECHO lines moved to GPIO34/35 - still input-only, so the
+//    property that made 36/39 attractive is preserved exactly.
+//
+// 2. The two boards were badly unbalanced. Rev 3 gave ESP32-A eleven jobs and
+//    ESP32-B four ADC reads, which wasted a whole microcontroller. Rev 4 splits
+//    by SUBSYSTEM instead:
+//
+//      ESP32-A (this firmware) - the BOTTLE path + all networking
+//          WiFi/TLS/HTTP, bottle FSM, conveyor, 3 ultrasonics, reset button, LED
+//          13 GPIO
+//
+//      ESP32-B (esp/esp32_sensor) - the CHARGING path, entirely
+//          4 relays + all 8 analog channels (4 ports x voltage+current)
+//          14 GPIO
+//
+//    This is not only more even, it is safer: the overcurrent trip now lives on
+//    the same board as the relays it protects, so the safety path no longer
+//    crosses a serial link. B also fails its relays OFF if A goes quiet.
+//
+//    It is also what makes 8 analog channels possible at all. ADC1 offers only
+//    four usable channels here (32/33/34/35) now that 36-39 are gone, and ADC2
+//    is unusable whenever WiFi is active. B never starts its radio, so B - and
+//    only B - can use ADC2. All eight channels therefore live on one board.
 // ============================================================================
 
 // ----------------------------------------------------------------------------
 // System Identity
 // ----------------------------------------------------------------------------
 #define LOG_TAG             "ECOCHARGE"
-#define FIRMWARE_VERSION    "3.0.0"
+#define FIRMWARE_VERSION    "4.0.0"
 
 // ----------------------------------------------------------------------------
 // Conveyor Motor — L298N H-Bridge Driver
@@ -51,42 +63,46 @@
 #define CONVEYOR_SPEED_REVERSE 100   // full power
 
 // ----------------------------------------------------------------------------
-// Charging Port Pin Assignments
+// Charging ports - OWNED BY ESP32-B as of rev 4.0.0
 // ----------------------------------------------------------------------------
-#define RELAY_PORT1_GPIO     25
-#define RELAY_PORT2_GPIO     26
-#define RELAY_PORT3_GPIO     16
-#define RELAY_PORT4_GPIO      5
+// This board no longer drives the relays or reads any analog channel. Both
+// moved to ESP32-B so that the overcurrent trip sits on the same board as the
+// relays it cuts. relay_control.c keeps its exact public API (relay_enable_port
+// etc.) but now sends a command over UART2 instead of toggling a GPIO, so
+// api_client.c and the FSM are unchanged.
 #define NUM_CHARGING_PORTS   4
-#define RELAY_ACTIVE_LEVEL   0
 #define RELAY_MAX_ON_SEC     3600
 
-// ── Local analog sensing: PORTS 1 AND 2 ONLY, all on ADC1 ──────────────────
-// ADC1 is the only ADC that keeps working while WiFi is on. Ports 3 and 4 are
-// read by ESP32-B and arrive over UART (see SENSOR_UART below).
-// GPIO36/39 are deliberately NOT used here — they are input-only and are the
-// right home for the ultrasonic ECHO lines.
-#define CURRENT_PORT1_ADC_CHANNEL   ADC_CHANNEL_5   // GPIO33
-#define CURRENT_PORT2_ADC_CHANNEL   ADC_CHANNEL_7   // GPIO35
-
+// Kept here because ESP32-A still REPORTS these values in telemetry, and
+// because the conversion from raw ADC counts stays on this board - B sends raw
+// counts so recalibration only ever means reflashing one board.
 #define CURRENT_SENSOR_SENSITIVITY  0.100f
 #define CURRENT_SENSOR_VOFFSET      1.65f
 #define CURRENT_OVERCURRENT_AMPS    15.0f
 #define CURRENT_OVERCURRENT_HOLD_MS 2000
-
-#define VOLTAGE_PORT1_ADC_CHANNEL   ADC_CHANNEL_4   // GPIO32
-#define VOLTAGE_PORT2_ADC_CHANNEL   ADC_CHANNEL_6   // GPIO34
 #define VOLTAGE_SCALE        75.76f
 #define ADC_VREF_MV          3300
 #define ADC_MAX_VALUE        4095
 
 // ----------------------------------------------------------------------------
-// Sensor-node UART — ESP32-B streams ports 3 & 4 (voltage + current)
+// Link to ESP32-B "Charging Node" — UART2, BIDIRECTIONAL as of rev 4.0.0
 // ----------------------------------------------------------------------------
-// Line format, one every SENSOR_NODE_PERIOD_MS:
-//     "<SW3V>,<SW3I>,<SW4V>,<SW4I>\n"      raw 12-bit ADC ints, 0..4095
-// Four values now, not the Pico's three: ESP32-B reads SW4's current too, so
-// nothing lands on ADC2 any more. A applies the conversion formulas.
+// B owns the relays and all eight analog channels, so this link carries both
+// telemetry in and relay commands out.
+//
+//   B -> A, every SENSOR_UART_PERIOD_MS:
+//     "T,<v1>,<i1>,<v2>,<i2>,<v3>,<i3>,<v4>,<i4>,<relaymask>,<ocmask>\n"
+//        eight raw 12-bit ADC counts (0..4095), then two bitmasks where
+//        bit0=port1 .. bit3=port4: which relays are on, which have tripped.
+//
+//   A -> B, on demand:
+//     "R,<port>,<0|1>\n"   set one relay (port 1..4)
+//     "X\n"                all relays off (fail-safe / shutdown)
+//     "P\n"                heartbeat - this controller is alive
+//
+// A sends a heartbeat every SENSOR_HEARTBEAT_MS. If B hears nothing for
+// SENSOR_LINK_TIMEOUT_MS it cuts all relays itself. That is deliberate: a dead
+// or unplugged controller must not be able to leave mains switched on.
 //
 // Wiring (GND MUST be common between the two boards):
 //     ESP32-B GPIO17 (TX) ---> ESP32-A GPIO17 (RX)
@@ -97,19 +113,24 @@
 #define SENSOR_UART_TX_GPIO   4
 #define SENSOR_UART_BAUD     115200
 #define SENSOR_UART_BUF      256
-
+#define SENSOR_UART_PERIOD_MS   100   // B's telemetry rate; matches the FSM tick
+#define SENSOR_HEARTBEAT_MS     1000  // A -> B "still alive"
+#define SENSOR_LINK_TIMEOUT_MS  5000  // B cuts relays if A goes quiet this long
 
 // ----------------------------------------------------------------------------
 // Ultrasonic Sensors — HC-SR04 (3 sensors)
 // ECHO pins use a 5V→3.3V voltage divider (1kΩ + 2kΩ).
 // GPIO36 and GPIO39 are input-only — ideal for ECHO lines.
 // ----------------------------------------------------------------------------
+// GPIO34/35 are input-only - no output driver, no internal pull-up - which is
+// exactly the property that made 36/39 the right choice in rev 3. Those pins
+// do not exist on the boards in use, so the ECHO lines moved here.
 #define ULTRASONIC_ENTRANCE_TRIG_GPIO   13
-#define ULTRASONIC_ENTRANCE_ECHO_GPIO   36   // input-only pin
+#define ULTRASONIC_ENTRANCE_ECHO_GPIO   34   // input-only pin (was 36)
 #define ULTRASONIC_BIN_TOP_TRIG_GPIO    14
-#define ULTRASONIC_BIN_TOP_ECHO_GPIO    39   // input-only pin
-#define ULTRASONIC_BIN_BOT_TRIG_GPIO    15
-#define ULTRASONIC_BIN_BOT_ECHO_GPIO    21
+#define ULTRASONIC_BIN_TOP_ECHO_GPIO    35   // input-only pin (was 39)
+#define ULTRASONIC_BIN_BOT_TRIG_GPIO    25
+#define ULTRASONIC_BIN_BOT_ECHO_GPIO    26
 
 #define ULTRASONIC_TRIG_PULSE_US        10       // 10 µs trigger pulse
 #define ULTRASONIC_TIMEOUT_US           30000    // 30 ms = ~5 m max range
