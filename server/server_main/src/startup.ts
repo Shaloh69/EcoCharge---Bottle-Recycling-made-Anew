@@ -8,10 +8,17 @@ import { log } from "./logger";
 const execAsync = promisify(exec);
 
 // ── Auto-migrate ───────────────────────────────────────────────────────────────
+// 12 attempts with capped exponential backoff covers roughly 2.5 minutes of
+// the database being unavailable before giving up. Deliberately not longer:
+// past that, something is genuinely wrong and a human should see a clear
+// failure rather than a process that waits silently forever.
+const MAX_MIGRATION_ATTEMPTS = 12;
+const TOTAL_WAIT_DESCRIPTION = "2.5 minutes";
+
 export async function runMigrations() {
   log.migration("Connecting to database…");
 
-  for (let attempt = 1; attempt <= 10; attempt++) {
+  for (let attempt = 1; attempt <= MAX_MIGRATION_ATTEMPTS; attempt++) {
     try {
       const { stdout, stderr } = await execAsync("npx prisma migrate deploy");
       if (stdout) process.stdout.write(stdout);
@@ -86,12 +93,54 @@ export async function runMigrations() {
         }
       }
 
+      // ── Connection-class errors: the database simply is not up YET ────────
+      //
+      // These are transient READINESS failures, not schema problems, and they
+      // must not be fatal. Found the hard way twice:
+      //   2026-08-24  P1017 "Server has closed the connection"
+      //   2026-09-03  P1001 "Can't reach database server at 127.0.0.1:13306"
+      //               - the host rebooted at 11:48 but Docker Desktop only
+      //                 started at 13:53 (it launches at USER LOGIN, not at
+      //                 boot), so MySQL did not exist for over two hours.
+      //
+      // The old code threw on the first such error, so this loop never
+      // actually retried for them: the process died, the .bat relaunched it
+      // ~5s later, and it died again. That produced 71,423 logged restarts and
+      // a 100 MB stdout.log - the crash loop was the only thing keeping the
+      // service alive, and it made the real cause almost impossible to see.
+      //
+      // Waiting is strictly better: the API comes up on its own the moment the
+      // database appears, with no restart storm and no lost log.
+      const CONNECTION_ERRORS = ["P1001", "P1017", "P1002", "P2024", "ECONNREFUSED"];
+      const isTransient = CONNECTION_ERRORS.some((code) => combined.includes(code));
+
+      if (isTransient) {
+        // Backoff capped at 15s: long enough not to spam, short enough that the
+        // API is serving within seconds of the database becoming reachable.
+        const waitMs = Math.min(1000 * 2 ** (attempt - 1), 15000);
+        log.migration(
+          `Database not reachable yet (attempt ${attempt}/${MAX_MIGRATION_ATTEMPTS}) - ` +
+            `retrying in ${waitMs / 1000}s. This is normal shortly after a reboot.`,
+        );
+        await new Promise((r) => setTimeout(r, waitMs));
+        continue;
+      }
+
       log.error("Migration", combined || String(err));
       throw new Error("migrate deploy failed");
     }
   }
 
-  throw new Error("Migration loop exceeded max attempts");
+  // Every attempt exhausted. Still do NOT exit: on this deployment the process
+  // is relaunched by a .bat loop, so exiting just restarts the same wait from
+  // zero and burns another log file. Throwing here is correct only because
+  // index.ts treats it as fatal - see the note there.
+  throw new Error(
+    `Database unreachable after ${MAX_MIGRATION_ATTEMPTS} attempts (~${TOTAL_WAIT_DESCRIPTION}). ` +
+      "Check that the MySQL container is running - on desktop-gklhcri, Docker Desktop " +
+      "starts at user login rather than at boot, so after an unattended reboot the " +
+      "database can be absent for hours.",
+  );
 }
 
 // ── AI Server health check ─────────────────────────────────────────────────────
