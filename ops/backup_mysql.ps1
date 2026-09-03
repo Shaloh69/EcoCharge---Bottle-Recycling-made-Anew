@@ -118,6 +118,34 @@ try {
     Write-Log "MIRROR FAILED (primary backup is fine) - $($_.Exception.Message)"
 }
 
+# ── Off-box copy — DISABLED 2026-09-03, deliberately ────────────────────────
+# An scp to the kiosk PC was built and then REMOVED the same day. Not because
+# off-box copies are unwanted - they are the one thing the E: mirror cannot
+# provide - but because the transport is not trustworthy yet:
+#
+#   * The kiosk PC had been offline for 8 days immediately before this.
+#   * With it online, server -> kiosk SSH authenticated ("Server accepts key")
+#     and then died at [preauth] with "Connection reset", and a plain ssh from
+#     the server HUNG rather than failing fast.
+#
+# A hanging scp inside this script would stall the backup itself. The backup is
+# a P0 control that currently works; an unproven extra copy must not be allowed
+# to take it down. Fix the path first, then re-enable.
+#
+# Groundwork already in place, so re-enabling is small:
+#   * ed25519 keypair exists in SYSTEM's profile on the server
+#     (C:\Windows\System32\config\systemprofile\.ssh\id_ed25519, no passphrase -
+#      verified with ssh-keygen -y -P "")
+#   * its public key is authorised on the kiosk in
+#     C:\ProgramData\sshdministrators_authorized_keys, owner BUILTIN\Administrators
+#   * C:\EcoCharge-OffboxBackups exists on the kiosk
+#
+# Real bug found and fixed while doing this, worth remembering: appending a key
+# to authorized_keys when the file has no trailing newline silently glues it
+# onto the previous line, where it becomes part of that key's COMMENT field.
+# The file then looks correct and the new key simply does not exist. Always
+# write authorized_keys as an array, one key per element.
+
 # Retention is time-based, not count-based, on purpose: a crash loop that
 # somehow triggered many runs must not silently evict older good backups.
 $cutoff  = (Get-Date).AddDays(-$Retention)

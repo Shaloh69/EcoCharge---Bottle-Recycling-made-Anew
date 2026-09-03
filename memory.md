@@ -6,6 +6,24 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-09-03 (12th session) — Kiosk PC back online; off-box backup attempted, then deliberately backed out
+
+**Kiosk PC (`desktop-5nrh6ug`, 100.113.67.13) is online again** after 8 days dark, reachable from both this machine and the server, on a **direct LAN path** (192.168.1.19) rather than a relay.
+
+**Off-box backup replication was built, tested, and then removed the same session.** Not because it is unwanted — it is the one protection the E: mirror cannot give — but because the transport is not trustworthy: server→kiosk SSH authenticates (`Server accepts key`) and then dies at `[preauth]` with `Connection reset`, and a plain `ssh` from the server **hangs** instead of failing fast. **A hanging `scp` inside the backup script would stall the backup**, and the backup is a P0 control that currently works. An unproven extra copy must not be able to take down the proven one. Removed, with the reasoning written into the script itself.
+
+**Two false theories, both killed by testing rather than assumed:**
+- *"The key has a passphrase because PowerShell turned `-N '\"\"'` into a literal two-character passphrase."* Plausible, and wrong — `ssh-keygen -y -P ""` succeeded, so the key is genuinely passphrase-free.
+- *"The ACL or owner on `administrators_authorized_keys` is wrong."* Also wrong — owner was already `BUILTIN\Administrators` with the correct ACL.
+
+**One REAL bug found and fixed, worth remembering: appending to `authorized_keys` when the file has no trailing newline silently glues the new key onto the previous line, where it becomes part of that key's COMMENT field.** The file then looks perfectly plausible — `Select-String` even finds the new key — but sshd only ever sees the first key, and the appended one simply does not exist. Diagnosed by counting `ssh-ed25519` occurrences (2) against actual lines (1, 214 chars). It also explains why the existing key kept working throughout. **Always write that file as an array, one key per element**, which is what the fix does.
+
+**Groundwork left in place so re-enabling is cheap** once the network path is understood: passphrase-free ed25519 key in SYSTEM's profile on the server, public key correctly authorised on the kiosk, `C:\EcoCharge-OffboxBackups` created.
+
+**How to apply:** when a new control (off-box copy) is layered onto a working control (the backup), the new one must not be able to break the old one. Timeouts and hangs matter more than exit codes here — a script that fails fast is safe; a script that hangs inside a scheduled task is not.
+
+---
+
 ## 2026-09-03 (11th session, later) — Staying on Docker; user enabled AutoStart, one gap remains
 
 **Decision: stay on Docker Desktop rather than migrate MySQL to the native service.** The migration was proposed and fully planned — `MySQL80` is already installed on this host, already `StartMode: Auto`, running as `NetworkService` on port 3306, so it would have started at true boot with no stored credential — but it was **not executed and no data was moved**. It stalled on needing the MySQL80 root password, and the user chose Docker instead. The plan is preserved in `14-production-readiness.md` if it is ever wanted.
