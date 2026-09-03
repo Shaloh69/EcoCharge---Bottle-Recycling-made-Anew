@@ -116,6 +116,20 @@ Every actionable item across `docs/planning/00-07`, in the order `00-start-here.
 - [x] **UART is bidirectional now**, 100 ms telemetry (matched to A's FSM tick so bin-confirmation re-sampling lines up) carrying eight raw counts plus relay and trip bitmasks.
 - [x] **Both firmwares compile clean** — real `pio run` each (A: 25.4% flash / 10.8% RAM; B: 6.0% / 3.5%).
 - [ ] **NOT flashed — both boards were physically disconnected** when this revision was built (zero COM ports enumerated). Binaries are built and ready. Flash both, then verify: A↔B UART link, a relay actually clicking, the link-loss cut (unplug A's TX and confirm B de-energises within 5 s), and the local overcurrent trip.
+- [x] **HARDWARE VERIFICATION IS NOW POSSIBLE REMOTELY — 2026-09-03.** The ESP32s are serial-connected to the **kiosk PC**, which is on the tailnet, so boards can be read and flashed over SSH without physical presence. Set up that day:
+  - **esptool v5.4.0** installed at `C:\esptool\esptool-windows-amd64\esptool.exe` (standalone binary from Espressif's GitHub releases — no Python needed; `winget` on that machine has a broken source, and the Store `python` is a non-functional stub).
+  - **ESP32-B rev 4.0.0 binaries staged** at `C:\ecocharge-fw\esp32b\` (`bootloader.bin`, `partitions.bin`, `firmware.bin`).
+  - **Reading serial needs no toolchain at all** — PowerShell's `[System.IO.Ports.SerialPort]` is built in. Toggling RTS on open pulses EN and produces a fresh boot banner, which is how the boards were identified non-destructively.
+- [!] **FIRST REAL HARDWARE FINDING: the attached board's flash is CORRUPT and it cannot boot.** Read over serial on 2026-09-03 and reproduced **across two different USB cables**, so it is not a cable artifact:
+  ```
+  esp_image: Checksum failed. Calculated 0xf3 read 0xaf
+  boot: Factory app partition is not bootable
+  boot: No bootable app partitions in the partition table
+  Fatal exception (0): IllegalInstruction
+  ```
+  It flashed cleanly on 2026-08-20 (`Hash of data verified`), so the flash has degraded or been corrupted since. **The chip itself is alive** — esptool reaches it and reports `Wrong boot mode detected (0x13)`, meaning it resets and boots normally rather than entering download mode.
+  - **Blocked on one physical action:** the board's auto-reset (DTR/RTS) will not put it into download mode — tried `default-reset`, `usb-reset`, `no-reset`, baud 74880 and 115200, up to 10 connect attempts. **Someone must hold the BOOT button** while esptool connects. Everything else is staged and ready.
+  - **Only ONE ESP32 is attached** (the CH340 board, `COM4` — this is the one flashed as ESP32-B). The CP210x board (ESP32-A) is not connected; `COM1` is a motherboard port, not an ESP.
 
 ### Hardware revision 3.0.0 — ESP32 + ESP32 (2026-08-20, user-directed)
 

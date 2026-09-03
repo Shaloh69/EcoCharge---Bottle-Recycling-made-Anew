@@ -6,6 +6,31 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-09-03 (13th session) — First real hardware access: the attached ESP32's flash is corrupt; remote flashing is now set up
+
+**The ESPs are serial-connected to the kiosk PC, which is on the tailnet — so hardware can finally be read and flashed remotely.** This is the first genuine hardware verification in the project's history.
+
+**Set up on the kiosk PC:** **esptool v5.4.0** at `C:\esptool\esptool-windows-amd64\esptool.exe`, taken as Espressif's standalone Windows binary from the GitHub releases API — **no Python required**, which matters because that machine's `winget` source is broken (`0x8a15000f`) and its `python` is the non-functional Microsoft Store stub. ESP32-B rev 4.0.0 binaries staged at `C:\ecocharge-fw\esp32b\`.
+
+**Worth remembering: reading serial needs no toolchain at all.** PowerShell's `[System.IO.Ports.SerialPort]` is built into .NET, and toggling RTS on open pulses EN to produce a fresh boot banner. That is how the board was identified without installing anything.
+
+**THE FINDING: the attached board's flash is corrupt and it cannot boot.**
+```
+esp_image: Checksum failed. Calculated 0xf3 read 0xaf
+boot: Factory app partition is not bootable
+boot: No bootable app partitions in the partition table
+Fatal exception (0): IllegalInstruction
+```
+**Reproduced across two different USB cables**, so it is not a cable artifact — that mattered, because the first cable also produced heavy character corruption and I nearly attributed the whole thing to it. The user swapped cables mid-diagnosis, which turned `No serial data received` into `Wrong boot mode detected (0x13)` — proving the chip is alive and talking, while the checksum failure stayed identical. **The board flashed cleanly on 2026-08-20 (`Hash of data verified`), so the flash has degraded or been corrupted since then.**
+
+**Blocked on one physical action:** auto-reset will not put this board into download mode. Tried `--before default-reset`, `usb-reset`, `no-reset`, at 74880 and 115200 baud, up to 10 connect attempts. CH340 boards commonly have unreliable DTR/RTS auto-reset wiring. **Someone has to hold the BOOT button while esptool connects.** Everything else is staged.
+
+**Also learned: only ONE ESP32 is attached** — the CH340 board on `COM4`, which is the one flashed as ESP32-B. The CP210x board (ESP32-A) is not connected, and `COM1` is a motherboard serial port, not an ESP.
+
+**How to apply:** the kiosk PC is now a real remote hardware bench — esptool and a staged firmware directory live there, and PowerShell alone can read any board's boot banner. Use it before assuming anything about firmware state; this session found a board that every document had recorded as successfully flashed.
+
+---
+
 ## 2026-09-03 (12th session) — Kiosk PC back online; off-box backup attempted, then deliberately backed out
 
 **Kiosk PC (`desktop-5nrh6ug`, 100.113.67.13) is online again** after 8 days dark, reachable from both this machine and the server, on a **direct LAN path** (192.168.1.19) rather than a relay.
