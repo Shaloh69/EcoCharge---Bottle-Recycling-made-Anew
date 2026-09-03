@@ -6,6 +6,24 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-09-03 (16th session) — Both ESP32s boot and run rev 4.0.0; ESP32-B's board is faulty and ports 3-4 read above the trip threshold
+
+**The user changed the power/cabling and it fixed the boot problem — both boards now run rev 4.0.0**, `App version: fdf6ab3` on each, matching the commit exactly. That retires the earlier "both non-bootable" state and, with it, my unpowered-hub hypothesis for the *boot* failures. **Both also connect to esptool now**, so remote flashing over the tailnet genuinely works.
+
+**Every rev 4.0.0 design decision is now confirmed on real hardware rather than in source** — ESP32-B's own boot log reads `Relays initialised — all OFF (GPIO 19/23/18/5, active LOW)`, `ADC ready — 4 channels on ADC1, 4 on ADC2 (WiFi never started)`, and `Streaming every 100 ms at 115200 baud; overcurrent raw>=3908 for 2000 ms; link timeout 5000 ms`. That is the first end-to-end validation the rev 4 rewrite has ever had.
+
+**FINDING 1 — ESP32-B's board is faulty.** It resets **13 times in 15 seconds**; ESP32-A on the **same hub** resets **once**, while doing strictly more work (WiFi, TLS, HTTP, the bottle FSM). Measured with the serial reset line deliberately untouched, so it is the board resetting itself. **That comparison is what killed the power theory** — a shared supply cannot explain one board looping while the other is stable.
+
+**Flash writes fail verification intermittently at any speed.** After a full `erase-flash`: write at 460800 → `MD5 of file does not match data in flash!`; retry at 115200 → `Hash of data verified`; next full write at 115200 → **failed again the same way**. So it is not a baud problem — the earlier 115200 success was luck. A 26 KB bootloader failing verification after a clean erase is storage that does not retain what was written. **Recommendation: swap the board.** No firmware change can compensate.
+
+**FINDING 2, independent of the faulty board and more consequential for safety: ports 3 and 4 read 4095 (full scale) with nothing connected, and 4095 is ABOVE the 3908 overcurrent trip point.** Ports 1–2 on ADC1 read ~0–48, which is normal floating behaviour; ports 3–4 on ADC2 sit pegged at maximum. No trip fires today only because `safety_check` skips ports whose relay is off — **the moment a port 3 or 4 relay closes, it would false-trip within 2 seconds.** Either the ADC2 reads are not valid in this configuration — which would undermine rev 4's core premise that a radio-free board makes ADC2 usable — or those inputs need pull-downs. **Ports 3 and 4 must not be energised until this is understood.**
+
+**Also confirmed:** `link=DOWN` on B throughout, since the A↔B UART is not wired yet. Expected, and the next bench step.
+
+**How to apply:** when two boards share a supply and only one misbehaves, the comparison is the experiment — it separates "the environment is bad" from "this unit is bad" in one measurement, and it did exactly that here after I had spent a session blaming the hub.
+
+---
+
 ## 2026-09-03 (15th session) — Sixth tunnel rotation re-pointed; testing phases re-verified against the live system
 
 **The tunnels had rotated for the sixth time and every client was pointing at dead 2026-08-20 hostnames.** Nothing could be tested until that was fixed, so the documented rotation runbook ran end to end: repo configs (`config.h`, `api_service.dart`, both `.env.local`), host env (`ALLOWED_ORIGINS`, `AI_SERVER_URL`, kiosk env), both Next.js apps rebuilt locally and shipped, services restarted.
