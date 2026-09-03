@@ -6,6 +6,20 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-09-03 (11th session, later) — Staying on Docker; user enabled AutoStart, one gap remains
+
+**Decision: stay on Docker Desktop rather than migrate MySQL to the native service.** The migration was proposed and fully planned — `MySQL80` is already installed on this host, already `StartMode: Auto`, running as `NetworkService` on port 3306, so it would have started at true boot with no stored credential — but it was **not executed and no data was moved**. It stalled on needing the MySQL80 root password, and the user chose Docker instead. The plan is preserved in `14-production-readiness.md` if it is ever wanted.
+
+**The user enabled Docker Desktop's `AutoStart`, and it is genuinely changed — verified, not taken on trust: `AutoStart = True`, where it read `False` earlier the same day.** Docker Desktop now starts reliably whenever someone signs in, which it did not do before.
+
+**The gap that remains, recorded precisely so a later reader does not mistake it for solved: `AutoAdminLogon` is still not set.** A reboot where nobody signs in still leaves MySQL absent and the backend down — that is the exact scenario that produced the 2 h 05 m outage. It is now a much smaller window in practice, because the crash-loop fix lets the API wait ~2.5 minutes instead of restarting thousands of times, which covers Docker starting shortly after a login. It does not cover nobody logging in at all.
+
+**Also done:** the stray `supabase/studio` container (started 2026-09-03 06:35 UTC, on a stack recorded as decommissioned in August) was stopped and removed with the user's approval. `docker ps -a` now shows only `ecocharge-mysql` and `engirent-mysql`, matching the documented topology again.
+
+**How to apply:** treat "starts at login" and "starts at boot" as different guarantees on this machine — the distinction has now produced two separate multi-hour outages (Scheduled Tasks in August, Docker Desktop in September). When something must survive an unattended restart, check `AutoAdminLogon` or use a real Windows service, and verify by comparing boot time against process start time.
+
+---
+
 ## 2026-09-03 (11th session) — All three P0 reliability gaps closed and proven; found the real root cause of the multi-hour outages
 
 **Checked the live system rather than the docs, as instructed. State had DEGRADED since 2026-08-25, not improved.**

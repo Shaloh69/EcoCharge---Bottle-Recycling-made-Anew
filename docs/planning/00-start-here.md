@@ -26,7 +26,7 @@ The folder scatter is gone (one numbered series under `docs/planning/`, only `RE
 
 **All three P0 reliability gaps were closed and proven on 2026-09-03:** database backups now exist and a **real restore was verified table-by-table**; log rotation runs; and the API no longer treats a not-yet-ready database as fatal — demonstrated live by stopping MySQL and watching it wait, then recover on its own.
 
-**What replaced them is more fundamental and needs your decision: Docker Desktop does not start at boot.** The host rebooted at 11:48 on 2026-09-03 and Docker only started at 13:53 when someone logged in — MySQL did not exist for over two hours. Same class of defect as the August "Interactive only" Scheduled Tasks. The crash-loop fix makes it quiet, not solved.
+**Docker Desktop startup — improved 2026-09-03, not fully closed.** It had never started at boot (host rebooted 11:48, Docker started 13:53 on login; MySQL absent for 2h05m). The user enabled `AutoStart` (verified `True`), so it now starts on sign-in. **But `AutoAdminLogon` is still unset, so a reboot with nobody signing in still leaves the database absent.** Staying on Docker was a deliberate choice over the already-installed native `MySQL80` service; that migration is planned but unexecuted.
 
 **And the oldest item is still the most serious: the overcurrent trip has never been tested with a real load.** Everything else on that page is uptime and data; that one is somebody getting hurt.
 
