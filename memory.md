@@ -6,6 +6,30 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-09-03 (11th session) — All three P0 reliability gaps closed and proven; found the real root cause of the multi-hour outages
+
+**Checked the live system rather than the docs, as instructed. State had DEGRADED since 2026-08-25, not improved.**
+
+**The crash loop had got far worse and nobody knew.** `restarts.log` went **29,746 -> 71,423** in nine days — **41,677 restarts**. `stdout.log` reached **103.8 MB**, `stderr.log` **44.4 MB**. Root cause of the loop: `startup.ts` had a 10-attempt retry loop, but every unrecognised error hit the `throw` on attempt 1, so **it had never actually retried a connection failure in its life**. Now handles `P1001`/`P1017`/`P1002`/`P2024`/`ECONNREFUSED` as transient readiness errors with capped exponential backoff.
+
+**Proven live, not asserted:** stopped MySQL, restarted the API, left it with no database for 25 s. **The restart count did not move** (71,423 before and after — the old behaviour produced one restart every ~8 s), the log read `Database not reachable yet (attempt 1/12) - retrying in 1s`, and when MySQL returned the API recovered by itself with `All migrations applied`. No restart, no intervention.
+
+**THE ACTUAL ROOT CAUSE, which no document had ever identified: Docker Desktop does not start at boot.** The host rebooted at **11:48** and Docker Desktop did not start until **13:53:51** — when a human logged in. MySQL therefore **did not exist for 2 h 05 m**. The container's restart policy is correct (`unless-stopped`); it simply cannot run without an engine. Confirmed by inspection: `AutoStart` is `False`, Docker Desktop lives in the **per-user Run key** (interactive login, not boot), and Windows auto-login is not configured. **This is the same class of defect as the August "Interactive only" Scheduled Tasks** — a thing that quietly waits for a human session on a machine meant to run unattended. The crash-loop fix makes it *quiet*, not *solved*: the API now waits calmly, then gives up after ~2.5 min, and the database still is not there. **Left as `[!]` — the fix (auto-login, or moving MySQL off Docker Desktop) is a real security/effort tradeoff that is the user's call.**
+
+**Database backups now exist and a real restore was performed.** There were still zero. `ops/backup_mysql.ps1` + `EcoChargeBackup` (daily 03:30, `/RU SYSTEM`, Logon Mode confirmed). **The root password never leaves the container** — `MYSQL_PWD` is read from the container's own environment, so it appears in no file, command line or scheduler entry. The script rejects any dump under 2 KB or lacking `CREATE TABLE` and deletes it, because a file that *looks* like a backup is worse than none. `ops/restore_test.ps1` restored the newest dump into a scratch database and compared **every table's `COUNT(*)`** against live — **all 10 tables matched exactly**, then the scratch copy was dropped. Deliberately `COUNT(*)`, not `information_schema.table_rows`, which is an InnoDB estimate and would have made the test meaningless.
+
+**Log rotation built.** `ops/rotate_logs.ps1` + `EcoChargeLogRotate` (daily 03:45). First run took **148 MB down to 2.4 MB** compressed. Size was never the problem — 641 GB free — the problem was that two hours of crash-loop evidence sat in a file too large for anyone to casually open, which is exactly how the fault stayed invisible for nine days.
+
+**Real constraint found while building it:** the launcher `.bat` files redirect with `>>`, which opens the log **without write-sharing**, so in-place truncation fails with "being used by another process". Rotation therefore stops the owning service, truncates, and restarts — but only for a file genuinely over the threshold, which after the crash-loop fix should be rare.
+
+**PowerShell trap worth keeping:** `mysqldump`'s "password on the command line is insecure" warning goes to stderr, and **PowerShell 5.1 wraps a native command's stderr in `ErrorRecord`s** — which under `$ErrorActionPreference = 'Stop'` throws on a harmless warning and aborts the backup. Fixed two ways: `MYSQL_PWD` removes the warning at source, and `cmd` handles the native redirection. Both database scripts now do this.
+
+**`ops/` added to the repo** — the three scripts are versioned there with a README, and the copies on the host are deployments. Previously nothing on that machine was in version control.
+
+**How to apply:** on this deployment, "does it start unattended?" has now bitten twice in different disguises — Scheduled Tasks in August, Docker Desktop in September. **Before trusting anything to survive a reboot, ask what user session it needs**, and check by looking at boot time versus process start time rather than assuming.
+
+---
+
 ## 2026-08-25 (10th session) — Hardware rev 4.0.0: GPIO36/39 don't exist on these boards, and the two ESP32s are now balanced by subsystem
 
 **Two user-reported constraints, both real, both with consequences bigger than they first look.**

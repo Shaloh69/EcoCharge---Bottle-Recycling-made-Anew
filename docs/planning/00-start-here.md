@@ -22,7 +22,13 @@ The folder scatter is gone (one numbered series under `docs/planning/`, only `RE
 
 ## Before any pilot: read `14-production-readiness.md`
 
-`docs/planning/14-production-readiness.md` (created 2026-08-25) is the ordered pre-production list — P0 blockers, then everything else. Three gaps found while writing it that were in **no** checklist before: **zero database backups** (the `backups/mysql` folder is empty and no backup task exists), **unbounded logs**, and **an API that treats a not-yet-ready MySQL as fatal** — verified crash-looping every ~8s on 2026-08-24, 29,746 restarts logged. Also: the **overcurrent trip has never been tested with a real load**, which is the one item where being wrong hurts somebody.
+`docs/planning/14-production-readiness.md` is the ordered pre-production list — P0 blockers first.
+
+**All three P0 reliability gaps were closed and proven on 2026-09-03:** database backups now exist and a **real restore was verified table-by-table**; log rotation runs; and the API no longer treats a not-yet-ready database as fatal — demonstrated live by stopping MySQL and watching it wait, then recover on its own.
+
+**What replaced them is more fundamental and needs your decision: Docker Desktop does not start at boot.** The host rebooted at 11:48 on 2026-09-03 and Docker only started at 13:53 when someone logged in — MySQL did not exist for over two hours. Same class of defect as the August "Interactive only" Scheduled Tasks. The crash-loop fix makes it quiet, not solved.
+
+**And the oldest item is still the most serious: the overcurrent trip has never been tested with a real load.** Everything else on that page is uptime and data; that one is somebody getting hurt.
 
 ## Open work, in priority order
 
