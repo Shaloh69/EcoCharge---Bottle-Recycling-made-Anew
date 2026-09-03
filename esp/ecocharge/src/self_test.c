@@ -85,24 +85,19 @@ static void _test_sensors(selftest_results_t *r)
         r->voltage[p - 1] = d.voltage_volts;
         r->current[p - 1] = d.current_amps;
 
-        bool is_remote_port = (p == 3 || p == 4);
-
-        if (is_remote_port) {
-            // Remote port — mark ok regardless (0 is valid if ESP32-B is offline)
-            r->sensor_ok[p - 1] = true;
-            if (!r->pico_ok) {
-                ESP_LOGW(TAG, "  Port %d [ESP32-B]: V=%.1fV  I=%.3fA  [PASS w/WARNING — node offline]",
-                         p, d.voltage_volts, d.current_amps);
-            } else {
-                ESP_LOGI(TAG, "  Port %d [ESP32-B]: V=%.1fV  I=%.3fA  [PASS]",
-                         p, d.voltage_volts, d.current_amps);
-            }
+        // Rev 4.0.0: ALL FOUR ports are read by ESP32-B — this board owns no
+        // analog channel at all (sensor_monitor.c makes zero adc_oneshot calls,
+        // verified 2026-09-03). The old code labelled ports 1-2 as "[ADC]" and
+        // treated only 3-4 as remote, which was true in rev 3 and became
+        // actively misleading at a bench: it implied this board could read
+        // ports 1-2 with ESP32-B unplugged, which it cannot.
+        r->sensor_ok[p - 1] = true;   // 0.00 is valid when the node is offline
+        if (!r->pico_ok) {
+            ESP_LOGW(TAG, "  Port %d [ESP32-B]: V=%.1fV  I=%.3fA  [PASS w/WARNING — node offline]",
+                     p, d.voltage_volts, d.current_amps);
         } else {
-            // Direct ADC port — fail only if sensor_get_port() itself failed
-            r->sensor_ok[p - 1] = (ret == ESP_OK);
-            const char *status = r->sensor_ok[p - 1] ? "PASS" : "FAIL";
-            ESP_LOGI(TAG, "  Port %d [ADC]:  V=%.1fV  I=%.3fA  [%s]",
-                     p, d.voltage_volts, d.current_amps, status);
+            ESP_LOGI(TAG, "  Port %d [ESP32-B]: V=%.1fV  I=%.3fA  [PASS]",
+                     p, d.voltage_volts, d.current_amps);
         }
     }
 }
@@ -217,7 +212,7 @@ esp_err_t self_test_run(selftest_results_t *results)
     }
     if (!results->pico_ok) {
         ESP_LOGW(TAG, "║   WARNING: ESP32-B not responding    ║");
-        ESP_LOGW(TAG, "║   SW2 & SW4 sensors offline          ║");
+        ESP_LOGW(TAG, "║   ALL port sensors offline           ║");
     }
     ESP_LOGI(TAG, "╚══════════════════════════════════════╝");
     ESP_LOGI(TAG, "");
