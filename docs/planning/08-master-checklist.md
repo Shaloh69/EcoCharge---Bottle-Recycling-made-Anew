@@ -10,17 +10,33 @@ Every actionable item across `docs/planning/00-07`, in the order `00-start-here.
 
 ## Phase A — Self-hosting migration (`03-revamp-master.md` §1)
 
+> ### ✅ SURVIVED A REAL BROWNOUT — 2026-09-03 19:34, and the recovery fixes all worked
+>
+> An unplanned power event rebooted the host at **19:34:55**. This is the first genuine, unplanned test of everything built over the preceding sessions, and the results are the strongest evidence any of it has:
+>
+> | What was fixed earlier | How it behaved in a real power event |
+> |---|---|
+> | Scheduled Tasks re-registered `/RU SYSTEM` | **All 10 service tasks came back `Running` on their own** — no login, no intervention |
+> | Docker Desktop `AutoStart` (user, 2026-09-03) | **MySQL was `Up … (healthy)` within a minute** of boot |
+> | API retry on `P1001`/`P1017` instead of fatal | **ZERO restarts since boot.** `restarts.log` stayed at 71,423 — unchanged. The same event previously produced thousands |
+> | Daily backup task | Survived, `Logon Mode: Interactive/Background`, `Last Result: 0`, next run scheduled |
+> | Database | Intact — a fresh dump is byte-identical in size and the integration suite passes 6/6 against it |
+>
+> **One real gap the brownout exposed, which nothing else would have found: the AI server hung on startup and nothing noticed for six minutes.** Its Scheduled Task read `Running` and four `python` processes existed, but port 30012 was never bound — CPU sat at ~5 s over six minutes with only ~200 MB resident, so it was blocked, not loading models. `restarts.log` had **zero** lines, because **the `.bat` restart loop only catches a process that EXITS.** A process that hangs without exiting is invisible to it. A clean restart recovered it in 75 s (`Models loaded — AI server ready`). **A liveness check that actually probes `/health` — rather than trusting "the task is Running" — is the missing control.**
+>
+> **Tunnels rotated for the seventh time** and the full runbook was re-run and re-verified end to end (below).
+>
 > ### ✅ CURRENT URLS — re-pointed and re-verified end-to-end 2026-09-03
 >
 > **Sixth rotation.** Every client was pointing at dead 2026-08-20 hostnames until this pass. Current set, each verified 200 from the public internet:
 >
-> | Service | URL |
+> | Service | URL (post-brownout, 7th rotation) |
 > |---|---|
-> | API | `https://clearing-eventually-red-fresh.trycloudflare.com` |
-> | Admin Console | `https://trace-memorial-scout-praise.trycloudflare.com` |
-> | AI server | `https://reaches-moral-rates-andrea.trycloudflare.com` |
-> | Kiosk Web | `https://posing-acer-dylan-riding.trycloudflare.com` |
-> | Website | `https://accepted-pastor-ray-findarticles.trycloudflare.com` |
+> | API | `https://cafe-patents-newman-gay.trycloudflare.com` |
+> | Admin Console | `https://velvet-buddy-tsunami-fast.trycloudflare.com` |
+> | AI server | `https://correlation-duty-looksmart-lying.trycloudflare.com` |
+> | Kiosk Web | `https://lamb-comparable-peers-schemes.trycloudflare.com` |
+> | Website | `https://architecture-acts-qualifying-advert.trycloudflare.com` |
 >
 > **Verified after re-pointing, not assumed:** API `/health` 200 and `/api/app-config` correct · kiosk→AI `{"online":true,"auth":true}` · kiosk→API `{"online":true,"status":200}` · CORS preflight returns the new kiosk origin · both Next.js apps rebuilt with the new URL confirmed baked into their chunks and **no stale URL remaining**.
 >

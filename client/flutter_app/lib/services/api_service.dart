@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 // only if the tunnel process restarts (see esp/ecocharge/include/config.h's
 // RENDER_BASE_URL comment for how to find the current URL if it ever does).
 const _base = String.fromEnvironment('API_BASE_URL',
-    defaultValue: 'https://clearing-eventually-red-fresh.trycloudflare.com');
+    defaultValue: 'https://cafe-patents-newman-gay.trycloudflare.com');
 
 class ApiUser {
   final int id;

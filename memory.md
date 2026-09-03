@@ -6,6 +6,29 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-09-03 (18th session) — A real brownout tested every recovery fix at once; all held, and it exposed one genuine blind spot
+
+**An unplanned power event rebooted the host at 19:34:55.** Nothing about it was scheduled, which makes it the most honest test this infrastructure has had.
+
+**Everything built over the preceding sessions worked:**
+- **All 10 service Scheduled Tasks came back `Running` on their own** — the `/RU SYSTEM` re-registration, proven again without a login.
+- **MySQL was healthy within a minute** — the user's Docker `AutoStart` change doing its job.
+- **The API did not crash-loop. Zero restarts since boot; `restarts.log` stayed at 71,423, unchanged.** The identical situation previously produced thousands of restarts, so this is the `P1001`/`P1017` retry fix validated by the exact event it was written for.
+- **Backups intact** — task survived with `Logon Mode: Interactive/Background`, `Last Result: 0`; a fresh dump ran, mirrored to E:, 7 retained.
+- **The database survived** — dump byte-identical in size, and the integration suite passes **6/6** against it. Unit suite **18/18**.
+
+**THE GAP IT EXPOSED, which no amount of code review would have found: the AI server hung on startup and nothing noticed for six minutes.** Its Scheduled Task read `Running`, four `python` processes existed, `restarts.log` had **zero** lines — and port 30012 was never bound. CPU was ~5 s across six minutes with ~200 MB resident, so it was blocked, not loading models. A clean restart brought it up in 75 s (`Models loaded — AI server ready`).
+
+**The lesson generalises to every service here: the `.bat` restart loop only catches a process that EXITS.** A process that hangs without exiting is completely invisible to it, and "the Scheduled Task says Running" is not evidence a service is working. **The missing control is a watchdog that probes each `/health` and restarts on failure rather than on exit** — now filed as `[!]` in `14-production-readiness.md`.
+
+**Also, a smaller thing worth noting because it went right:** the integration suite **skipped** rather than ran when the SSH tunnel died with the reboot. Its guard refuses to execute unless `DATABASE_URL` points at `ecocharge_test`, so a dead tunnel produced 6 skips instead of 6 tests silently running against production data. That guard earned its keep.
+
+**Tunnels rotated for the seventh time** and the runbook was re-run end to end: repo configs, host env (including `APP_DOWNLOAD_URL`, the one that is easy to miss), both Next.js apps rebuilt with the new URL confirmed baked into their chunks and no stale URL remaining, services restarted, then verified — API `/health` 200, `app-config` correct, kiosk→AI `auth:true`, kiosk→API 200, CORS returning the new kiosk origin, website `/download` 200.
+
+**How to apply:** an unplanned outage is worth more than any drill, and the thing to do with one is check every control at once while the evidence is fresh. Four fixes proved themselves here; the fifth gap only became visible because a service failed in a way the existing safety net was structurally incapable of catching.
+
+---
+
 ## 2026-09-03 (17th session) — One-at-a-time testing settles it: ESP32-A is healthy, ESP32-B's flash is faulty
 
 **Testing one board at a time on the same PC and the same known-good cable is what turned a week of hypotheses into a conclusion.** Every earlier theory — bad cable, unpowered hub, wrong baud, missing driver — was plausible and each explained part of the evidence. The controlled comparison explained all of it.
