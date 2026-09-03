@@ -6,6 +6,25 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-09-03 (14th session) — Both ESP32s now visible; the missing piece was a DRIVER, and both boards are non-bootable
+
+**ESP32-A was never actually missing — the kiosk PC had no CP210x driver.** Windows reported `CP2102 USB to UART Bridge Controller [Error] ConfigManagerErrorCode 28` ("the drivers for this device are not installed"), so the board enumerated as a device but got **no COM port**. Earlier sessions concluded "only one ESP32 is attached"; that was wrong, and it was wrong for an instructive reason — **a device with no COM port cannot appear in a COM-port listing**, so the check I used could never have found it. **Windows Update did not supply the driver** (`pnputil /scan-devices` left it at code 28). Fixed with the Silicon Labs CP210x Universal Windows Driver and `pnputil /add-driver <inf> /install`, which bound it to the live device. Both now enumerate: **`COM4` CH340 = ESP32-B, `COM5` CP210x = ESP32-A.**
+
+**Both boards are non-bootable.**
+- **ESP32-B** (`COM4`): flash checksum failure, `No bootable app partitions`, `Fatal exception (0): IllegalInstruction` — reproduced across **two different cables**, so not a cable artifact.
+- **ESP32-A** (`COM5`): ROM-loader boot loop, `load:0x40080400,len:4 / ho ...` repeating. Confirmed 115200 is correct (74880 gave pure noise), so the loop is real and not a misread.
+- **Neither enters download mode via auto-reset** — `default-reset`, `usb-reset`, `no-reset`, at 74880 and 115200, up to 10 attempts, both ports.
+
+**The hypothesis that fits everything, and it is not firmware: both boards are on a generic USB dongle hub, very likely unpowered.** Two ESP32s sharing one unpowered port can brown out, and **a brownout during a flash write is a classic cause of exactly the checksum corruption seen on ESP32-B** — a board that flashed cleanly on 2026-08-20 with `Hash of data verified` when plugged directly into a laptop. Two boards failing identically and at the same time is far better explained by one shared power fault than by two independent ones. Windows logged no USB power errors, but host-side logging rarely catches device-side brownouts, so its silence is not evidence against the theory.
+
+**Not proven — it needs a physical change I cannot make remotely.** Next, in order: plug **one** board directly into the PC (or use a powered hub); if it still will not connect, hold **BOOT** while esptool connects.
+
+**Tooling note: PlatformIO would not have helped, and saying so was better than installing it.** PlatformIO drives esptool underneath, so it hits the identical download-mode wall; it is also absent from the kiosk PC, which has a broken `winget` source and no real Python. The standalone esptool binary was the right tool for that machine.
+
+**How to apply:** on Windows, "the board is not showing up" has three genuinely different causes worth separating before blaming the hardware — **no driver** (error 28; invisible as a COM port), **no download mode** (auto-reset wiring), and **no power** (brownout, which also corrupts flash). This session hit all three in one sitting.
+
+---
+
 ## 2026-09-03 (13th session) — First real hardware access: the attached ESP32's flash is corrupt; remote flashing is now set up
 
 **The ESPs are serial-connected to the kiosk PC, which is on the tailnet — so hardware can finally be read and flashed remotely.** This is the first genuine hardware verification in the project's history.
