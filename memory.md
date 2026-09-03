@@ -6,6 +6,24 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-09-03 (17th session) — One-at-a-time testing settles it: ESP32-A is healthy, ESP32-B's flash is faulty
+
+**Testing one board at a time on the same PC and the same known-good cable is what turned a week of hypotheses into a conclusion.** Every earlier theory — bad cable, unpowered hub, wrong baud, missing driver — was plausible and each explained part of the evidence. The controlled comparison explained all of it.
+
+**ESP32-A: flashed, verified, stable.** All three images wrote first time with `Hash of data verified`, including a **1,065,840-byte** application, `exit: 0`. Runtime shows `v4.0.0`, **2 resets in 16 s** (one being my own reset pulse), the **current** backend URL baked in, and `WiFi reset button ready on GPIO22`. A healthy board with nothing wired to it — the three ultrasonic `timeout … FAIL` results are exactly what unconnected TRIG/ECHO pairs produce.
+
+**ESP32-B: faulty flash, replace the board.**
+- ESP32-A wrote **1,065,840 bytes** and verified. ESP32-B **cannot get a 26,800-byte bootloader to verify** — `Input MD5 a2e3729169…` vs `Flash MD5 3dc4598a25…`.
+- **Four attempts, three failures**, across 460800 / 115200 / 74880. The one success was luck; the next identical attempt failed.
+- **The fault follows the board.** After the user swapped cables: A **1 reset / 15 s**, B **43 resets / 15 s**, same hub, with A doing strictly more work. The ROM later reported `rst:0x10 (RTCWDT_RTC_RESET)` with `invalid header: 0xffffffff` — empty flash, meaning the erase took and the write did not.
+- Flash chip is *detected* (`Manufacturer 0x20, Device 4016, 4 MB`); it just does not retain data. **No firmware change compensates for storage that loses what you write to it.**
+
+**A real bug fixed along the way, found only because the board was on a bench:** the self-test printed `Port 1 [ADC]` / `Port 2 [ADC]`, implying ESP32-A read those ports locally. That was true in rev 3; rev 4 moved **all** analog to ESP32-B, and `sensor_monitor.c` makes zero `adc_oneshot` calls — I checked before changing it. The old label would have sent someone hunting a wiring fault on pins that are not used. All four ports now report `[ESP32-B]`, confirmed live after reflashing.
+
+**How to apply:** when several plausible causes each explain part of a fault, stop adding theories and remove variables instead. One board, one cable, one port, one at a time — the comparison is the experiment. It also produced the strongest possible evidence for the conclusion: the same setup that wrote a megabyte perfectly could not write 26 KB to the other board.
+
+---
+
 ## 2026-09-03 (16th session) — Both ESP32s boot and run rev 4.0.0; ESP32-B's board is faulty and ports 3-4 read above the trip threshold
 
 **The user changed the power/cabling and it fixed the boot problem — both boards now run rev 4.0.0**, `App version: fdf6ab3` on each, matching the commit exactly. That retires the earlier "both non-bootable" state and, with it, my unpowered-hub hypothesis for the *boot* failures. **Both also connect to esptool now**, so remote flashing over the tailnet genuinely works.
