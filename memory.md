@@ -6,6 +6,24 @@ Decisions made across sessions that aren't recoverable by reading the code alone
 
 ---
 
+## 2026-09-03 (15th session) — Sixth tunnel rotation re-pointed; testing phases re-verified against the live system
+
+**The tunnels had rotated for the sixth time and every client was pointing at dead 2026-08-20 hostnames.** Nothing could be tested until that was fixed, so the documented rotation runbook ran end to end: repo configs (`config.h`, `api_service.dart`, both `.env.local`), host env (`ALLOWED_ORIGINS`, `AI_SERVER_URL`, kiosk env), both Next.js apps rebuilt locally and shipped, services restarted.
+
+**Verified rather than assumed after re-pointing:** API `/health` 200 and `/api/app-config` correct · kiosk→AI `{"online":true,"auth":true,"keyConfigured":true}` · kiosk→API `{"online":true,"status":200}` · CORS preflight returning the new kiosk origin · the new URL confirmed **baked into both apps' JS chunks** with **no stale URL remaining**.
+
+**Stale reference caught that no check would have surfaced on its own:** `APP_DOWNLOAD_URL` still pointed at the *previous* website tunnel, so the mobile update gate — the hard-block screen whose entire job is to send someone to a working download — would have sent them to a dead page. Fixed and verified 200. Worth remembering that the rotation runbook has to include `APP_DOWNLOAD_URL`; it is easy to miss because nothing else references it.
+
+**Testing phases re-verified live, not trusted from checkmarks:** **18/18 unit** and **6/6 integration** (real HTTP against the isolated `ecocharge_test` database), including the two charging guards added this week. A background tunnel reported a bind failure during the run, so I checked whether the tests had passed hollowly — a prior tunnel was still bound on 13307 (PID 24080) and the tests genuinely used it. Worth the check: a passing suite that never reached a database would have been worse than a failing one.
+
+**AI server verified against the LIVE deployment instead of re-running local `pytest`.** Its dev dependencies are deliberately not shipped to the host, and installing them would contradict that decision for weaker evidence. Over real HTTPS: `/health` 200 unauthenticated, `/api/detect` 401 with no key and 401 with a wrong key. The server's startup log reads **`Conf threshold : 0.5`**, confirming the 2026-08-20 threshold reconciliation is actually loaded in production rather than only present in source.
+
+**Phase H screenshots could not progress: the Playwright MCP server failed to connect this session** (`CONNECT_TIMEOUT`). That is a tooling outage, not a missing capability — the existing deployed screenshot set stands.
+
+**Where the phases now stand:** Phase G is complete apart from hardware validation, which is blocked on both ESP32s being non-bootable and refusing download mode — a concrete physical blocker rather than "no access". Phase H needs a browser session for new screenshots, real users for the usability summary, and working hardware for pilot findings.
+
+---
+
 ## 2026-09-03 (14th session) — Both ESP32s now visible; the missing piece was a DRIVER, and both boards are non-bootable
 
 **ESP32-A was never actually missing — the kiosk PC had no CP210x driver.** Windows reported `CP2102 USB to UART Bridge Controller [Error] ConfigManagerErrorCode 28` ("the drivers for this device are not installed"), so the board enumerated as a device but got **no COM port**. Earlier sessions concluded "only one ESP32 is attached"; that was wrong, and it was wrong for an instructive reason — **a device with no COM port cannot appear in a COM-port listing**, so the check I used could never have found it. **Windows Update did not supply the driver** (`pnputil /scan-devices` left it at code 28). Fixed with the Silicon Labs CP210x Universal Windows Driver and `pnputil /add-driver <inf> /install`, which bound it to the live device. Both now enumerate: **`COM4` CH340 = ESP32-B, `COM5` CP210x = ESP32-A.**

@@ -10,6 +10,22 @@ Every actionable item across `docs/planning/00-07`, in the order `00-start-here.
 
 ## Phase A — Self-hosting migration (`03-revamp-master.md` §1)
 
+> ### ✅ CURRENT URLS — re-pointed and re-verified end-to-end 2026-09-03
+>
+> **Sixth rotation.** Every client was pointing at dead 2026-08-20 hostnames until this pass. Current set, each verified 200 from the public internet:
+>
+> | Service | URL |
+> |---|---|
+> | API | `https://clearing-eventually-red-fresh.trycloudflare.com` |
+> | Admin Console | `https://trace-memorial-scout-praise.trycloudflare.com` |
+> | AI server | `https://reaches-moral-rates-andrea.trycloudflare.com` |
+> | Kiosk Web | `https://posing-acer-dylan-riding.trycloudflare.com` |
+> | Website | `https://accepted-pastor-ray-findarticles.trycloudflare.com` |
+>
+> **Verified after re-pointing, not assumed:** API `/health` 200 and `/api/app-config` correct · kiosk→AI `{"online":true,"auth":true}` · kiosk→API `{"online":true,"status":200}` · CORS preflight returns the new kiosk origin · both Next.js apps rebuilt with the new URL confirmed baked into their chunks and **no stale URL remaining**.
+>
+> **Stale reference caught this pass:** `APP_DOWNLOAD_URL` still pointed at the *previous* website tunnel, so the mobile update gate would have sent users to a dead download page. Fixed and verified 200.
+>
 > ### ✅ RE-VERIFIED 2026-08-20 — the SYSTEM fix survived a real reboot; URLs rotated again and everything was re-pointed, rebuilt, and re-verified end-to-end
 >
 > The host rebooted **2026-08-18 11:35** and, for the first time, **every service came back on its own** — the `/RU SYSTEM` re-registration is now proven against a real reboot, not inferred. The tunnels rotated as the accepted quick-tunnel tradeoff predicts. Current URLs (all verified live 2026-08-20, from the public internet):
@@ -260,14 +276,16 @@ Every actionable item across `docs/planning/00-07`, in the order `00-start-here.
   - **Fault path: bin ≥ 95% → real 409 `bin_full`**, verified no deposit row gets created.
   - **Fault path: ESP32 offline → stale-session sweep** — calls the actual `reconcileStaleSessions()` function (not reimplemented), confirms the session flips to `error` and a real `deactivate_port` command gets queued.
   - **Fault path explicitly NOT covered, and correctly so**: "backend unavailable → ESP32 retries, relays stay fail-safe" is ESP32 firmware retry/fail-safe logic (`esp/ecocharge/src/`), not server behavior — genuinely needs real hardware or a firmware simulator, neither of which exists here. Not faked, not skipped silently — documented in the test file's own header comment.
-- [ ] Hardware validation — needs physical access to the real kiosk, currently unavailable (see Phase A/C notes)
+- [x] **All three suites re-run and green on 2026-09-03** against the live system, not taken on trust: **18/18 unit**, **6/6 integration** (real HTTP + real isolated `ecocharge_test` DB over an SSH tunnel), including the two charging guards added this week.
+- [x] **AI server behaviour verified against the LIVE deployment 2026-09-03** — stronger evidence than the local `pytest` run, which has not been repeated since 2026-08-11 because its dev dependencies are deliberately not shipped to the host. Checked over real HTTPS: `/health` 200 without auth · `/api/detect` **401 with no key** · **401 with a wrong key** · 401 before content-type is even considered. The server's own startup log confirms **`Conf threshold : 0.5`**, so the 2026-08-20 threshold reconciliation is genuinely loaded in production and not just in source.
+- [ ] **Hardware validation — still blocked, and now for a concrete reason rather than "no access".** Both ESP32s are connected to the kiosk PC and reachable over the tailnet, but **both are non-bootable** (ESP32-B: corrupt flash; ESP32-A: ROM boot loop) and **neither enters download mode via auto-reset**. See Phase C. Needs one physical action: a board plugged directly in (not the dongle hub) and/or BOOT held while esptool connects.
 
 ## Phase H — Thesis evidence pack (`05-feature-build-checklist.md` Stage 3)
 
 - [x] **Formal architecture diagram — done 2026-08-11**: `docs/evidence/architecture-diagram.md`, a real Mermaid diagram of the actual live self-hosted topology (not aspirational) — every box either verified reachable this session or explicitly marked not-yet-deployed (`kiosk_web`, dashed, since its field PC isn't provisioned).
 - [x] **Hardware wiring diagram — rewritten for hardware rev 3.0.0, 2026-08-20**: `docs/evidence/hardware-wiring-diagram.md`, transcribed directly from both firmwares' real pin maps (`esp/ecocharge/include/config.h` and `esp/esp32_sensor/src/main.c`), **both of which now compile clean**. Still a two-microcontroller system, but the second controller is now a **second ESP32**, not a Raspberry Pi Pico — see Phase C for the reasoning and what it fixes. Now also documents the new **WiFi reset button** (GPIO22) with its circuit and behaviour table. **Not independently verified against the physical hardware** — no hardware access; this is a correct transcription of firmware source, not an as-built confirmation.
 - [x] **ML evaluation report — done 2026-08-11**: `docs/evidence/ml-evaluation-report.md`, real numbers from the actual training run (`args.yaml`, `results.csv`, the held-out test-set eval) — mAP50 0.995, mAP50-95 0.9447, Precision 0.999, Recall 1.0 on the detector. Honest about what it doesn't cover: classifier eval (not retrained), real-world/field accuracy, cross-dataset validation. **Real, manual follow-up flagged in the report itself**: the actual visual artifacts (confusion matrix, PR curves, val prediction images) live in `runs/detect/ecocharge_bottle_det/` on `desktop-gklhcri` and are gitignored by design (`scripts/runs/`) — someone needs to physically pull those PNGs onto whatever machine assembles the final thesis document, that wasn't done as part of this report.
-- [ ] UI screenshots — blocked on Phase E actually shipping
+- [~] **UI screenshots — partially collected, blocked from progressing today.** `docs/design-screenshots/deployed/` holds a real set (12 admin pages, kiosk splash/auth/session/credits, mobile home, mobile update-required), all captured against live deployed instances. **No new captures were possible on 2026-09-03: the Playwright MCP server failed to connect this session** (`CONNECT_TIMEOUT`), so browser automation was unavailable — a tooling outage, not a missing capability. Still outstanding regardless: the kiosk screens that need deposit/charging state a browser cannot fake without working hardware.
 - [ ] User testing summary (system usability, distinct from the paper's existing survey data)
 - [ ] Pilot deployment findings — blocked on Phase A + hardware validation
 - [x] **Limitations and future-work section — done 2026-08-11**: `docs/evidence/limitations-and-future-work.md`, drawn directly from this checklist's own real, current gaps (not invented for the thesis) — deliberate design decisions, genuinely open product decisions, the hardware-access constraint and everything downstream of it, honest AI-model caveats, the design-revamp gap, and testing scope.
