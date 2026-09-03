@@ -269,3 +269,100 @@ describe("Fault path: ESP32 offline -> stale-session sweep fires correctly", () 
     expect(deactivateCmd?.status).toBe("PENDING");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Charging guards — added 2026-09-03.
+//
+// `14-production-readiness.md` flagged both of these as untested P1 items, and
+// the credit check specifically as "money-like logic". Neither had any coverage
+// despite being the two ways a charging start can legitimately be refused: a
+// user spending credits they do not have, and two people reaching for the same
+// physical socket. Both are pure server-side guards, so they can be tested for
+// real without any hardware.
+// ---------------------------------------------------------------------------
+describe("Charging guards: credit enforcement and port conflicts", () => {
+  it("refuses to start a charge for more credits than the user holds", async () => {
+    const { access_token, user } = await registerUser("nocredit");
+    const auth = { Authorization: `Bearer ${access_token}` };
+
+    // A freshly registered user has earned nothing yet. That is the whole
+    // point: the balance check must hold at zero, which is the state every
+    // brand-new account is in.
+    expect(user.credit_balance).toBe(0);
+
+    const res = await request(app)
+      .post("/api/charging/start")
+      .set(auth)
+      .send({ kiosk_id: kioskId, port_number: 1, credits: 5 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("insufficient credits");
+
+    // The guard must not merely return 400 - it must not have created a
+    // session or moved any balance. A refusal that still writes rows is worse
+    // than no guard at all, because it looks correct from the outside.
+    const started = await prisma.chargingSession.findFirst({
+      where: { userId: user.id },
+    });
+    expect(started).toBeNull();
+
+    const after = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(after.creditBalance).toBe(0);
+  });
+
+  it("refuses a second charge on a port that is already in use", async () => {
+    // Two different users, one socket - the real-world case this protects
+    // against, rather than one user double-clicking.
+    const first  = await registerUser("port-a");
+    const second = await registerUser("port-b");
+    const authA = { Authorization: `Bearer ${first.access_token}` };
+    const authB = { Authorization: `Bearer ${second.access_token}` };
+
+    // Give both users credits directly. Earning them through the deposit flow
+    // is already covered by the happy-path test; repeating it here would make
+    // this test slower and would not exercise anything new.
+    await prisma.user.update({
+      where: { id: first.user.id },
+      data: { creditBalance: 10 },
+    });
+    await prisma.user.update({
+      where: { id: second.user.id },
+      data: { creditBalance: 10 },
+    });
+
+    const PORT = 3;
+
+    const firstStart = await request(app)
+      .post("/api/charging/start")
+      .set(authA)
+      .send({ kiosk_id: kioskId, port_number: PORT, credits: 1 });
+    expect(firstStart.status).toBe(201);
+
+    const secondStart = await request(app)
+      .post("/api/charging/start")
+      .set(authB)
+      .send({ kiosk_id: kioskId, port_number: PORT, credits: 1 });
+
+    expect(secondStart.status).toBe(409);
+    expect(secondStart.body.error).toBe("port already in use");
+
+    // The refused user must be left exactly as they were - not charged, and
+    // without a dangling session.
+    const secondAfter = await prisma.user.findUniqueOrThrow({
+      where: { id: second.user.id },
+    });
+    expect(secondAfter.creditBalance).toBe(10);
+
+    const activeOnPort = await prisma.chargingSession.findMany({
+      where: { kioskId, portNumber: PORT, status: "active" },
+    });
+    expect(activeOnPort).toHaveLength(1);
+    expect(activeOnPort[0].userId).toBe(first.user.id);
+
+    // Free the port so this test leaves no state behind for later tests.
+    await prisma.chargingSession.updateMany({
+      where: { kioskId, portNumber: PORT, status: "active" },
+      data: { status: "completed" },
+    });
+  });
+});

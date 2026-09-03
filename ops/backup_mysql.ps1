@@ -85,6 +85,39 @@ if (-not ($head -match 'CREATE TABLE')) {
 
 Write-Log ("OK - {0:N0} bytes" -f $size)
 
+# ── Second-disk copy ────────────────────────────────────────────────────────
+# D: is a Toshiba HDD; E: is a separate Samsung SSD (verified 2026-09-03 via
+# Get-PhysicalDisk - different DiskNumber, different physical device). A copy
+# there survives the failure of the disk holding both the database and the
+# primary backups, which is the actual risk a single-disk backup does not cover.
+#
+# This is NOT off-site. It protects against a dead drive, not a dead machine,
+# a fire, or ransomware. The intended off-box target is the kiosk PC on the
+# tailnet, which was offline (last seen 8 days) when this was written - so this
+# is the best available today, not the finished answer.
+$MirrorDir = 'E:\EcoCharge-Backups'
+try {
+    if (-not (Test-Path $MirrorDir)) { New-Item -ItemType Directory -Force -Path $MirrorDir | Out-Null }
+    Copy-Item -Path $out -Destination $MirrorDir -Force -ErrorAction Stop
+    $mirrored = Join-Path $MirrorDir (Split-Path $out -Leaf)
+    # Verify the copy rather than trusting Copy-Item - a truncated mirror is
+    # worse than an obviously missing one.
+    if ((Get-Item $mirrored).Length -eq $size) {
+        Write-Log "mirrored to $MirrorDir"
+    } else {
+        Write-Log "MIRROR SIZE MISMATCH - removing bad copy"
+        Remove-Item $mirrored -Force -ErrorAction SilentlyContinue
+    }
+    # Same retention on the mirror.
+    Get-ChildItem $MirrorDir -Filter 'ecocharge_*.sql' -File |
+        Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-$Retention) } |
+        ForEach-Object { Remove-Item $_.FullName -Force }
+} catch {
+    # A failed mirror must not fail the backup - the primary copy already
+    # succeeded and is more important than the redundancy.
+    Write-Log "MIRROR FAILED (primary backup is fine) - $($_.Exception.Message)"
+}
+
 # Retention is time-based, not count-based, on purpose: a crash loop that
 # somehow triggered many runs must not silently evict older good backups.
 $cutoff  = (Get-Date).AddDays(-$Retention)
